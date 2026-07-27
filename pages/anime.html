@@ -10,7 +10,7 @@
     
     <style>
         /* ============================================================
-           RESET & VARIABILI - (IDENTICO a prima)
+           RESET & VARIABILI
            ============================================================ */
         * {
             margin: 0;
@@ -1030,7 +1030,6 @@
             async function translateToItalian(text) {
                 if (!text || text.length < 5) return text;
                 
-                // Controlla la cache
                 if (translationCache.has(text)) {
                     return translationCache.get(text);
                 }
@@ -1044,7 +1043,6 @@
                     const data = await response.json();
                     const translated = data[0][0][0];
                     
-                    // Salva in cache
                     translationCache.set(text, translated);
                     
                     return translated;
@@ -1052,6 +1050,35 @@
                     console.warn('Errore traduzione:', err);
                     return text;
                 }
+            }
+
+            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER =====
+            function containsSpoilers(media, synopsis) {
+                // 1. Controlla se contiene il titolo dell'anime
+                const titles = [
+                    media.title.english,
+                    media.title.romaji,
+                    media.title.native
+                ].filter(Boolean);
+                
+                for (const title of titles) {
+                    if (!title) continue;
+                    if (synopsis.toLowerCase().includes(title.toLowerCase())) {
+                        return true;
+                    }
+                }
+                
+                // 2. Controlla se contiene nomi di personaggi
+                const characters = media.characters?.nodes || [];
+                for (const char of characters) {
+                    if (!char?.name?.full) continue;
+                    const charName = char.name.full;
+                    if (synopsis.toLowerCase().includes(charName.toLowerCase())) {
+                        return true;
+                    }
+                }
+                
+                return false;
             }
 
             // ===== PULISCE E ACCORCIA LA SINOPSI =====
@@ -1236,7 +1263,7 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - CON TRADUZIONE
+            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO SPOILER
             // ============================================================
             async function generateAnimeQuestion(animeList) {
                 const validAnime = animeList.filter(a => {
@@ -1250,51 +1277,62 @@
                     return null;
                 }
                 
-                const media = pickRandom(validAnime);
-                if (!media) return null;
+                // Prova fino a 30 volte a trovare un anime senza spoiler
+                for (let attempt = 0; attempt < 30; attempt++) {
+                    const media = pickRandom(validAnime);
+                    if (!media) continue;
+                    
+                    const correct = getTitle(media);
+                    const correctImage = getImage(media);
+                    
+                    let synopsis = getShortSynopsis(media);
+                    if (!synopsis || synopsis.length < 20) continue;
+                    
+                    // ===== CONTROLLA SPOILER =====
+                    if (containsSpoilers(media, synopsis)) {
+                        console.log(`⏭️ Saltato "${correct}" - contiene spoiler nella trama`);
+                        continue;
+                    }
+                    
+                    // Traduci la sinossi
+                    const translatedSynopsis = await translateToItalian(synopsis);
+                    
+                    const others = validAnime.filter(a => a.id !== media.id);
+                    if (others.length < 3) continue;
+                    
+                    const shuffledOthers = shuffleArray(others).slice(0, 3);
+                    
+                    const options = shuffleArray([
+                        { text: correct, image: correctImage, isCorrect: true },
+                        ...shuffledOthers.map(a => ({ 
+                            text: getTitle(a), 
+                            image: getImage(a), 
+                            isCorrect: false 
+                        }))
+                    ]);
+                    
+                    const optionTexts = options.map(o => o.text);
+                    const uniqueOptions = new Set(optionTexts);
+                    if (uniqueOptions.size !== 4) continue;
+                    
+                    return {
+                        question: `Quale anime ha questa trama?`,
+                        synopsis: translatedSynopsis,
+                        options: options,
+                        correct: correct,
+                        detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
+                        showImageInQuestion: false,
+                        questionImage: null,
+                        isTextOnly: false,
+                        hasSynopsis: true
+                    };
+                }
                 
-                const correct = getTitle(media);
-                const correctImage = getImage(media);
-                
-                let synopsis = getShortSynopsis(media);
-                if (!synopsis || synopsis.length < 20) return null;
-                
-                // ===== TRADUCE LA SINOPSI IN ITALIANO =====
-                const translatedSynopsis = await translateToItalian(synopsis);
-                
-                const others = validAnime.filter(a => a.id !== media.id);
-                if (others.length < 3) return null;
-                
-                const shuffledOthers = shuffleArray(others).slice(0, 3);
-                
-                const options = shuffleArray([
-                    { text: correct, image: correctImage, isCorrect: true },
-                    ...shuffledOthers.map(a => ({ 
-                        text: getTitle(a), 
-                        image: getImage(a), 
-                        isCorrect: false 
-                    }))
-                ]);
-                
-                const optionTexts = options.map(o => o.text);
-                const uniqueOptions = new Set(optionTexts);
-                if (uniqueOptions.size !== 4) return null;
-                
-                return {
-                    question: `Quale anime ha questa trama?`,
-                    synopsis: translatedSynopsis, // ← TRADOTTO!
-                    options: options,
-                    correct: correct,
-                    detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
-                    showImageInQuestion: false,
-                    questionImage: null,
-                    isTextOnly: false,
-                    hasSynopsis: true
-                };
+                return null;
             }
 
             // ============================================================
-            // GENERA DOMANDE (PUBBLICA) - CON TRADUZIONE
+            // GENERA DOMANDE (PUBBLICA)
             // ============================================================
             window.generateQuestions = async function(type, animeList) {
                 const questions = [];
