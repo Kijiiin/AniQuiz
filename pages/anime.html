@@ -231,8 +231,8 @@
         .question-text .synopsis {
             color: var(--text-secondary);
             font-weight: 400;
-            font-size: 1.1rem;
-            line-height: 1.6;
+            font-size: 1.05rem;
+            line-height: 1.7;
             margin-top: 12px;
             padding: 20px 24px;
             background: rgba(255, 255, 255, 0.03);
@@ -1022,43 +1022,50 @@
                 return media.coverImage?.large || null;
             }
 
-            // ===== PULISCE E ACCORCIA LA SINOPSI =====
+            // ===== PULISCE E ACCORCIA LA SINOPSI (VERSIONE MIGLIORATA) =====
             function getShortSynopsis(media) {
-                // Prende la descrizione (se c'è)
                 let description = media.description || '';
                 
-                // Se non c'è descrizione, usa un messaggio
                 if (!description || description.length < 10) {
-                    return 'Trama non disponibile per questo anime.';
+                    return null;
                 }
                 
-                // Rimuove i tag HTML
+                // Rimuove i tag HTML (inclusi attributi come data-v-*)
                 description = description.replace(/<[^>]*>/g, '');
                 
-                // Rimuove i caratteri speciali
+                // Rimuove le entità HTML
                 description = description.replace(/&#[0-9]+;/g, ' ');
+                description = description.replace(/&quot;/g, '"');
+                description = description.replace(/&amp;/g, '&');
+                description = description.replace(/&lt;/g, '<');
+                description = description.replace(/&gt;/g, '>');
+                
+                // Rimuove "Source: ..." e "(Source: ...)"
+                description = description.replace(/\(Source:.*?\)/gi, '');
+                description = description.replace(/Source:.*?$/gi, '');
+                description = description.replace(/\(src:.*?\)/gi, '');
+                description = description.replace(/src:.*?$/gi, '');
+                
+                // Rimuove spazi multipli
                 description = description.replace(/\s+/g, ' ').trim();
                 
-                // Prende solo le prime 30-50 parole (circa 200-250 caratteri)
+                if (description.length < 30) {
+                    return null;
+                }
+                
+                // Prende le prime 35-50 parole
                 const words = description.split(' ');
                 let synopsis = words.slice(0, 35).join(' ');
                 
-                // Se la sinossi è troppo corta, usa più parole
-                if (synopsis.length < 80 && words.length > 35) {
-                    synopsis = words.slice(0, 60).join(' ');
+                if (synopsis.length < 100 && words.length > 35) {
+                    synopsis = words.slice(0, 50).join(' ');
                 }
                 
-                // Se ancora troppo corta, usa tutto
-                if (synopsis.length < 30) {
-                    synopsis = description;
-                }
-                
-                // Aggiunge i puntini di sospensione se è stata tagliata
                 if (words.length > 35) {
                     synopsis += '...';
                 }
                 
-                return synopsis.trim() || 'Trama non disponibile.';
+                return synopsis.trim();
             }
 
             function buildMultiQuery() {
@@ -1199,7 +1206,7 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE SINOPSI
+            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE SINOPSI (SENZA FILTRO)
             // ============================================================
             function generateAnimeQuestion(animeList) {
                 // Prendi un anime a caso
@@ -1209,50 +1216,50 @@
                 const correct = getTitle(media);
                 const correctImage = getImage(media);
                 
-                // Prendi la sinossi (se c'è)
+                // Prova a prendere la sinossi
                 let synopsis = getShortSynopsis(media);
                 
-                // Se la sinossi è "Trama non disponibile", usa un fallback
-                if (synopsis === 'Trama non disponibile per questo anime.' || synopsis === 'Trama non disponibile.') {
-                    // Usa una domanda classica
+                // Se la sinossi è disponibile, usa la domanda con trama
+                if (synopsis && synopsis.length > 30) {
                     const others = animeList.filter(a => a.id !== media.id);
                     if (others.length < 3) return null;
+
                     const shuffledOthers = shuffleArray(others).slice(0, 3);
                     const options = shuffleArray([
                         { text: correct, image: correctImage, isCorrect: true },
                         ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
                     ]);
+
                     return {
-                        question: `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`,
+                        question: `Quale anime ha questa trama?`,
+                        synopsis: synopsis,
                         options: options,
                         correct: correct,
                         detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                         showImageInQuestion: false,
                         questionImage: null,
                         isTextOnly: false,
-                        hasSynopsis: false
+                        hasSynopsis: true
                     };
                 }
                 
+                // FALLBACK: se non c'è sinossi, usa la domanda classica
                 const others = animeList.filter(a => a.id !== media.id);
                 if (others.length < 3) return null;
-
                 const shuffledOthers = shuffleArray(others).slice(0, 3);
                 const options = shuffleArray([
                     { text: correct, image: correctImage, isCorrect: true },
                     ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
                 ]);
-
                 return {
-                    question: `Quale anime ha questa trama?`,
-                    synopsis: synopsis,
+                    question: `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`,
                     options: options,
                     correct: correct,
                     detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                     showImageInQuestion: false,
                     questionImage: null,
                     isTextOnly: false,
-                    hasSynopsis: true
+                    hasSynopsis: false
                 };
             }
 
@@ -1332,7 +1339,6 @@
                     return;
                 }
 
-                // Costruisce il HTML della domanda
                 let questionHtml = q.question;
                 if (q.hasSynopsis && q.synopsis) {
                     questionHtml += `<div class="synopsis">${q.synopsis}</div>`;
