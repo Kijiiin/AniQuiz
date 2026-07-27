@@ -1052,7 +1052,7 @@
                 }
             }
 
-            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER =====
+            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER (SOLO NOMI PERSONAGGI) =====
             function containsSpoilers(media, synopsis) {
                 // 1. Controlla se contiene il titolo dell'anime
                 const titles = [
@@ -1063,19 +1063,74 @@
                 
                 for (const title of titles) {
                     if (!title) continue;
-                    if (synopsis.toLowerCase().includes(title.toLowerCase())) {
+                    const regex = new RegExp('\\b' + title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+                    if (regex.test(synopsis)) {
                         return true;
                     }
                 }
                 
-                // 2. Controlla se contiene nomi di personaggi
+                // 2. Controlla se contiene nomi di personaggi (DA ANILIST)
                 const characters = media.characters?.nodes || [];
                 for (const char of characters) {
                     if (!char?.name?.full) continue;
                     const charName = char.name.full;
+                    
+                    // Controlla il nome completo
                     if (synopsis.toLowerCase().includes(charName.toLowerCase())) {
                         return true;
                     }
+                    
+                    // Controlla anche il nome senza cognome
+                    const nameParts = charName.split(' ');
+                    for (const part of nameParts) {
+                        if (part.length > 2 && synopsis.toLowerCase().includes(part.toLowerCase())) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // 3. RICONOSCIMENTO AUTOMATICO DI NOMI DI PERSONAGGI
+                const words = synopsis.split(/\s+/);
+                let previousWord = '';
+                
+                // Parole comuni che iniziano con maiuscola ma NON sono nomi di persona
+                const commonCapitalized = [
+                    'The', 'This', 'That', 'These', 'Those', 'He', 'She', 'It', 'They', 
+                    'We', 'You', 'I', 'My', 'Your', 'His', 'Her', 'Our', 'Their', 
+                    'Me', 'Him', 'Us', 'Them', 'Who', 'Whom', 'Whose', 'Which', 
+                    'What', 'When', 'Where', 'Why', 'How', 'Then', 'Than', 'So', 'For',
+                    'But', 'Or', 'Yet', 'Nor', 'As', 'At', 'By', 'From', 'Into', 'Of',
+                    'On', 'To', 'With', 'Without', 'After', 'Before', 'During', 'Since',
+                    'Upon', 'Within', 'Without', 'About', 'Across', 'Against', 'Along',
+                    'Among', 'Around', 'Behind', 'Below', 'Beneath', 'Beside', 'Between',
+                    'Beyond', 'Inside', 'Outside', 'Under', 'Upon', 'Within', 'Without',
+                    'Chapter', 'Episode', 'Season', 'Volume', 'Part', 'Act', 'Scene',
+                    'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+                    'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'
+                ];
+                
+                for (const word of words) {
+                    // Pulisce la parola (rimuove punteggiatura)
+                    const cleanWord = word.replace(/[^a-zA-ZÀ-ÿ']/g, '');
+                    if (cleanWord.length < 3) {
+                        previousWord = cleanWord;
+                        continue;
+                    }
+                    
+                    // Se la parola inizia con MAIUSCOLA e non è l'inizio della frase
+                    const isCapitalized = cleanWord[0] === cleanWord[0].toUpperCase();
+                    const isNotStartOfSentence = previousWord && !previousWord.endsWith('.') && !previousWord.endsWith('!') && !previousWord.endsWith('?');
+                    
+                    // Controlla che la parola non sia comune
+                    const isCommon = commonCapitalized.includes(cleanWord);
+                    
+                    if (isCapitalized && isNotStartOfSentence && !isCommon) {
+                        // Potrebbe essere un nome di persona!
+                        console.log(`   🔍 Rilevato possibile nome di persona: "${cleanWord}"`);
+                        return true;
+                    }
+                    
+                    previousWord = cleanWord;
                 }
                 
                 return false;
@@ -1142,7 +1197,7 @@
                                 studios { nodes { name } }
                                 genres
                                 description
-                                characters(page: 1, perPage: 10) {
+                                characters(page: 1, perPage: 15) {
                                     nodes {
                                         id
                                         name { full }
@@ -1263,7 +1318,7 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO SPOILER
+            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO SOLO PERSONAGGI
             // ============================================================
             async function generateAnimeQuestion(animeList) {
                 const validAnime = animeList.filter(a => {
@@ -1288,9 +1343,9 @@
                     let synopsis = getShortSynopsis(media);
                     if (!synopsis || synopsis.length < 20) continue;
                     
-                    // ===== CONTROLLA SPOILER =====
+                    // ===== CONTROLLA SPOILER (SOLO PERSONAGGI) =====
                     if (containsSpoilers(media, synopsis)) {
-                        console.log(`⏭️ Saltato "${correct}" - contiene spoiler nella trama`);
+                        console.log(`⏭️ Saltato "${correct}" - contiene nomi di personaggi nella trama`);
                         continue;
                     }
                     
