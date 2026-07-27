@@ -981,6 +981,7 @@
             const PER_PAGE = 30;
             const TOTAL_CATEGORIES = 5;
             const TOTAL_ANIME = 150;
+            const QUESTIONS_PER_QUIZ = 10;
 
             window.allAnime = [];
             window.isDataLoaded = false;
@@ -1022,50 +1023,36 @@
                 return media.coverImage?.large || null;
             }
 
-            // ===== PULISCE E ACCORCIA LA SINOPSI (VERSIONE DEFINITIVA) =====
+            // ===== PULISCE E ACCORCIA LA SINOPSI =====
             function getShortSynopsis(media) {
                 let description = media.description || '';
                 
-                // Se non c'è descrizione, usa fallback
                 if (!description || description.length < 10) {
                     return null;
                 }
                 
-                // RIMUOVE TUTTI I TAG HTML
                 description = description.replace(/<[^>]*>/g, '');
-                
-                // RIMUOVE LE ENTITÀ HTML
                 description = description.replace(/&#[0-9]+;/g, ' ');
                 description = description.replace(/&quot;/g, '"');
                 description = description.replace(/&amp;/g, '&');
                 description = description.replace(/&lt;/g, '<');
                 description = description.replace(/&gt;/g, '>');
                 description = description.replace(/&nbsp;/g, ' ');
-                
-                // RIMUOVE "Source: ..." e "(Source: ...)"
                 description = description.replace(/\(Source:.*?\)/gi, '');
                 description = description.replace(/Source:.*?$/gi, '');
-                description = description.replace(/\(src:.*?\)/gi, '');
-                description = description.replace(/src:.*?$/gi, '');
-                
-                // RIMUOVE SPZI MULTIPLI
                 description = description.replace(/\s+/g, ' ').trim();
                 
-                // SE DOPO LA PULIZIA È TROPPO CORTA (meno di 20 caratteri), usa fallback
                 if (description.length < 20) {
                     return null;
                 }
                 
-                // PRENDE LE PRIME 35 PAROLE (circa 200 caratteri)
                 const words = description.split(' ');
                 let synopsis = words.slice(0, 35).join(' ');
                 
-                // Se la sinossi è troppo corta e ci sono più parole, usa 50 parole
                 if (synopsis.length < 80 && words.length > 35) {
                     synopsis = words.slice(0, 50).join(' ');
                 }
                 
-                // Aggiunge i puntini di sospensione se è stata tagliata
                 if (words.length > 35) {
                     synopsis += '...';
                 }
@@ -1139,7 +1126,6 @@
                         const names = ['Popolari', 'Trending', 'Votati', 'Recenti', 'Casuali'];
                         console.log(`📊 ${names[index]}: ${categoryData.length} anime`);
                         
-                        // DEBUG: Controlla quanti hanno la descrizione
                         const withDescription = categoryData.filter(a => a.description && a.description.length > 10);
                         console.log(`   📝 Con descrizione: ${withDescription.length}`);
                         
@@ -1156,7 +1142,6 @@
                     const uniqueAnime = Array.from(uniqueMap.values());
                     console.log(`✅ Caricati ${uniqueAnime.length} anime unici (mix di 5 categorie)`);
                     
-                    // DEBUG: Controlla quanti hanno la descrizione dopo la deduplica
                     const withDesc = uniqueAnime.filter(a => a.description && a.description.length > 10);
                     console.log(`📝 Anime con descrizione valida: ${withDesc.length}`);
                     
@@ -1220,60 +1205,58 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME"
+            // GENERATORE PER "INDOVINA L'ANIME" - SOLO SINOPSI
             // ============================================================
             function generateAnimeQuestion(animeList) {
-                // Prendi un anime a caso
-                const media = pickRandom(animeList);
+                // Filtra SOLO anime che hanno una descrizione valida
+                const validAnime = animeList.filter(a => {
+                    const desc = a.description || '';
+                    const clean = desc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                    return clean.length > 30;
+                });
+                
+                if (validAnime.length < 4) {
+                    console.warn(`⚠️ Solo ${validAnime.length} anime con descrizione valida`);
+                    return null;
+                }
+                
+                const media = pickRandom(validAnime);
                 if (!media) return null;
                 
                 const correct = getTitle(media);
                 const correctImage = getImage(media);
                 
-                // Prova a prendere la sinossi
                 let synopsis = getShortSynopsis(media);
+                if (!synopsis || synopsis.length < 20) return null;
                 
-                // Se la sinossi è disponibile, usa la domanda con trama
-                if (synopsis && synopsis.length > 20) {
-                    const others = animeList.filter(a => a.id !== media.id);
-                    if (others.length < 3) return null;
-
-                    const shuffledOthers = shuffleArray(others).slice(0, 3);
-                    const options = shuffleArray([
-                        { text: correct, image: correctImage, isCorrect: true },
-                        ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
-                    ]);
-
-                    return {
-                        question: `Quale anime ha questa trama?`,
-                        synopsis: synopsis,
-                        options: options,
-                        correct: correct,
-                        detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
-                        showImageInQuestion: false,
-                        questionImage: null,
-                        isTextOnly: false,
-                        hasSynopsis: true
-                    };
-                }
-                
-                // FALLBACK: se non c'è sinossi, usa la domanda classica
-                const others = animeList.filter(a => a.id !== media.id);
+                const others = validAnime.filter(a => a.id !== media.id);
                 if (others.length < 3) return null;
+                
                 const shuffledOthers = shuffleArray(others).slice(0, 3);
+                
                 const options = shuffleArray([
                     { text: correct, image: correctImage, isCorrect: true },
-                    ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
+                    ...shuffledOthers.map(a => ({ 
+                        text: getTitle(a), 
+                        image: getImage(a), 
+                        isCorrect: false 
+                    }))
                 ]);
+                
+                const optionTexts = options.map(o => o.text);
+                const uniqueOptions = new Set(optionTexts);
+                if (uniqueOptions.size !== 4) return null;
+                
                 return {
-                    question: `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`,
+                    question: `Quale anime ha questa trama?`,
+                    synopsis: synopsis,
                     options: options,
                     correct: correct,
                     detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                     showImageInQuestion: false,
                     questionImage: null,
                     isTextOnly: false,
-                    hasSynopsis: false
+                    hasSynopsis: true
                 };
             }
 
@@ -1282,23 +1265,32 @@
             // ============================================================
             window.generateQuestions = function(type, animeList) {
                 const questions = [];
+                const usedTitles = new Set();
+                const usedSynopsis = new Set();
                 let attempts = 0;
+                const maxAttempts = 500;
 
-                while (questions.length < 10 && attempts < 300) {
-                    const q = generateAnimeQuestion(animeList);
-                    if (q && q.options && q.options.length === 4) {
-                        const duplicate = questions.some(existing =>
-                            existing.question === q.question ||
-                            (existing.correct === q.correct && 
-                             existing.options.map(o => o.text).join(',') === q.options.map(o => o.text).join(','))
-                        );
-                        if (!duplicate) {
-                            questions.push(q);
-                        }
-                    }
+                while (questions.length < QUESTIONS_PER_QUIZ && attempts < maxAttempts) {
                     attempts++;
+                    
+                    const q = generateAnimeQuestion(animeList);
+                    if (!q || !q.options || q.options.length !== 4) continue;
+                    
+                    const titleKey = q.correct;
+                    const synopsisKey = q.synopsis ? q.synopsis.substring(0, 50) : '';
+                    
+                    if (usedTitles.has(titleKey)) continue;
+                    if (synopsisKey && usedSynopsis.has(synopsisKey)) continue;
+                    
+                    const correctInOptions = q.options.some(o => o.isCorrect === true);
+                    if (!correctInOptions) continue;
+                    
+                    questions.push(q);
+                    usedTitles.add(titleKey);
+                    if (synopsisKey) usedSynopsis.add(synopsisKey);
                 }
 
+                console.log(`✅ Generate ${questions.length} domande uniche su ${QUESTIONS_PER_QUIZ} richieste (${attempts} tentativi)`);
                 return questions;
             };
 
