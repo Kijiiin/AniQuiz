@@ -10,7 +10,7 @@
     
     <style>
         /* ============================================================
-           RESET & VARIABILI
+           RESET & VARIABILI (IDENTICO)
            ============================================================ */
         * {
             margin: 0;
@@ -1017,148 +1017,294 @@
             }
 
             // ============================================================
-            // MAPPA EMOJI PER ANIME (BASATA SU ELEMENTI CHIAVE)
+            // GENERAZIONE DINAMICA EMOJI
             // ============================================================
-            function getEmojisForAnime(media) {
+            function generateEmojis(media) {
+                const emojis = new Set();
                 const title = (media.title.english || media.title.romaji || '').toLowerCase();
                 const genres = media.genres || [];
-                const emojis = new Set();
+                const description = (media.description || '').toLowerCase();
+                const characters = media.characters?.nodes || [];
                 
-                // === MAPPA EMOJI PER ANIME SPECIFICI ===
-                const animeEmojiMap = {
-                    // Shonen classici
-                    'one piece': ['🏴‍☠️', '⚓', '🍖', '🌊', '👒'],
-                    'naruto': ['🍥', '🦊', '🍜', '🌀', '👁️'],
-                    'naruto shippuden': ['🍥', '🦊', '🍜', '🌀', '👁️'],
-                    'bleach': ['⚔️', '👻', '🖤', '🌙'],
-                    'dragon ball': ['🐉', '⚡', '🥋', '🌟', '💪'],
-                    'dragon ball z': ['🐉', '⚡', '🥋', '🌟', '💪'],
-                    'dragon ball super': ['🐉', '⚡', '🥋', '🌟', '💪'],
-                    'attack on titan': ['🏰', '🧱', '🦴', '⚡', '🗡️'],
-                    'shingeki no kyojin': ['🏰', '🧱', '🦴', '⚡', '🗡️'],
-                    'demon slayer': ['⚔️', '🌊', '🔥', '💨', '🌙'],
-                    'kimetsu no yaiba': ['⚔️', '🌊', '🔥', '💨', '🌙'],
-                    'my hero academia': ['🦸', '💥', '⭐', '🔥', '💪'],
-                    'boku no hero academia': ['🦸', '💥', '⭐', '🔥', '💪'],
-                    'jujutsu kaisen': ['👹', '⚔️', '💀', '🌀', '🔥'],
-                    'fullmetal alchemist': ['🔧', '🧪', '⚗️', '🦾', '⛓️'],
-                    'fullmetal alchemist brotherhood': ['🔧', '🧪', '⚗️', '🦾', '⛓️'],
-                    'death note': ['📓', '✍️', '💀', '🖊️', '👁️'],
-                    'tokyo ghoul': ['👹', '🍽️', '🖤', '💀'],
-                    'solo leveling': ['🎮', '⚔️', '💀', '⬆️', '🗡️'],
-                    'frieren': ['🧙', '❄️', '📜', '✨', '🌿'],
-                    'sousou no frieren': ['🧙', '❄️', '📜', '✨', '🌿'],
-                    'dandadan': ['👽', '👻', '💥', '🌀', '🔥'],
-                    'chainsaw man': ['⛓️', '🪚', '💀', '🔥', '🩸'],
-                    'spy x family': ['🕵️', '👨‍👩‍👧', '🐕', '❤️', '🎯'],
-                    'mob psycho 100': ['🧠', '💥', '👁️', '🔥', '💪'],
-                    'one punch man': ['👊', '💥', '🦸', '⚡', '😐'],
-                    'hunter x hunter': ['🎯', '🃏', '🐉', '💎', '👁️'],
-                    'gintama': ['🤪', '🍡', '🗡️', '👽', '😂'],
-                    'fairy tail': ['🐉', '🔥', '🧊', '🗡️', '✨'],
-                    'black clover': ['📖', '⚔️', '🔥', '💀', '✨'],
-                    'fire force': ['🔥', '⚔️', '🧯', '💀', '⚡'],
-                    'soul eater': ['⚔️', '💀', '🌙', '🔥', '🖤'],
+                // === MAPPA PAROLE CHIAVE → EMOJI ===
+                const keywordMap = {
+                    // Personaggi famosi
+                    'pirate': '🏴‍☠️',
+                    'ninja': '🥷',
+                    'shinobi': '🥷',
+                    'samurai': '⚔️',
+                    'soul reaper': '👻',
+                    'shinigami': '💀',
+                    'demon': '👹',
+                    'devil': '👹',
+                    'angel': '😇',
+                    'vampire': '🧛',
+                    'ghost': '👻',
+                    'zombie': '🧟',
+                    'alien': '👽',
+                    'robot': '🤖',
+                    'mecha': '🤖',
+                    'cyborg': '🦾',
+                    'magic': '🧙',
+                    'wizard': '🧙',
+                    'witch': '🧙‍♀️',
+                    'mage': '🧙',
+                    'sorcerer': '🧙',
+                    'hero': '🦸',
+                    'superhero': '🦸',
+                    'villain': '🦹',
+                    'god': '👑',
+                    'goddess': '👑',
+                    'king': '👑',
+                    'queen': '👑',
+                    'prince': '🤴',
+                    'princess': '👸',
+                    'knight': '⚔️',
+                    'warrior': '⚔️',
+                    'fighter': '🥊',
+                    'assassin': '🗡️',
+                    'spy': '🕵️',
+                    'detective': '🔍',
+                    'police': '👮',
+                    'maid': '🧹',
+                    'butler': '🧐',
+                    'teacher': '👨‍🏫',
+                    'student': '🎒',
+                    'scientist': '🔬',
+                    'doctor': '👨‍⚕️',
+                    'nurse': '👩‍⚕️',
+                    'artist': '🎨',
+                    'musician': '🎵',
+                    'singer': '🎤',
+                    'dancer': '💃',
+                    'athlete': '🏃',
                     
-                    // Isekai
-                    're:zero': ['⏳', '💀', '❤️', '🐰', '🔄'],
-                    're:zero kara hajimeru isekai seikatsu': ['⏳', '💀', '❤️', '🐰', '🔄'],
-                    'konosuba': ['🎯', '💥', '❤️', '🧙', '⚔️'],
-                    'kono subarashii sekai ni shukufuku wo': ['🎯', '💥', '❤️', '🧙', '⚔️'],
-                    'sword art online': ['🗡️', '🎮', '🕹️', '⚔️', '💀'],
-                    'overlord': ['💀', '👑', '🖤', '⚔️', '🧙'],
-                    'mushoku tensei': ['🧙', '📖', '💀', '❤️', '🌍'],
-                    'tensura': ['🐉', '💀', '⚔️', '🧙', '👑'],
-                    'that time i got reincarnated as a slime': ['🐉', '💀', '⚔️', '🧙', '👑'],
+                    // Animali
+                    'cat': '🐱',
+                    'dog': '🐕',
+                    'fox': '🦊',
+                    'wolf': '🐺',
+                    'bear': '🐻',
+                    'tiger': '🐯',
+                    'lion': '🦁',
+                    'dragon': '🐉',
+                    'phoenix': '🔥',
+                    'eagle': '🦅',
+                    'hawk': '🦅',
+                    'owl': '🦉',
+                    'snake': '🐍',
+                    'spider': '🕷️',
+                    'rat': '🐀',
+                    'mouse': '🐭',
+                    'rabbit': '🐰',
+                    'monkey': '🐒',
+                    'gorilla': '🦍',
+                    'elephant': '🐘',
+                    'whale': '🐋',
+                    'dolphin': '🐬',
+                    'shark': '🦈',
+                    'fish': '🐟',
+                    'bird': '🐦',
+                    'butterfly': '🦋',
+                    'bee': '🐝',
+                    'ant': '🐜',
                     
-                    // Mecha
-                    'evangelion': ['🤖', '💀', '👁️', '⚡', '🖤'],
-                    'neon genesis evangelion': ['🤖', '💀', '👁️', '⚡', '🖤'],
-                    'code geass': ['🤖', '👑', '💀', '⚡', '👁️'],
-                    'gundam': ['🤖', '⚔️', '💀', '🔥', '🚀'],
-                    'gurren lagann': ['🤖', '🔥', '💪', '🌌', '⚡'],
-                    'tengen toppa gurren lagann': ['🤖', '🔥', '💪', '🌌', '⚡'],
+                    // Oggetti
+                    'sword': '🗡️',
+                    'katana': '⚔️',
+                    'blade': '⚔️',
+                    'gun': '🔫',
+                    'rifle': '🔫',
+                    'cannon': '💣',
+                    'bomb': '💣',
+                    'shield': '🛡️',
+                    'armor': '🛡️',
+                    'helmet': '⛑️',
+                    'crown': '👑',
+                    'ring': '💍',
+                    'book': '📖',
+                    'notebook': '📓',
+                    'diary': '📓',
+                    'scroll': '📜',
+                    'potion': '🧪',
+                    'elixir': '🧪',
+                    'food': '🍽️',
+                    'ramen': '🍜',
+                    'sushi': '🍣',
+                    'pizza': '🍕',
+                    'cake': '🍰',
+                    'meat': '🍖',
+                    'fruit': '🍎',
+                    'bread': '🍞',
                     
-                    // Romantici/Commedia
-                    'kaguya-sama': ['❤️', '🧠', '🎯', '😂', '👑'],
-                    'kaguya sama love is war': ['❤️', '🧠', '🎯', '😂', '👑'],
-                    'your lie in april': ['🎹', '❤️', '🌸', '🎻', '💔'],
-                    'shigatsu wa kimi no uso': ['🎹', '❤️', '🌸', '🎻', '💔'],
-                    'horimiya': ['❤️', '🎒', '😊', '💕', '🌸'],
-                    'komi can\'t communicate': ['❤️', '😶', '📝', '🎒', '🌸'],
-                    'komi-san wa komyushou desu': ['❤️', '😶', '📝', '🎒', '🌸'],
+                    // Elementi
+                    'fire': '🔥',
+                    'flame': '🔥',
+                    'water': '💧',
+                    'ice': '❄️',
+                    'snow': '❄️',
+                    'wind': '💨',
+                    'storm': '🌪️',
+                    'thunder': '⚡',
+                    'lightning': '⚡',
+                    'electric': '⚡',
+                    'energy': '⚡',
+                    'light': '✨',
+                    'dark': '🌙',
+                    'shadow': '🌙',
+                    'moon': '🌙',
+                    'sun': '☀️',
+                    'star': '⭐',
+                    'space': '🌌',
+                    'sky': '☁️',
+                    'cloud': '☁️',
+                    'rain': '🌧️',
+                    'earth': '🌍',
+                    'world': '🌍',
+                    'sea': '🌊',
+                    'ocean': '🌊',
+                    'mountain': '⛰️',
+                    'forest': '🌲',
+                    'flower': '🌸',
+                    'cherry blossom': '🌸',
                     
-                    // Sport
-                    'haikyuu': ['🏐', '💪', '🔥', '⚡', '👟'],
-                    'haikyuu!!': ['🏐', '💪', '🔥', '⚡', '👟'],
-                    'kuroko no basket': ['🏀', '👁️', '⚡', '💪', '🔥'],
-                    'kuroko\'s basketball': ['🏀', '👁️', '⚡', '💪', '🔥'],
-                    'free!': ['🏊', '💪', '🌊', '🔥', '👟'],
+                    // Azioni/Stati
+                    'fight': '⚔️',
+                    'battle': '⚔️',
+                    'war': '⚔️',
+                    'victory': '🏆',
+                    'defeat': '💀',
+                    'death': '💀',
+                    'life': '❤️',
+                    'love': '❤️',
+                    'heart': '❤️',
+                    'friend': '🤝',
+                    'family': '👨‍👩‍👧',
+                    'protect': '🛡️',
+                    'save': '🛡️',
+                    'rescue': '🛡️',
+                    'escape': '🏃',
+                    'run': '🏃',
+                    'fly': '✈️',
+                    'teleport': '🌀',
+                    'time': '⏳',
+                    'dream': '💭',
+                    'memory': '📷',
+                    'secret': '🔒',
+                    'mystery': '🔍',
+                    'curse': '🧙',
+                    'spell': '🧙',
+                    'magic': '🧙',
+                    'power': '💪',
+                    'strength': '💪',
+                    'speed': '🏃',
+                    'skill': '🎯',
+                    'talent': '⭐',
+                    'genius': '🧠',
+                    'smart': '🧠',
+                    'crazy': '🤪',
+                    'funny': '😂',
+                    'sad': '😢',
+                    'cry': '😭',
+                    'happy': '😊',
+                    'smile': '😊',
                 };
                 
-                // Cerca nella mappa specifica
-                for (const [key, emojiList] of Object.entries(animeEmojiMap)) {
-                    if (title.includes(key) || key.includes(title)) {
-                        emojiList.forEach(e => emojis.add(e));
-                        break;
+                // === GENERA EMOJI DAL TITOLO ===
+                const titleWords = title.split(/[\s-]+/);
+                for (const word of titleWords) {
+                    if (word.length > 2) {
+                        for (const [key, emoji] of Object.entries(keywordMap)) {
+                            if (word.includes(key) || key.includes(word)) {
+                                emojis.add(emoji);
+                            }
+                        }
                     }
                 }
                 
-                // === MAPPA BASATA SUI GENERI ===
-                if (genres.includes('Action') && genres.includes('Adventure')) {
-                    emojis.add('⚔️');
+                // === GENERA EMOJI DAI GENERI ===
+                const genreMap = {
+                    'Action': '⚔️',
+                    'Adventure': '🗺️',
+                    'Comedy': '😂',
+                    'Romance': '❤️',
+                    'Fantasy': '🐉',
+                    'Sci-Fi': '🚀',
+                    'Horror': '💀',
+                    'Mystery': '🔍',
+                    'Drama': '🎭',
+                    'Sports': '🏆',
+                    'Music': '🎵',
+                    'School': '🎒',
+                    'Slice of Life': '🌿',
+                    'Supernatural': '👻',
+                    'Mecha': '🤖',
+                    'Isekai': '🌍',
+                    'Thriller': '😱',
+                    'Psychological': '🧠',
+                    'Historical': '🏛️',
+                    'Samurai': '⚔️',
+                    'Martial Arts': '🥋',
+                    'Shounen': '🔥',
+                    'Shoujo': '🌸',
+                    'Seinen': '📖',
+                    'Josei': '💕',
+                };
+                
+                for (const genre of genres) {
+                    if (genreMap[genre]) {
+                        emojis.add(genreMap[genre]);
+                    }
                 }
-                if (genres.includes('Comedy')) {
-                    emojis.add('😂');
+                
+                // === GENERA EMOJI DALLA DESCRIZIONE ===
+                const descWords = description.split(/[\s,.;!?()]+/);
+                let foundKeywords = 0;
+                for (const word of descWords) {
+                    if (word.length < 3) continue;
+                    for (const [key, emoji] of Object.entries(keywordMap)) {
+                        if (word.includes(key) || key.includes(word)) {
+                            emojis.add(emoji);
+                            foundKeywords++;
+                            if (foundKeywords >= 3) break;
+                        }
+                    }
+                    if (foundKeywords >= 3) break;
                 }
-                if (genres.includes('Romance')) {
-                    emojis.add('❤️');
-                }
-                if (genres.includes('Fantasy')) {
-                    emojis.add('🐉');
-                }
-                if (genres.includes('Sci-Fi')) {
-                    emojis.add('🚀');
-                }
-                if (genres.includes('Horror')) {
-                    emojis.add('💀');
-                }
-                if (genres.includes('Mystery')) {
-                    emojis.add('🔍');
-                }
-                if (genres.includes('Drama')) {
-                    emojis.add('🎭');
-                }
-                if (genres.includes('Sports')) {
-                    emojis.add('🏆');
-                }
-                if (genres.includes('Music')) {
-                    emojis.add('🎵');
-                }
-                if (genres.includes('School')) {
-                    emojis.add('🎒');
-                }
-                if (genres.includes('Slice of Life')) {
-                    emojis.add('🌿');
-                }
-                if (genres.includes('Supernatural')) {
-                    emojis.add('👻');
-                }
-                if (genres.includes('Mecha')) {
-                    emojis.add('🤖');
-                }
-                if (genres.includes('Isekai')) {
-                    emojis.add('🌍');
+                
+                // === GENERA EMOJI DAI NOMI DEI PERSONAGGI ===
+                for (const char of characters) {
+                    if (!char?.name?.full) continue;
+                    const charName = char.name.full.toLowerCase();
+                    for (const [key, emoji] of Object.entries(keywordMap)) {
+                        if (charName.includes(key) || key.includes(charName)) {
+                            emojis.add(emoji);
+                            break;
+                        }
+                    }
                 }
                 
                 // === EMOJI DI FALLBACK ===
                 if (emojis.size < 2) {
-                    emojis.add('🎌');
-                    emojis.add('📺');
+                    // Aggiungi emoji basate sui generi
+                    if (genres.includes('Action')) emojis.add('⚔️');
+                    if (genres.includes('Adventure')) emojis.add('🗺️');
+                    if (genres.includes('Comedy')) emojis.add('😂');
+                    if (genres.includes('Romance')) emojis.add('❤️');
+                    if (genres.includes('Fantasy')) emojis.add('🐉');
+                    if (genres.includes('Sci-Fi')) emojis.add('🚀');
+                    if (genres.includes('Horror')) emojis.add('💀');
+                    
+                    // Fallback estremo
+                    if (emojis.size < 2) {
+                        emojis.add('🎌');
+                        emojis.add('📺');
+                    }
                 }
                 
-                // Restituisce le prime 3-5 emoji
+                // Limita a 5 emoji e mescola
                 const result = Array.from(emojis);
+                shuffleArray(result);
                 return result.slice(0, 5);
             }
 
@@ -1304,10 +1450,9 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE EMOJI
+            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE EMOJI DINAMICHE
             // ============================================================
             function generateAnimeQuestion(animeList) {
-                // Filtra anime con descrizione
                 const validAnime = animeList.filter(a => {
                     const desc = a.description || '';
                     const clean = desc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -1319,18 +1464,19 @@
                     return null;
                 }
                 
-                // Prova fino a 20 volte
-                for (let attempt = 0; attempt < 20; attempt++) {
+                for (let attempt = 0; attempt < 30; attempt++) {
                     const media = pickRandom(validAnime);
                     if (!media) continue;
                     
                     const correct = getTitle(media);
                     const correctImage = getImage(media);
                     
-                    // Ottieni le emoji per questo anime
-                    const emojis = getEmojisForAnime(media);
+                    // Genera emoji DINAMICHE per questo anime
+                    const emojis = generateEmojis(media);
                     if (emojis.length < 2) continue;
                     
+                    // Mescola le emoji per rendere il gioco più interessante
+                    shuffleArray(emojis);
                     const emojiDisplay = emojis.join(' ');
                     
                     const others = validAnime.filter(a => a.id !== media.id);
