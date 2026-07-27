@@ -218,40 +218,27 @@
         }
 
         .question-text {
-            font-size: 1.3rem;
-            font-weight: 600;
+            font-size: 1.5rem;
+            font-weight: 700;
             line-height: 1.5;
             padding: 8px 0;
+            text-align: center;
         }
 
         .question-text .highlight {
             color: var(--accent-pink);
         }
 
-        .question-text .synopsis {
-            color: var(--text-secondary);
-            font-weight: 400;
-            font-size: 1.05rem;
-            line-height: 1.7;
-            margin-top: 12px;
-            padding: 20px 24px;
+        .question-text .emoji-display {
+            font-size: 4rem;
+            letter-spacing: 8px;
+            display: block;
+            margin: 16px 0;
+            text-align: center;
+            padding: 20px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: var(--radius-sm);
-            border-left: 4px solid var(--accent-purple);
-            font-style: italic;
-            display: block;
-        }
-
-        .question-text .synopsis::before {
-            content: '"';
-            color: var(--accent-purple);
-            font-size: 1.5rem;
-        }
-
-        .question-text .synopsis::after {
-            content: '"';
-            color: var(--accent-purple);
-            font-size: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .question-image {
@@ -794,6 +781,9 @@
                 max-width: 130px;
                 max-height: 180px;
             }
+            .question-text .emoji-display {
+                font-size: 3rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -805,7 +795,7 @@
                 border-radius: var(--radius-sm);
             }
             .question-text {
-                font-size: 1.05rem;
+                font-size: 1.1rem;
             }
             .options-grid {
                 grid-template-columns: 1fr 1fr;
@@ -836,6 +826,9 @@
             .question-image img {
                 max-width: 110px;
                 max-height: 150px;
+            }
+            .question-text .emoji-display {
+                font-size: 2.5rem;
             }
         }
     </style>
@@ -987,9 +980,6 @@
             window.isDataLoaded = false;
             window.isLoading = false;
 
-            // ===== CACHE PER LE TRADUZIONI =====
-            const translationCache = new Map();
-
             function shuffleArray(arr) {
                 for (let i = arr.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1026,171 +1016,150 @@
                 return media.coverImage?.large || null;
             }
 
-            // ===== TRADUCE IL TESTO IN ITALIANO =====
-            async function translateToItalian(text) {
-                if (!text || text.length < 5) return text;
+            // ============================================================
+            // MAPPA EMOJI PER ANIME (BASATA SU ELEMENTI CHIAVE)
+            // ============================================================
+            function getEmojisForAnime(media) {
+                const title = (media.title.english || media.title.romaji || '').toLowerCase();
+                const genres = media.genres || [];
+                const emojis = new Set();
                 
-                if (translationCache.has(text)) {
-                    return translationCache.get(text);
-                }
+                // === MAPPA EMOJI PER ANIME SPECIFICI ===
+                const animeEmojiMap = {
+                    // Shonen classici
+                    'one piece': ['🏴‍☠️', '⚓', '🍖', '🌊', '👒'],
+                    'naruto': ['🍥', '🦊', '🍜', '🌀', '👁️'],
+                    'naruto shippuden': ['🍥', '🦊', '🍜', '🌀', '👁️'],
+                    'bleach': ['⚔️', '👻', '🖤', '🌙'],
+                    'dragon ball': ['🐉', '⚡', '🥋', '🌟', '💪'],
+                    'dragon ball z': ['🐉', '⚡', '🥋', '🌟', '💪'],
+                    'dragon ball super': ['🐉', '⚡', '🥋', '🌟', '💪'],
+                    'attack on titan': ['🏰', '🧱', '🦴', '⚡', '🗡️'],
+                    'shingeki no kyojin': ['🏰', '🧱', '🦴', '⚡', '🗡️'],
+                    'demon slayer': ['⚔️', '🌊', '🔥', '💨', '🌙'],
+                    'kimetsu no yaiba': ['⚔️', '🌊', '🔥', '💨', '🌙'],
+                    'my hero academia': ['🦸', '💥', '⭐', '🔥', '💪'],
+                    'boku no hero academia': ['🦸', '💥', '⭐', '🔥', '💪'],
+                    'jujutsu kaisen': ['👹', '⚔️', '💀', '🌀', '🔥'],
+                    'fullmetal alchemist': ['🔧', '🧪', '⚗️', '🦾', '⛓️'],
+                    'fullmetal alchemist brotherhood': ['🔧', '🧪', '⚗️', '🦾', '⛓️'],
+                    'death note': ['📓', '✍️', '💀', '🖊️', '👁️'],
+                    'tokyo ghoul': ['👹', '🍽️', '🖤', '💀'],
+                    'solo leveling': ['🎮', '⚔️', '💀', '⬆️', '🗡️'],
+                    'frieren': ['🧙', '❄️', '📜', '✨', '🌿'],
+                    'sousou no frieren': ['🧙', '❄️', '📜', '✨', '🌿'],
+                    'dandadan': ['👽', '👻', '💥', '🌀', '🔥'],
+                    'chainsaw man': ['⛓️', '🪚', '💀', '🔥', '🩸'],
+                    'spy x family': ['🕵️', '👨‍👩‍👧', '🐕', '❤️', '🎯'],
+                    'mob psycho 100': ['🧠', '💥', '👁️', '🔥', '💪'],
+                    'one punch man': ['👊', '💥', '🦸', '⚡', '😐'],
+                    'hunter x hunter': ['🎯', '🃏', '🐉', '💎', '👁️'],
+                    'gintama': ['🤪', '🍡', '🗡️', '👽', '😂'],
+                    'fairy tail': ['🐉', '🔥', '🧊', '🗡️', '✨'],
+                    'black clover': ['📖', '⚔️', '🔥', '💀', '✨'],
+                    'fire force': ['🔥', '⚔️', '🧯', '💀', '⚡'],
+                    'soul eater': ['⚔️', '💀', '🌙', '🔥', '🖤'],
+                    
+                    // Isekai
+                    're:zero': ['⏳', '💀', '❤️', '🐰', '🔄'],
+                    're:zero kara hajimeru isekai seikatsu': ['⏳', '💀', '❤️', '🐰', '🔄'],
+                    'konosuba': ['🎯', '💥', '❤️', '🧙', '⚔️'],
+                    'kono subarashii sekai ni shukufuku wo': ['🎯', '💥', '❤️', '🧙', '⚔️'],
+                    'sword art online': ['🗡️', '🎮', '🕹️', '⚔️', '💀'],
+                    'overlord': ['💀', '👑', '🖤', '⚔️', '🧙'],
+                    'mushoku tensei': ['🧙', '📖', '💀', '❤️', '🌍'],
+                    'tensura': ['🐉', '💀', '⚔️', '🧙', '👑'],
+                    'that time i got reincarnated as a slime': ['🐉', '💀', '⚔️', '🧙', '👑'],
+                    
+                    // Mecha
+                    'evangelion': ['🤖', '💀', '👁️', '⚡', '🖤'],
+                    'neon genesis evangelion': ['🤖', '💀', '👁️', '⚡', '🖤'],
+                    'code geass': ['🤖', '👑', '💀', '⚡', '👁️'],
+                    'gundam': ['🤖', '⚔️', '💀', '🔥', '🚀'],
+                    'gurren lagann': ['🤖', '🔥', '💪', '🌌', '⚡'],
+                    'tengen toppa gurren lagann': ['🤖', '🔥', '💪', '🌌', '⚡'],
+                    
+                    // Romantici/Commedia
+                    'kaguya-sama': ['❤️', '🧠', '🎯', '😂', '👑'],
+                    'kaguya sama love is war': ['❤️', '🧠', '🎯', '😂', '👑'],
+                    'your lie in april': ['🎹', '❤️', '🌸', '🎻', '💔'],
+                    'shigatsu wa kimi no uso': ['🎹', '❤️', '🌸', '🎻', '💔'],
+                    'horimiya': ['❤️', '🎒', '😊', '💕', '🌸'],
+                    'komi can\'t communicate': ['❤️', '😶', '📝', '🎒', '🌸'],
+                    'komi-san wa komyushou desu': ['❤️', '😶', '📝', '🎒', '🌸'],
+                    
+                    // Sport
+                    'haikyuu': ['🏐', '💪', '🔥', '⚡', '👟'],
+                    'haikyuu!!': ['🏐', '💪', '🔥', '⚡', '👟'],
+                    'kuroko no basket': ['🏀', '👁️', '⚡', '💪', '🔥'],
+                    'kuroko\'s basketball': ['🏀', '👁️', '⚡', '💪', '🔥'],
+                    'free!': ['🏊', '💪', '🌊', '🔥', '👟'],
+                };
                 
-                try {
-                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=it&dt=t&q=${encodeURIComponent(text)}`;
-                    const response = await fetch(url);
-                    
-                    if (!response.ok) throw new Error('Errore traduzione');
-                    
-                    const data = await response.json();
-                    const translated = data[0][0][0];
-                    
-                    translationCache.set(text, translated);
-                    
-                    return translated;
-                } catch (err) {
-                    console.warn('Errore traduzione:', err);
-                    return text;
-                }
-            }
-
-            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER (CON CONTROLLO TITOLI AVANZATO) =====
-            function containsSpoilers(media, synopsis) {
-                // 1. Controlla se contiene il titolo dell'anime (VERSIONE AVANZATA)
-                const titles = [
-                    media.title.english,
-                    media.title.romaji,
-                    media.title.native
-                ].filter(Boolean);
-                
-                for (const title of titles) {
-                    if (!title) continue;
-                    
-                    // Controlla il titolo normale
-                    const regex = new RegExp('\\b' + title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-                    if (regex.test(synopsis)) {
-                        return true;
+                // Cerca nella mappa specifica
+                for (const [key, emojiList] of Object.entries(animeEmojiMap)) {
+                    if (title.includes(key) || key.includes(title)) {
+                        emojiList.forEach(e => emojis.add(e));
+                        break;
                     }
-                    
-                    // 🔥 CONTROLLO EXTRA: titolo senza spazi (per titoli giapponesi)
-                    const noSpaces = title.replace(/\s+/g, '');
-                    if (noSpaces.length > 5 && synopsis.toLowerCase().includes(noSpaces.toLowerCase())) {
-                        console.log(`   🔍 Rilevato titolo (senza spazi): "${noSpaces}"`);
-                        return true;
-                    }
-                    
-                    // 🔥 CONTROLLO EXTRA: prime 3 parole del titolo
-                    const words = title.split(' ');
-                    if (words.length > 2) {
-                        const firstWords = words.slice(0, 3).join(' ');
-                        if (firstWords.length > 5 && synopsis.toLowerCase().includes(firstWords.toLowerCase())) {
-                            console.log(`   🔍 Rilevato titolo (prime parole): "${firstWords}"`);
-                            return true;
-                        }
-                    }
-                    
-                    // 🔥 CONTROLLO EXTRA: ultime 3 parole del titolo
-                    if (words.length > 2) {
-                        const lastWords = words.slice(-3).join(' ');
-                        if (lastWords.length > 5 && synopsis.toLowerCase().includes(lastWords.toLowerCase())) {
-                            console.log(`   🔍 Rilevato titolo (ultime parole): "${lastWords}"`);
-                            return true;
-                        }
-                    }
                 }
                 
-                // 2. Controlla se contiene nomi di personaggi (DA ANILIST)
-                const characters = media.characters?.nodes || [];
-                for (const char of characters) {
-                    if (!char?.name?.full) continue;
-                    const charName = char.name.full;
-                    
-                    if (synopsis.toLowerCase().includes(charName.toLowerCase())) {
-                        return true;
-                    }
-                    
-                    const nameParts = charName.split(' ');
-                    for (const part of nameParts) {
-                        if (part.length > 2 && synopsis.toLowerCase().includes(part.toLowerCase())) {
-                            return true;
-                        }
-                    }
+                // === MAPPA BASATA SUI GENERI ===
+                if (genres.includes('Action') && genres.includes('Adventure')) {
+                    emojis.add('⚔️');
+                }
+                if (genres.includes('Comedy')) {
+                    emojis.add('😂');
+                }
+                if (genres.includes('Romance')) {
+                    emojis.add('❤️');
+                }
+                if (genres.includes('Fantasy')) {
+                    emojis.add('🐉');
+                }
+                if (genres.includes('Sci-Fi')) {
+                    emojis.add('🚀');
+                }
+                if (genres.includes('Horror')) {
+                    emojis.add('💀');
+                }
+                if (genres.includes('Mystery')) {
+                    emojis.add('🔍');
+                }
+                if (genres.includes('Drama')) {
+                    emojis.add('🎭');
+                }
+                if (genres.includes('Sports')) {
+                    emojis.add('🏆');
+                }
+                if (genres.includes('Music')) {
+                    emojis.add('🎵');
+                }
+                if (genres.includes('School')) {
+                    emojis.add('🎒');
+                }
+                if (genres.includes('Slice of Life')) {
+                    emojis.add('🌿');
+                }
+                if (genres.includes('Supernatural')) {
+                    emojis.add('👻');
+                }
+                if (genres.includes('Mecha')) {
+                    emojis.add('🤖');
+                }
+                if (genres.includes('Isekai')) {
+                    emojis.add('🌍');
                 }
                 
-                // 3. RICONOSCIMENTO AUTOMATICO DI NOMI DI PERSONAGGI
-                const words = synopsis.split(/\s+/);
-                let previousWord = '';
-                
-                const commonCapitalized = [
-                    'The', 'This', 'That', 'These', 'Those', 'He', 'She', 'It', 'They', 
-                    'We', 'You', 'I', 'My', 'Your', 'His', 'Her', 'Our', 'Their', 
-                    'Me', 'Him', 'Us', 'Them', 'Who', 'Whom', 'Whose', 'Which', 
-                    'What', 'When', 'Where', 'Why', 'How', 'Then', 'Than', 'So', 'For',
-                    'But', 'Or', 'Yet', 'Nor', 'As', 'At', 'By', 'From', 'Into', 'Of',
-                    'On', 'To', 'With', 'Without', 'After', 'Before', 'During', 'Since',
-                    'Upon', 'Within', 'Without', 'About', 'Across', 'Against', 'Along',
-                    'Among', 'Around', 'Behind', 'Below', 'Beneath', 'Beside', 'Between',
-                    'Beyond', 'Inside', 'Outside', 'Under', 'Upon', 'Within', 'Without',
-                    'Chapter', 'Episode', 'Season', 'Volume', 'Part', 'Act', 'Scene',
-                    'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-                    'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'
-                ];
-                
-                for (const word of words) {
-                    const cleanWord = word.replace(/[^a-zA-ZÀ-ÿ']/g, '');
-                    if (cleanWord.length < 3) {
-                        previousWord = cleanWord;
-                        continue;
-                    }
-                    
-                    const isCapitalized = cleanWord[0] === cleanWord[0].toUpperCase();
-                    const isNotStartOfSentence = previousWord && !previousWord.endsWith('.') && !previousWord.endsWith('!') && !previousWord.endsWith('?');
-                    const isCommon = commonCapitalized.includes(cleanWord);
-                    
-                    if (isCapitalized && isNotStartOfSentence && !isCommon) {
-                        console.log(`   🔍 Rilevato possibile nome di persona: "${cleanWord}"`);
-                        return true;
-                    }
-                    
-                    previousWord = cleanWord;
+                // === EMOJI DI FALLBACK ===
+                if (emojis.size < 2) {
+                    emojis.add('🎌');
+                    emojis.add('📺');
                 }
                 
-                return false;
-            }
-
-            // ===== PULISCE E ACCORCIA LA SINOPSI =====
-            function getShortSynopsis(media) {
-                let description = media.description || '';
-                
-                if (!description || description.length < 10) {
-                    return null;
-                }
-                
-                description = description.replace(/<[^>]*>/g, '');
-                description = description.replace(/&#[0-9]+;/g, ' ');
-                description = description.replace(/&quot;/g, '"');
-                description = description.replace(/&amp;/g, '&');
-                description = description.replace(/&lt;/g, '<');
-                description = description.replace(/&gt;/g, '>');
-                description = description.replace(/&nbsp;/g, ' ');
-                description = description.replace(/\(Source:.*?\)/gi, '');
-                description = description.replace(/Source:.*?$/gi, '');
-                description = description.replace(/\s+/g, ' ').trim();
-                
-                if (description.length < 20) {
-                    return null;
-                }
-                
-                const words = description.split(' ');
-                let synopsis = words.slice(0, 35).join(' ');
-                
-                if (synopsis.length < 80 && words.length > 35) {
-                    synopsis = words.slice(0, 50).join(' ');
-                }
-                
-                if (words.length > 35) {
-                    synopsis += '...';
-                }
-                
-                return synopsis.trim();
+                // Restituisce le prime 3-5 emoji
+                const result = Array.from(emojis);
+                return result.slice(0, 5);
             }
 
             function buildMultiQuery() {
@@ -1275,9 +1244,6 @@
                     const uniqueAnime = Array.from(uniqueMap.values());
                     console.log(`✅ Caricati ${uniqueAnime.length} anime unici (mix di 5 categorie)`);
                     
-                    const withDesc = uniqueAnime.filter(a => a.description && a.description.length > 10);
-                    console.log(`📝 Anime con descrizione valida: ${withDesc.length}`);
-                    
                     return shuffleArray(uniqueAnime);
 
                 } catch (err) {
@@ -1338,9 +1304,10 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO AVANZATO
+            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE EMOJI
             // ============================================================
-            async function generateAnimeQuestion(animeList) {
+            function generateAnimeQuestion(animeList) {
+                // Filtra anime con descrizione
                 const validAnime = animeList.filter(a => {
                     const desc = a.description || '';
                     const clean = desc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -1352,25 +1319,19 @@
                     return null;
                 }
                 
-                // Prova fino a 30 volte a trovare un anime senza spoiler
-                for (let attempt = 0; attempt < 30; attempt++) {
+                // Prova fino a 20 volte
+                for (let attempt = 0; attempt < 20; attempt++) {
                     const media = pickRandom(validAnime);
                     if (!media) continue;
                     
                     const correct = getTitle(media);
                     const correctImage = getImage(media);
                     
-                    let synopsis = getShortSynopsis(media);
-                    if (!synopsis || synopsis.length < 20) continue;
+                    // Ottieni le emoji per questo anime
+                    const emojis = getEmojisForAnime(media);
+                    if (emojis.length < 2) continue;
                     
-                    // ===== CONTROLLA SPOILER =====
-                    if (containsSpoilers(media, synopsis)) {
-                        console.log(`⏭️ Saltato "${correct}" - contiene spoiler nella trama`);
-                        continue;
-                    }
-                    
-                    // Traduci la sinossi
-                    const translatedSynopsis = await translateToItalian(synopsis);
+                    const emojiDisplay = emojis.join(' ');
                     
                     const others = validAnime.filter(a => a.id !== media.id);
                     if (others.length < 3) continue;
@@ -1391,15 +1352,15 @@
                     if (uniqueOptions.size !== 4) continue;
                     
                     return {
-                        question: `Quale anime ha questa trama?`,
-                        synopsis: translatedSynopsis,
+                        question: `Quale anime è rappresentato da queste emoji?`,
+                        emojiDisplay: emojiDisplay,
                         options: options,
                         correct: correct,
                         detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                         showImageInQuestion: false,
                         questionImage: null,
                         isTextOnly: false,
-                        hasSynopsis: true
+                        hasEmoji: true
                     };
                 }
                 
@@ -1409,31 +1370,31 @@
             // ============================================================
             // GENERA DOMANDE (PUBBLICA)
             // ============================================================
-            window.generateQuestions = async function(type, animeList) {
+            window.generateQuestions = function(type, animeList) {
                 const questions = [];
                 const usedTitles = new Set();
-                const usedSynopsis = new Set();
+                const usedEmoji = new Set();
                 let attempts = 0;
                 const maxAttempts = 500;
 
                 while (questions.length < QUESTIONS_PER_QUIZ && attempts < maxAttempts) {
                     attempts++;
                     
-                    const q = await generateAnimeQuestion(animeList);
+                    const q = generateAnimeQuestion(animeList);
                     if (!q || !q.options || q.options.length !== 4) continue;
                     
                     const titleKey = q.correct;
-                    const synopsisKey = q.synopsis ? q.synopsis.substring(0, 50) : '';
+                    const emojiKey = q.emojiDisplay ? q.emojiDisplay.substring(0, 30) : '';
                     
                     if (usedTitles.has(titleKey)) continue;
-                    if (synopsisKey && usedSynopsis.has(synopsisKey)) continue;
+                    if (emojiKey && usedEmoji.has(emojiKey)) continue;
                     
                     const correctInOptions = q.options.some(o => o.isCorrect === true);
                     if (!correctInOptions) continue;
                     
                     questions.push(q);
                     usedTitles.add(titleKey);
-                    if (synopsisKey) usedSynopsis.add(synopsisKey);
+                    if (emojiKey) usedEmoji.add(emojiKey);
                 }
 
                 console.log(`✅ Generate ${questions.length} domande uniche su ${QUESTIONS_PER_QUIZ} richieste (${attempts} tentativi)`);
@@ -1492,8 +1453,8 @@
                 }
 
                 let questionHtml = q.question;
-                if (q.hasSynopsis && q.synopsis) {
-                    questionHtml += `<div class="synopsis">${q.synopsis}</div>`;
+                if (q.hasEmoji && q.emojiDisplay) {
+                    questionHtml += `<span class="emoji-display">${q.emojiDisplay}</span>`;
                 }
 
                 questionText.innerHTML = questionHtml;
@@ -1611,10 +1572,10 @@
 
                 if (accuracy === 100) {
                     resultIcon.textContent = '🏆';
-                    resultLabel.textContent = 'Perfetto! Conosci tutti gli anime dalla trama!';
+                    resultLabel.textContent = 'Perfetto! Conosci tutti gli anime dalle emoji!';
                 } else if (accuracy >= 80) {
                     resultIcon.textContent = '🌟';
-                    resultLabel.textContent = 'Ottimo! Conosci bene le trame degli anime!';
+                    resultLabel.textContent = 'Ottimo! Conosci bene gli anime!';
                 } else if (accuracy >= 60) {
                     resultIcon.textContent = '📚';
                     resultLabel.textContent = 'Buon lavoro! Continua a guardare anime!';
@@ -1642,7 +1603,7 @@
                         return;
                     }
 
-                    const questions = await window.generateQuestions(quizType, animeData);
+                    const questions = window.generateQuestions(quizType, animeData);
                     
                     if (questions.length < 5) {
                         errorMessage.textContent = 'Impossibile generare abbastanza domande. Riprova.';
