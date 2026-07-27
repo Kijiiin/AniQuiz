@@ -64,9 +64,6 @@
                 radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.04) 0%, transparent 50%);
         }
 
-        /* ============================================================
-           NAVBAR
-           ============================================================ */
         .navbar {
             background: rgba(10, 10, 15, 0.85);
             backdrop-filter: blur(20px);
@@ -132,9 +129,6 @@
             color: var(--accent-purple);
         }
 
-        /* ============================================================
-           BREADCRUMB
-           ============================================================ */
         .breadcrumb {
             padding: 16px 0 8px;
             color: var(--text-secondary);
@@ -155,9 +149,6 @@
             margin: 0 8px;
         }
 
-        /* ============================================================
-           QUIZ CONTAINER
-           ============================================================ */
         .quiz-container {
             background: var(--bg-card);
             border-radius: var(--radius);
@@ -219,9 +210,6 @@
             transition: width 0.5s ease;
         }
 
-        /* ============================================================
-           QUESTION AREA
-           ============================================================ */
         .question-area {
             flex: 1;
             display: flex;
@@ -245,12 +233,13 @@
             font-weight: 400;
             font-size: 1.1rem;
             line-height: 1.6;
-            margin-top: 8px;
-            padding: 16px 20px;
+            margin-top: 12px;
+            padding: 20px 24px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: var(--radius-sm);
             border-left: 4px solid var(--accent-purple);
             font-style: italic;
+            display: block;
         }
 
         .question-text .synopsis::before {
@@ -402,9 +391,6 @@
             transform: none;
         }
 
-        /* ============================================================
-           FEEDBACK
-           ============================================================ */
         .feedback-area {
             margin-top: 20px;
             padding: 16px 20px;
@@ -463,9 +449,6 @@
             }
         }
 
-        /* ============================================================
-           NEXT BUTTON
-           ============================================================ */
         .next-btn {
             align-self: flex-end;
             margin-top: 20px;
@@ -493,9 +476,6 @@
             box-shadow: 0 0 50px rgba(168, 85, 247, 0.25);
         }
 
-        /* ============================================================
-           RESULTS
-           ============================================================ */
         .results {
             display: none;
             flex-direction: column;
@@ -597,9 +577,6 @@
             background: rgba(168, 85, 247, 0.2);
         }
 
-        /* ============================================================
-           LOADING
-           ============================================================ */
         .loading {
             display: flex;
             flex-direction: column;
@@ -669,9 +646,6 @@
             color: var(--accent-purple);
         }
 
-        /* ============================================================
-           ERROR STATE
-           ============================================================ */
         .error-state {
             display: none;
             flex-direction: column;
@@ -734,9 +708,6 @@
             background: var(--bg-card-hover);
         }
 
-        /* ============================================================
-           FOOTER
-           ============================================================ */
         .footer {
             border-top: 1px solid rgba(255, 255, 255, 0.04);
             padding: 24px 0;
@@ -757,9 +728,6 @@
             color: var(--accent-pink);
         }
 
-        /* ============================================================
-           RESPONSIVE
-           ============================================================ */
         @media (max-width: 1024px) {
             .option-btn .option-image {
                 width: 110px;
@@ -1059,19 +1027,25 @@
                 // Prende la descrizione (se c'è)
                 let description = media.description || '';
                 
+                // Se non c'è descrizione, usa un messaggio
+                if (!description || description.length < 10) {
+                    return 'Trama non disponibile per questo anime.';
+                }
+                
                 // Rimuove i tag HTML
                 description = description.replace(/<[^>]*>/g, '');
                 
                 // Rimuove i caratteri speciali
                 description = description.replace(/&#[0-9]+;/g, ' ');
+                description = description.replace(/\s+/g, ' ').trim();
                 
-                // Prende solo le prime 150-200 parole (circa)
+                // Prende solo le prime 30-50 parole (circa 200-250 caratteri)
                 const words = description.split(' ');
-                let synopsis = words.slice(0, 30).join(' ');
+                let synopsis = words.slice(0, 35).join(' ');
                 
                 // Se la sinossi è troppo corta, usa più parole
-                if (synopsis.length < 50 && words.length > 30) {
-                    synopsis = words.slice(0, 50).join(' ');
+                if (synopsis.length < 80 && words.length > 35) {
+                    synopsis = words.slice(0, 60).join(' ');
                 }
                 
                 // Se ancora troppo corta, usa tutto
@@ -1080,11 +1054,11 @@
                 }
                 
                 // Aggiunge i puntini di sospensione se è stata tagliata
-                if (words.length > 30) {
+                if (words.length > 35) {
                     synopsis += '...';
                 }
                 
-                return synopsis.trim() || 'Trama non disponibile';
+                return synopsis.trim() || 'Trama non disponibile.';
             }
 
             function buildMultiQuery() {
@@ -1228,14 +1202,19 @@
             // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE SINOPSI
             // ============================================================
             function generateAnimeQuestion(animeList) {
-                // Filtra anime che hanno una descrizione
-                const valid = animeList.filter(a => a.description && a.description.length > 50);
-                if (valid.length < 4) {
-                    // Fallback: usa tutti gli anime
-                    const media = pickRandom(animeList);
-                    if (!media) return null;
-                    const correct = getTitle(media);
-                    const correctImage = getImage(media);
+                // Prendi un anime a caso
+                const media = pickRandom(animeList);
+                if (!media) return null;
+                
+                const correct = getTitle(media);
+                const correctImage = getImage(media);
+                
+                // Prendi la sinossi (se c'è)
+                let synopsis = getShortSynopsis(media);
+                
+                // Se la sinossi è "Trama non disponibile", usa un fallback
+                if (synopsis === 'Trama non disponibile per questo anime.' || synopsis === 'Trama non disponibile.') {
+                    // Usa una domanda classica
                     const others = animeList.filter(a => a.id !== media.id);
                     if (others.length < 3) return null;
                     const shuffledOthers = shuffleArray(others).slice(0, 3);
@@ -1250,16 +1229,12 @@
                         detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                         showImageInQuestion: false,
                         questionImage: null,
-                        isTextOnly: false
+                        isTextOnly: false,
+                        hasSynopsis: false
                     };
                 }
-
-                const media = pickRandom(valid);
-                const correct = getTitle(media);
-                const correctImage = getImage(media);
-                const synopsis = getShortSynopsis(media);
                 
-                const others = valid.filter(a => a.id !== media.id);
+                const others = animeList.filter(a => a.id !== media.id);
                 if (others.length < 3) return null;
 
                 const shuffledOthers = shuffleArray(others).slice(0, 3);
