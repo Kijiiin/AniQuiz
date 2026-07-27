@@ -240,6 +240,31 @@
             color: var(--accent-pink);
         }
 
+        .question-text .synopsis {
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-top: 8px;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--accent-purple);
+            font-style: italic;
+        }
+
+        .question-text .synopsis::before {
+            content: '"';
+            color: var(--accent-purple);
+            font-size: 1.5rem;
+        }
+
+        .question-text .synopsis::after {
+            content: '"';
+            color: var(--accent-purple);
+            font-size: 1.5rem;
+        }
+
         .question-image {
             display: flex;
             justify-content: center;
@@ -1029,8 +1054,37 @@
                 return media.coverImage?.large || null;
             }
 
-            function sleep(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
+            // ===== PULISCE E ACCORCIA LA SINOPSI =====
+            function getShortSynopsis(media) {
+                // Prende la descrizione (se c'è)
+                let description = media.description || '';
+                
+                // Rimuove i tag HTML
+                description = description.replace(/<[^>]*>/g, '');
+                
+                // Rimuove i caratteri speciali
+                description = description.replace(/&#[0-9]+;/g, ' ');
+                
+                // Prende solo le prime 150-200 parole (circa)
+                const words = description.split(' ');
+                let synopsis = words.slice(0, 30).join(' ');
+                
+                // Se la sinossi è troppo corta, usa più parole
+                if (synopsis.length < 50 && words.length > 30) {
+                    synopsis = words.slice(0, 50).join(' ');
+                }
+                
+                // Se ancora troppo corta, usa tutto
+                if (synopsis.length < 30) {
+                    synopsis = description;
+                }
+                
+                // Aggiunge i puntini di sospensione se è stata tagliata
+                if (words.length > 30) {
+                    synopsis += '...';
+                }
+                
+                return synopsis.trim() || 'Trama non disponibile';
             }
 
             function buildMultiQuery() {
@@ -1056,6 +1110,7 @@
                                 startDate { year }
                                 studios { nodes { name } }
                                 genres
+                                description
                                 characters(page: 1, perPage: 10) {
                                     nodes {
                                         id
@@ -1170,15 +1225,41 @@
             };
 
             // ============================================================
-            // SOLO GENERATORE PER "INDOVINA L'ANIME"
+            // GENERATORE PER "INDOVINA L'ANIME" - VERSIONE SINOPSI
             // ============================================================
             function generateAnimeQuestion(animeList) {
-                const media = pickRandom(animeList);
-                if (!media) return null;
+                // Filtra anime che hanno una descrizione
+                const valid = animeList.filter(a => a.description && a.description.length > 50);
+                if (valid.length < 4) {
+                    // Fallback: usa tutti gli anime
+                    const media = pickRandom(animeList);
+                    if (!media) return null;
+                    const correct = getTitle(media);
+                    const correctImage = getImage(media);
+                    const others = animeList.filter(a => a.id !== media.id);
+                    if (others.length < 3) return null;
+                    const shuffledOthers = shuffleArray(others).slice(0, 3);
+                    const options = shuffleArray([
+                        { text: correct, image: correctImage, isCorrect: true },
+                        ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
+                    ]);
+                    return {
+                        question: `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`,
+                        options: options,
+                        correct: correct,
+                        detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
+                        showImageInQuestion: false,
+                        questionImage: null,
+                        isTextOnly: false
+                    };
+                }
 
+                const media = pickRandom(valid);
                 const correct = getTitle(media);
                 const correctImage = getImage(media);
-                const others = animeList.filter(a => a.id !== media.id);
+                const synopsis = getShortSynopsis(media);
+                
+                const others = valid.filter(a => a.id !== media.id);
                 if (others.length < 3) return null;
 
                 const shuffledOthers = shuffleArray(others).slice(0, 3);
@@ -1188,13 +1269,15 @@
                 ]);
 
                 return {
-                    question: `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`,
+                    question: `Quale anime ha questa trama?`,
+                    synopsis: synopsis,
                     options: options,
                     correct: correct,
                     detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
                     showImageInQuestion: false,
                     questionImage: null,
-                    isTextOnly: false
+                    isTextOnly: false,
+                    hasSynopsis: true
                 };
             }
 
@@ -1202,7 +1285,6 @@
             // GENERA DOMANDE (PUBBLICA) - SOLO PER "ANIME"
             // ============================================================
             window.generateQuestions = function(type, animeList) {
-                // Ignora il tipo, usa sempre generateAnimeQuestion
                 const questions = [];
                 let attempts = 0;
 
@@ -1275,7 +1357,13 @@
                     return;
                 }
 
-                questionText.innerHTML = q.question;
+                // Costruisce il HTML della domanda
+                let questionHtml = q.question;
+                if (q.hasSynopsis && q.synopsis) {
+                    questionHtml += `<div class="synopsis">${q.synopsis}</div>`;
+                }
+
+                questionText.innerHTML = questionHtml;
                 
                 questionImageContainer.innerHTML = '';
                 if (q.showImageInQuestion && q.questionImage) {
@@ -1390,10 +1478,10 @@
 
                 if (accuracy === 100) {
                     resultIcon.textContent = '🏆';
-                    resultLabel.textContent = 'Perfetto! Conosci tutti gli anime!';
+                    resultLabel.textContent = 'Perfetto! Conosci tutti gli anime dalla trama!';
                 } else if (accuracy >= 80) {
                     resultIcon.textContent = '🌟';
-                    resultLabel.textContent = 'Ottimo! Conosci davvero bene gli anime!';
+                    resultLabel.textContent = 'Ottimo! Conosci bene le trame degli anime!';
                 } else if (accuracy >= 60) {
                     resultIcon.textContent = '📚';
                     resultLabel.textContent = 'Buon lavoro! Continua a guardare anime!';
