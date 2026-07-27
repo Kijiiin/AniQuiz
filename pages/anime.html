@@ -10,7 +10,7 @@
     
     <style>
         /* ============================================================
-           RESET & VARIABILI
+           RESET & VARIABILI - (IDENTICO a prima)
            ============================================================ */
         * {
             margin: 0;
@@ -987,6 +987,9 @@
             window.isDataLoaded = false;
             window.isLoading = false;
 
+            // ===== CACHE PER LE TRADUZIONI =====
+            const translationCache = new Map();
+
             function shuffleArray(arr) {
                 for (let i = arr.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1021,6 +1024,34 @@
 
             function getImage(media) {
                 return media.coverImage?.large || null;
+            }
+
+            // ===== TRADUCE IL TESTO IN ITALIANO =====
+            async function translateToItalian(text) {
+                if (!text || text.length < 5) return text;
+                
+                // Controlla la cache
+                if (translationCache.has(text)) {
+                    return translationCache.get(text);
+                }
+                
+                try {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=it&dt=t&q=${encodeURIComponent(text)}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) throw new Error('Errore traduzione');
+                    
+                    const data = await response.json();
+                    const translated = data[0][0][0];
+                    
+                    // Salva in cache
+                    translationCache.set(text, translated);
+                    
+                    return translated;
+                } catch (err) {
+                    console.warn('Errore traduzione:', err);
+                    return text;
+                }
             }
 
             // ===== PULISCE E ACCORCIA LA SINOPSI =====
@@ -1205,10 +1236,9 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - SOLO SINOPSI
+            // GENERATORE PER "INDOVINA L'ANIME" - CON TRADUZIONE
             // ============================================================
-            function generateAnimeQuestion(animeList) {
-                // Filtra SOLO anime che hanno una descrizione valida
+            async function generateAnimeQuestion(animeList) {
                 const validAnime = animeList.filter(a => {
                     const desc = a.description || '';
                     const clean = desc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -1228,6 +1258,9 @@
                 
                 let synopsis = getShortSynopsis(media);
                 if (!synopsis || synopsis.length < 20) return null;
+                
+                // ===== TRADUCE LA SINOPSI IN ITALIANO =====
+                const translatedSynopsis = await translateToItalian(synopsis);
                 
                 const others = validAnime.filter(a => a.id !== media.id);
                 if (others.length < 3) return null;
@@ -1249,7 +1282,7 @@
                 
                 return {
                     question: `Quale anime ha questa trama?`,
-                    synopsis: synopsis,
+                    synopsis: translatedSynopsis, // ← TRADOTTO!
                     options: options,
                     correct: correct,
                     detail: `✅ L'anime corretto è <strong>"${correct}"</strong>`,
@@ -1261,9 +1294,9 @@
             }
 
             // ============================================================
-            // GENERA DOMANDE (PUBBLICA) - SOLO PER "ANIME"
+            // GENERA DOMANDE (PUBBLICA) - CON TRADUZIONE
             // ============================================================
-            window.generateQuestions = function(type, animeList) {
+            window.generateQuestions = async function(type, animeList) {
                 const questions = [];
                 const usedTitles = new Set();
                 const usedSynopsis = new Set();
@@ -1273,7 +1306,7 @@
                 while (questions.length < QUESTIONS_PER_QUIZ && attempts < maxAttempts) {
                     attempts++;
                     
-                    const q = generateAnimeQuestion(animeList);
+                    const q = await generateAnimeQuestion(animeList);
                     if (!q || !q.options || q.options.length !== 4) continue;
                     
                     const titleKey = q.correct;
@@ -1496,7 +1529,7 @@
                         return;
                     }
 
-                    const questions = window.generateQuestions(quizType, animeData);
+                    const questions = await window.generateQuestions(quizType, animeData);
                     
                     if (questions.length < 5) {
                         errorMessage.textContent = 'Impossibile generare abbastanza domande. Riprova.';
