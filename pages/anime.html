@@ -1052,9 +1052,9 @@
                 }
             }
 
-            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER (SOLO NOMI PERSONAGGI) =====
+            // ===== CONTROLLA SE LA SINOPSI CONTIENE SPOILER (CON CONTROLLO TITOLI AVANZATO) =====
             function containsSpoilers(media, synopsis) {
-                // 1. Controlla se contiene il titolo dell'anime
+                // 1. Controlla se contiene il titolo dell'anime (VERSIONE AVANZATA)
                 const titles = [
                     media.title.english,
                     media.title.romaji,
@@ -1063,9 +1063,37 @@
                 
                 for (const title of titles) {
                     if (!title) continue;
+                    
+                    // Controlla il titolo normale
                     const regex = new RegExp('\\b' + title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
                     if (regex.test(synopsis)) {
                         return true;
+                    }
+                    
+                    // 🔥 CONTROLLO EXTRA: titolo senza spazi (per titoli giapponesi)
+                    const noSpaces = title.replace(/\s+/g, '');
+                    if (noSpaces.length > 5 && synopsis.toLowerCase().includes(noSpaces.toLowerCase())) {
+                        console.log(`   🔍 Rilevato titolo (senza spazi): "${noSpaces}"`);
+                        return true;
+                    }
+                    
+                    // 🔥 CONTROLLO EXTRA: prime 3 parole del titolo
+                    const words = title.split(' ');
+                    if (words.length > 2) {
+                        const firstWords = words.slice(0, 3).join(' ');
+                        if (firstWords.length > 5 && synopsis.toLowerCase().includes(firstWords.toLowerCase())) {
+                            console.log(`   🔍 Rilevato titolo (prime parole): "${firstWords}"`);
+                            return true;
+                        }
+                    }
+                    
+                    // 🔥 CONTROLLO EXTRA: ultime 3 parole del titolo
+                    if (words.length > 2) {
+                        const lastWords = words.slice(-3).join(' ');
+                        if (lastWords.length > 5 && synopsis.toLowerCase().includes(lastWords.toLowerCase())) {
+                            console.log(`   🔍 Rilevato titolo (ultime parole): "${lastWords}"`);
+                            return true;
+                        }
                     }
                 }
                 
@@ -1075,12 +1103,10 @@
                     if (!char?.name?.full) continue;
                     const charName = char.name.full;
                     
-                    // Controlla il nome completo
                     if (synopsis.toLowerCase().includes(charName.toLowerCase())) {
                         return true;
                     }
                     
-                    // Controlla anche il nome senza cognome
                     const nameParts = charName.split(' ');
                     for (const part of nameParts) {
                         if (part.length > 2 && synopsis.toLowerCase().includes(part.toLowerCase())) {
@@ -1093,7 +1119,6 @@
                 const words = synopsis.split(/\s+/);
                 let previousWord = '';
                 
-                // Parole comuni che iniziano con maiuscola ma NON sono nomi di persona
                 const commonCapitalized = [
                     'The', 'This', 'That', 'These', 'Those', 'He', 'She', 'It', 'They', 
                     'We', 'You', 'I', 'My', 'Your', 'His', 'Her', 'Our', 'Their', 
@@ -1110,22 +1135,17 @@
                 ];
                 
                 for (const word of words) {
-                    // Pulisce la parola (rimuove punteggiatura)
                     const cleanWord = word.replace(/[^a-zA-ZÀ-ÿ']/g, '');
                     if (cleanWord.length < 3) {
                         previousWord = cleanWord;
                         continue;
                     }
                     
-                    // Se la parola inizia con MAIUSCOLA e non è l'inizio della frase
                     const isCapitalized = cleanWord[0] === cleanWord[0].toUpperCase();
                     const isNotStartOfSentence = previousWord && !previousWord.endsWith('.') && !previousWord.endsWith('!') && !previousWord.endsWith('?');
-                    
-                    // Controlla che la parola non sia comune
                     const isCommon = commonCapitalized.includes(cleanWord);
                     
                     if (isCapitalized && isNotStartOfSentence && !isCommon) {
-                        // Potrebbe essere un nome di persona!
                         console.log(`   🔍 Rilevato possibile nome di persona: "${cleanWord}"`);
                         return true;
                     }
@@ -1318,7 +1338,7 @@
             };
 
             // ============================================================
-            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO SOLO PERSONAGGI
+            // GENERATORE PER "INDOVINA L'ANIME" - CON CONTROLLO AVANZATO
             // ============================================================
             async function generateAnimeQuestion(animeList) {
                 const validAnime = animeList.filter(a => {
@@ -1343,9 +1363,9 @@
                     let synopsis = getShortSynopsis(media);
                     if (!synopsis || synopsis.length < 20) continue;
                     
-                    // ===== CONTROLLA SPOILER (SOLO PERSONAGGI) =====
+                    // ===== CONTROLLA SPOILER =====
                     if (containsSpoilers(media, synopsis)) {
-                        console.log(`⏭️ Saltato "${correct}" - contiene nomi di personaggi nella trama`);
+                        console.log(`⏭️ Saltato "${correct}" - contiene spoiler nella trama`);
                         continue;
                     }
                     
