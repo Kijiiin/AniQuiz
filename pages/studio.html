@@ -1132,74 +1132,9 @@
                 }
             };
 
-            // ===== GENERATORI DOMANDE =====
-
-            function generateCharacterQuestion(animeList) {
-                const valid = animeList.filter(a => getCharacters(a).length > 2);
-                if (valid.length < 4) return null;
-
-                const media = pickRandom(valid);
-                const chars = getCharacters(media);
-                const character = pickRandom(chars);
-                if (!character) return null;
-
-                const correct = getTitle(media);
-                const correctImage = getImage(media);
-                const others = valid.filter(a => a.id !== media.id);
-                if (others.length < 3) return null;
-
-                const shuffledOthers = shuffleArray(others).slice(0, 3);
-                const options = shuffleArray([
-                    { text: correct, image: correctImage, isCorrect: true },
-                    ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
-                ]);
-
-                return {
-                    question: `In quale anime compare il personaggio <span class="highlight">"${character.name.full}"</span>?`,
-                    options: options,
-                    correct: correct,
-                    detail: `✅ "${character.name.full}" appare in <strong>"${correct}"</strong>`,
-                    showImageInQuestion: false,
-                    questionImage: null,
-                    isTextOnly: false
-                };
-            }
-
-            function generateAnimeQuestion(animeList) {
-                const media = pickRandom(animeList);
-                if (!media) return null;
-
-                const correct = getTitle(media);
-                const correctImage = getImage(media);
-                const others = animeList.filter(a => a.id !== media.id);
-                if (others.length < 3) return null;
-
-                const shuffledOthers = shuffleArray(others).slice(0, 3);
-                const options = shuffleArray([
-                    { text: correct, image: correctImage, isCorrect: true },
-                    ...shuffledOthers.map(a => ({ text: getTitle(a), image: getImage(a), isCorrect: false }))
-                ]);
-
-                const chars = getCharacters(media);
-                const character = chars.length > 0 ? pickRandom(chars) : null;
-
-                const question = character ?
-                    `In quale di questi anime compare <span class="highlight">"${character.name.full}"</span>?` :
-                    `Quale di questi è l'anime <span class="highlight">"${correct}"</span>?`;
-
-                return {
-                    question: question,
-                    options: options,
-                    correct: correct,
-                    detail: character ?
-                        `✅ "${character.name.full}" appare in <strong>"${correct}"</strong>` :
-                        `✅ L'anime corretto è <strong>"${correct}"</strong>`,
-                    showImageInQuestion: false,
-                    questionImage: null,
-                    isTextOnly: false
-                };
-            }
-
+            // ============================================================
+            // SOLO GENERATORE PER "INDOVINA LO STUDIO"
+            // ============================================================
             function generateStudioQuestion(animeList) {
                 const valid = animeList.filter(a => getStudio(a) !== 'Sconosciuto');
                 if (valid.length < 4) return null;
@@ -1230,157 +1165,16 @@
                 };
             }
 
-            function generateYearQuestion(animeList) {
-                const valid = animeList.filter(a => a.startDate?.year && a.startDate.year > 1970);
-                if (valid.length < 4) return null;
-
-                const media = pickRandom(valid);
-                const correct = String(getYear(media));
-                const title = getTitle(media);
-                const correctImage = getImage(media);
-
-                const others = valid.filter(a => a.id !== media.id);
-                if (others.length < 3) return null;
-
-                const yearNum = parseInt(correct);
-                const distractorYears = new Set();
-                const offsets = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-                for (const offset of offsets) {
-                    const y = yearNum + offset;
-                    if (y > 1970 && y < 2030) {
-                        distractorYears.add(String(y));
-                    }
-                    if (distractorYears.size >= 3) break;
-                }
-
-                let distractors = Array.from(distractorYears);
-                let attempts = 0;
-                while (distractors.length < 3 && attempts < 50) {
-                    const other = pickRandom(others);
-                    if (other) {
-                        const y = String(getYear(other));
-                        if (y !== correct && !distractors.includes(y) && y !== '?' && y !== 'undefined') {
-                            distractors.push(y);
-                        }
-                    }
-                    attempts++;
-                }
-
-                if (distractors.length < 3) {
-                    let fakeCounter = 1;
-                    while (distractors.length < 3) {
-                        const fakeYear = String(yearNum + (fakeCounter * 2));
-                        if (!distractors.includes(fakeYear) && fakeYear !== correct) {
-                            distractors.push(fakeYear);
-                        }
-                        fakeCounter++;
-                        if (fakeCounter > 20) break;
-                    }
-                }
-
-                if (distractors.length < 3) {
-                    const fallbacks = ['2000', '2005', '2010', '2015', '2020'];
-                    for (const fb of fallbacks) {
-                        if (!distractors.includes(fb) && fb !== correct) {
-                            distractors.push(fb);
-                        }
-                        if (distractors.length >= 3) break;
-                    }
-                }
-
-                const options = shuffleArray([
-                    { text: correct, icon: 'fa-calendar', isCorrect: true },
-                    ...distractors.slice(0, 3).map(y => ({ text: y, icon: 'fa-calendar', isCorrect: false }))
-                ]);
-
-                return {
-                    question: `In che anno è uscito <span class="highlight">"${title}"</span>?`,
-                    options: options,
-                    correct: correct,
-                    detail: `✅ "${title}" è uscito nel <strong>${correct}</strong>`,
-                    showImageInQuestion: true,
-                    questionImage: correctImage,
-                    title: title,
-                    isTextOnly: true
-                };
-            }
-
-            function generateGenreQuestion(animeList) {
-                const valid = animeList.filter(a => a.genres && a.genres.length > 0);
-                if (valid.length < 4) return null;
-
-                const media = pickRandom(valid);
-                const genres = getGenres(media);
-                if (genres.length === 0) return null;
-
-                const genre = pickRandom(genres);
-                const title = getTitle(media);
-                const correctImage = getImage(media);
-
-                const notInGenre = valid.filter(a => 
-                    a.id !== media.id && 
-                    (!a.genres || !a.genres.includes(genre))
-                );
-                
-                if (notInGenre.length < 3) return null;
-
-                const shuffledDistractors = shuffleArray(notInGenre).slice(0, 3);
-                
-                const options = shuffleArray([
-                    { text: title, image: correctImage, isCorrect: true },
-                    ...shuffledDistractors.map(a => ({ 
-                        text: getTitle(a), 
-                        image: getImage(a), 
-                        isCorrect: false 
-                    }))
-                ]);
-
-                return {
-                    question: `Quale di questi anime appartiene al genere <span class="highlight">"${genre}"</span>?`,
-                    options: options,
-                    correct: title,
-                    detail: `✅ "<strong>${title}</strong>" è un anime di genere ${genre}`,
-                    showImageInQuestion: false,
-                    questionImage: null,
-                    isTextOnly: false
-                };
-            }
-
-            function generateMixedQuestion(animeList) {
-                const generators = [
-                    generateCharacterQuestion,
-                    generateAnimeQuestion,
-                    generateStudioQuestion,
-                    generateYearQuestion,
-                    generateGenreQuestion
-                ];
-
-                const generator = pickRandom(generators);
-                let question = null;
-                let attempts = 0;
-                while (!question && attempts < 10) {
-                    question = generator(animeList);
-                    attempts++;
-                }
-                return question;
-            }
-
+            // ============================================================
+            // GENERA DOMANDE (PUBBLICA) - SOLO PER "STUDIO"
+            // ============================================================
             window.generateQuestions = function(type, animeList) {
-                const generators = {
-                    character: generateCharacterQuestion,
-                    anime: generateAnimeQuestion,
-                    studio: generateStudioQuestion,
-                    year: generateYearQuestion,
-                    genre: generateGenreQuestion,
-                    mixed: generateMixedQuestion
-                };
-
-                const generator = generators[type] || generators.mixed;
+                // Ignora il tipo, usa sempre generateStudioQuestion
                 const questions = [];
                 let attempts = 0;
 
                 while (questions.length < 10 && attempts < 300) {
-                    const q = generator(animeList);
+                    const q = generateStudioQuestion(animeList);
                     if (q && q.options && q.options.length === 4) {
                         const duplicate = questions.some(existing =>
                             existing.question === q.question ||
@@ -1611,15 +1405,7 @@
                     currentIndex = 0;
                     score = 0;
                     
-                    const titles = {
-                        anime: 'Indovina l\'Anime',
-                        character: 'Indovina il Personaggio',
-                        studio: 'Indovina lo Studio',
-                        year: 'Indovina l\'Anno',
-                        genre: 'Indovina dal Genere',
-                        mixed: 'Quiz Misto 🔥'
-                    };
-                    quizTitle.textContent = titles[quizType] || 'Quiz';
+                    quizTitle.textContent = 'Indovina lo Studio';
                     
                     loading.style.display = 'none';
                     quizArea.style.display = 'block';
