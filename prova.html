@@ -2,36 +2,38 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Test AniList → YouTube Opening</title>
+<title>AniList Opening Test</title>
 
 <style>
-body{
-    font-family: Arial, sans-serif;
+body {
     background:#111;
     color:white;
+    font-family:Arial;
     text-align:center;
     padding:40px;
 }
 
-button{
+button {
     padding:15px 30px;
     font-size:18px;
     cursor:pointer;
 }
 
-iframe{
+iframe {
     width:900px;
-    height:506px;
-    border:none;
+    height:500px;
     margin-top:30px;
+    border:0;
 }
 </style>
+
 </head>
+
 <body>
 
-<h1>Test Opening AniList</h1>
+<h1>🎵 AniList Opening Test</h1>
 
-<button onclick="openOpening(17074)">
+<button onclick="openOpening(21)">
 Apri Opening
 </button>
 
@@ -39,11 +41,16 @@ Apri Opening
 
 <iframe id="player" allowfullscreen></iframe>
 
+
 <script>
 
-const YOUTUBE_API_KEY = "AIzaSyCeM7KVc9lZsdd8HM5b-PAfhx0usN8Aubo";
+const YOUTUBE_API_KEY = "YOUR_YOUTUBE_API_KEY";
+
 
 async function openOpening(anilistId){
+
+    console.log("Avvio ricerca opening...");
+
 
     const query = `
     query($id:Int){
@@ -56,65 +63,124 @@ async function openOpening(anilistId){
         }
     }`;
 
-    try{
 
-        // AniList
-        const aniRes = await fetch("https://graphql.anilist.co",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            },
-            body:JSON.stringify({
-                query,
-                variables:{id:anilistId}
-            })
-        });
+    try {
+
+        // PRENDO IL TITOLO DA ANILIST
+        const aniRes = await fetch(
+            "https://graphql.anilist.co",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                },
+                body:JSON.stringify({
+                    query:query,
+                    variables:{
+                        id:anilistId
+                    }
+                })
+            }
+        );
+
 
         const aniData = await aniRes.json();
 
-        if(!aniData.data.Media){
+        console.log("AniList:", aniData);
+
+
+        if(!aniData.data || !aniData.data.Media){
             alert("Anime non trovato");
             return;
         }
 
-        const media = aniData.data.Media;
 
         const title =
-            media.english ||
-            media.romaji ||
-            media.native;
+            aniData.data.Media.title.english ||
+            aniData.data.Media.title.romaji ||
+            aniData.data.Media.title.native;
 
-        console.log("Titolo:",title);
 
+        console.log("Titolo trovato:", title);
+
+
+
+        // CERCA OPENING SU YOUTUBE
         const searchQuery = `${title} opening 1`;
 
-        // YouTube
-        const ytRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=1&q=${encodeURIComponent(searchQuery)}&key=${YOUTUBE_API_KEY}`
-        );
+        console.log("Ricerca YouTube:", searchQuery);
+
+
+
+        const ytUrl =
+        "https://www.googleapis.com/youtube/v3/search?" +
+        "part=snippet" +
+        "&type=video" +
+        "&videoEmbeddable=true" +
+        "&maxResults=1" +
+        "&q=" + encodeURIComponent(searchQuery) +
+        "&key=" + YOUTUBE_API_KEY;
+
+
+
+        const ytRes = await fetch(ytUrl);
+
 
         const ytData = await ytRes.json();
 
-        console.log(ytData);
 
-        if(!ytData.items.length){
-            alert("Opening non trovata");
+        console.log("YouTube status:", ytRes.status);
+        console.log("YouTube risposta:", ytData);
+
+
+
+        // MOSTRA ERRORE PRECISO
+        if(ytData.error){
+
+            alert(
+                "Errore YouTube:\n\n" +
+                ytData.error.message
+            );
+
             return;
         }
 
-        const videoId = ytData.items[0].id.videoId;
+
+
+        if(!ytData.items || ytData.items.length === 0){
+
+            alert("Opening non trovata");
+            return;
+
+        }
+
+
+
+        const videoId =
+            ytData.items[0].id.videoId;
+
+
+        console.log("Video trovato:", videoId);
+
+
 
         document.getElementById("player").src =
-            `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        `https://www.youtube.com/embed/${videoId}?autoplay=1`;
 
-    }catch(err){
-        console.error(err);
+
+    }
+    catch(error){
+
+        console.error("Errore:", error);
+        alert("Errore nello script");
+
     }
 
 }
 
 </script>
+
 
 </body>
 </html>
