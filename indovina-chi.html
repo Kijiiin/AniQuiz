@@ -697,20 +697,20 @@
                 <button class="btn btn-secondary" onclick="showJoin()">🔗 Unisciti</button>
             </div>
             <div id="joinSection" class="hidden" style="margin-top: 15px;">
-                <input type="text" id="peerIdInput" placeholder="Incolla l'ID del tuo amico">
+                <input type="text" id="peerIdInput" placeholder="Codice a 4 cifre (es. 1234)" maxlength="4" pattern="\d*" style="text-transform: uppercase; letter-spacing: 6px; font-size: 20px; text-align: center;">
                 <button class="btn btn-success" onclick="joinGame()">📞 Connetti</button>
                 <button class="btn btn-secondary" onclick="showJoin()" style="margin-top: 5px;">Annulla</button>
             </div>
             <div id="waitingSection" class="hidden" style="margin-top: 20px;">
                 <div style="text-align: center; margin-bottom: 15px;">
-                    <p style="color: #666; margin-bottom: 10px;">📋 Condividi questo ID con il tuo amico:</p>
+                    <p style="color: #666; margin-bottom: 10px;">📋 Condividi questo codice con il tuo amico:</p>
                     <div class="room-code">
-                        <span class="label">ID PARTITA</span>
+                        <span class="label">CODICE PARTITA</span>
                         <div class="code" id="myPeerId">Caricamento...</div>
                     </div>
                 </div>
                 <div class="share-section">
-                    <button class="btn btn-info" onclick="copyPeerId()">📋 Copia ID</button>
+                    <button class="btn btn-info" onclick="copyPeerId()">📋 Copia Codice</button>
                     <button class="btn btn-primary" onclick="shareViaWhatsApp()">💬 WhatsApp</button>
                     <button class="btn btn-success" onclick="shareViaTelegram()">✈️ Telegram</button>
                 </div>
@@ -962,8 +962,8 @@
             const id = document.getElementById('myPeerId').textContent;
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(id).then(() => {
-                    showToast('✅ ID copiato!', 'success');
-                    addLog('📋 ID copiato', 'success');
+                    showToast('✅ Codice copiato!', 'success');
+                    addLog('📋 Codice copiato', 'success');
                 }).catch(() => fallbackCopy(id));
             } else {
                 fallbackCopy(id);
@@ -977,8 +977,8 @@
             textArea.select();
             try {
                 document.execCommand('copy');
-                showToast('✅ ID copiato!', 'success');
-                addLog('📋 ID copiato (fallback)', 'success');
+                showToast('✅ Codice copiato!', 'success');
+                addLog('📋 Codice copiato (fallback)', 'success');
             } catch (err) {
                 showToast('❌ Errore copia', 'error');
             }
@@ -987,21 +987,20 @@
 
         function shareViaWhatsApp() {
             const id = document.getElementById('myPeerId').textContent;
-            const message = `🎮 Unisciti alla mia partita di AniQuiz! Inserisci questo ID: ${id}`;
+            const message = `🎮 Unisciti alla mia partita di AniQuiz! Codice: ${id}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
         }
 
         function shareViaTelegram() {
             const id = document.getElementById('myPeerId').textContent;
-            const message = `🎮 Unisciti alla mia partita di AniQuiz! Inserisci questo ID: ${id}`;
+            const message = `🎮 Unisciti alla mia partita di AniQuiz! Codice: ${id}`;
             window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(message)}`, '_blank');
         }
 
         // ============================================
-        // RECUPERO PERSONAGGI DA ANILIST (MIGLIORATO)
+        // RECUPERO PERSONAGGI DA ANILIST
         // ============================================
         async function fetchAnimeCharacters() {
-            // Query ottimizzata: richiede nome, immagine large e titolo dell'anime
             const query = `
                 query {
                     Page(page: 1, perPage: 24) {
@@ -1039,7 +1038,7 @@
                 if (data.errors) throw new Error(data.errors[0].message);
                 
                 const characters = data.data.Page.characters
-                    .filter(c => c.image && c.image.large) // solo chi ha immagine
+                    .filter(c => c.image && c.image.large)
                     .map(c => ({
                         id: c.id,
                         name: c.name.first + (c.name.last ? ' ' + c.name.last : ''),
@@ -1055,7 +1054,7 @@
             } catch (error) {
                 addLog(`❌ Errore Anilist: ${error.message}`, 'error');
                 showToast('⚠️ Anilist non risponde, uso lista di fallback', 'warning', 4000);
-                // Fallback: lista hardcoded con placeholder
+                // Fallback
                 return [
                     { id: 1, name: 'Goku', anime: 'Dragon Ball', image: 'https://via.placeholder.com/150?text=Goku', emoji: '🐉' },
                     { id: 2, name: 'Naruto', anime: 'Naruto', image: 'https://via.placeholder.com/150?text=Naruto', emoji: '🍥' },
@@ -1179,45 +1178,45 @@
         }
 
         // ============================================
-        // PEERJS - COMUNICAZIONE
+        // PEERJS CON ID A 4 CIFRE
         // ============================================
-        function initPeer() {
+        function generateRoomCode() {
+            return String(Math.floor(1000 + Math.random() * 9000));
+        }
+
+        function initPeer(customId = null) {
             return new Promise((resolve, reject) => {
-                addLog('Inizializzazione PeerJS...', 'info');
-                showToast('🔌 Connessione in corso...', 'info', 2000);
-                GameState.peer = new Peer({ debug: 2 });
-                GameState.peer.on('open', (id) => {
-                    GameState.peerId = id;
-                    document.getElementById('myPeerId').textContent = id;
-                    addLog(`✅ Peer aperto con ID: ${id}`, 'success');
-                    updateConnectionStatus('connected', 'In attesa di connessioni');
-                    showToast('✅ Connesso!', 'success', 2000);
-                    resolve(id);
+                const id = customId || generateRoomCode();
+                addLog(`🔑 Inizializzazione con ID: ${id}`, 'info');
+                
+                GameState.peer = new Peer(id, { debug: 0 });
+                
+                GameState.peer.on('open', (assignedId) => {
+                    GameState.peerId = assignedId;
+                    document.getElementById('myPeerId').textContent = assignedId;
+                    addLog(`✅ Peer aperto con ID: ${assignedId}`, 'success');
+                    updateConnectionStatus('connected', 'In attesa');
+                    showToast(`✅ Stanza: ${assignedId}`, 'success', 3000);
+                    resolve(assignedId);
                 });
-                GameState.peer.on('connection', (conn) => {
-                    addLog(`📞 Connessione ricevuta da: ${conn.peer}`, 'success');
-                    GameState.connection = conn;
-                    setupConnection(conn);
-                    addChatMessage('system', null, '🔗 Un amico si è connesso!');
-                    document.getElementById('waitingSection').classList.add('hidden');
-                    updateConnectionStatus('connected', 'Connesso!');
-                    showToast('🔗 Amico connesso!', 'success', 2000);
-                    startPing();
-                    if (GameState.isHost) {
-                        loadBoardAndSendToClient();
-                    }
-                });
+                
                 GameState.peer.on('error', (err) => {
-                    addLog(`❌ Errore PeerJS: ${err.message}`, 'error');
-                    showToast(`❌ Errore: ${err.message}`, 'error', 4000);
-                    updateConnectionStatus('disconnected', 'Errore');
+                    if (err.type === 'unavailable-id') {
+                        addLog('⚠️ ID già in uso, ne genero uno nuovo', 'warning');
+                        const newId = generateRoomCode();
+                        showToast(`⚠️ ID occupato, uso: ${newId}`, 'warning', 2000);
+                        GameState.peer.destroy();
+                        initPeer(newId).then(resolve).catch(reject);
+                        return;
+                    }
+                    addLog(`❌ Errore: ${err.message}`, 'error');
+                    showToast(`❌ ${err.message}`, 'error', 3000);
                     reject(err);
                 });
+                
                 setTimeout(() => {
                     if (!GameState.peerId) {
-                        addLog('⚠️ Timeout: Peer non inizializzato', 'error');
-                        showToast('⚠️ Timeout connessione', 'error', 3000);
-                        reject(new Error('Timeout inizializzazione Peer'));
+                        reject(new Error('Timeout inizializzazione'));
                     }
                 }, 10000);
             });
@@ -1230,12 +1229,10 @@
                     return;
                 }
                 if (data.type === 'pong') {
-                    // reset del timeout di pong
                     if (GameState.pongTimeout) {
                         clearTimeout(GameState.pongTimeout);
                         GameState.pongTimeout = null;
                     }
-                    addLog('💓 Pong ricevuto', 'info');
                     return;
                 }
                 addLog(`📨 Ricevuto: ${data.type}`, 'info');
@@ -1250,7 +1247,7 @@
             conn.on('close', () => {
                 addLog('🔌 Connessione chiusa', 'error');
                 if (GameState.intentionalDisconnect) {
-                    addLog('🔌 Disconnessione volontaria, nessun tentativo di riconnessione', 'info');
+                    addLog('🔌 Disconnessione volontaria', 'info');
                     return;
                 }
                 addChatMessage('system', null, '🔌 Connessione persa! Tentativo di riconnessione...');
@@ -1340,9 +1337,7 @@
                     break;
                 }
                 case 'player_ready': {
-                    if (data.playerId === GameState.myId) {
-                        // noi siamo pronti, già gestito
-                    } else {
+                    if (data.playerId !== GameState.myId) {
                         GameState.opponentReady = true;
                         document.getElementById('opponentStatus').textContent = '✅ L\'avversario è pronto!';
                         showToast('✅ L\'avversario è pronto!', 'success', 2000);
@@ -1594,14 +1589,11 @@
         // ============================================
         function startPing() {
             if (GameState.pingInterval) clearInterval(GameState.pingInterval);
-            // Ping ogni 3 secondi
             GameState.pingInterval = setInterval(() => {
                 if (GameState.connection && GameState.connection.open) {
                     sendMessage({ type: 'ping' });
-                    // Imposta un timeout per il pong (10 secondi)
                     if (GameState.pongTimeout) clearTimeout(GameState.pongTimeout);
                     GameState.pongTimeout = setTimeout(() => {
-                        // Nessun pong ricevuto, consideriamo la connessione persa
                         addLog('⚠️ Nessun pong ricevuto, connessione persa', 'error');
                         if (GameState.connection) {
                             GameState.connection.close();
@@ -1627,10 +1619,8 @@
             }
         }
 
-        // Rilevamento quando il tab torna visibile
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                // Il tab è tornato visibile
                 addLog('👁️ Tab visibile, controllo connessione', 'info');
                 if (!GameState.connection || !GameState.connection.open) {
                     if (!GameState.intentionalDisconnect) {
@@ -1638,14 +1628,13 @@
                         attemptReconnect();
                     }
                 } else {
-                    // Invia un ping per verificare
                     sendMessage({ type: 'ping' });
                 }
             }
         });
 
         // ============================================
-        // RESET STATO (dopo disconnessione)
+        // RESET STATO
         // ============================================
         function resetGameState() {
             stopPing();
@@ -1685,16 +1674,16 @@
             GameState.myName = name;
             GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
             try {
-                await initPeer();
+                await initPeer(); // genera codice 4 cifre automatico
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
-                addChatMessage('system', null, `🏠 Stanza creata! ID: ${GameState.peerId}`);
-                showStatus('📋 Copia l\'ID e condividilo con il tuo amico', 'info');
+                addChatMessage('system', null, `🏠 Stanza creata! Codice: ${GameState.peerId}`);
+                showStatus(`📋 Codice: ${GameState.peerId} - Condividilo con il tuo amico`, 'info');
                 showToast('🏠 Stanza creata!', 'success', 2000);
                 addLog('✅ Stanza creata con successo', 'success');
             } catch (error) {
-                addLog(`❌ Errore creazione stanza: ${error.message}`, 'error');
+                addLog(`❌ Errore: ${error.message}`, 'error');
                 showStatus(`❌ Errore: ${error.message}`, 'error');
                 showToast(`❌ Errore: ${error.message}`, 'error', 4000);
             }
@@ -1711,26 +1700,25 @@
         async function joinGame() {
             const name = document.getElementById('playerName').value.trim() || 'Giocatore2';
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) {
-                showStatus('❌ Inserisci l\'ID del tuo amico!', 'error');
-                showToast('❌ Inserisci un ID valido', 'error', 3000);
-                addLog('❌ Tentativo di connessione senza ID', 'error');
+            if (!remoteId || remoteId.length !== 4 || !/^\d{4}$/.test(remoteId)) {
+                showStatus('❌ Inserisci un codice a 4 cifre (es. 1234)!', 'error');
+                showToast('❌ Codice non valido', 'error', 3000);
                 return;
             }
-            addLog(`📞 Tentativo di connessione a: ${remoteId}`, 'info');
+            addLog(`📞 Connessione a: ${remoteId}`, 'info');
             GameState.myId = 'client_' + Date.now();
             GameState.isHost = false;
             GameState.myName = name;
             GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
             try {
-                await initPeer();
-                updateConnectionStatus('connecting', 'Connessione in corso...');
+                await initPeer(); // ID generato automaticamente (non serve per join)
+                updateConnectionStatus('connecting', 'Connessione...');
                 showStatus('⏳ Connessione in corso...', 'info');
                 const conn = GameState.peer.connect(remoteId);
                 GameState.connection = conn;
                 setupConnection(conn);
                 conn.on('open', () => {
-                    addLog('✅ Connessione aperta!', 'success');
+                    addLog('✅ Connesso!', 'success');
                     updateConnectionStatus('connected', 'Connesso!');
                     showToast('✅ Connesso!', 'success', 2000);
                     startPing();
@@ -1746,14 +1734,14 @@
                 });
                 setTimeout(() => {
                     if (!conn.open) {
-                        addLog('⚠️ Timeout connessione', 'error');
-                        showStatus('❌ Timeout: impossibile connettersi', 'error');
-                        showToast('❌ Timeout connessione', 'error', 4000);
+                        addLog('⚠️ Timeout', 'error');
+                        showStatus('❌ Timeout', 'error');
+                        showToast('❌ Timeout', 'error', 3000);
                         updateConnectionStatus('disconnected', 'Timeout');
                     }
                 }, 15000);
             } catch (error) {
-                addLog(`❌ Errore connessione: ${error.message}`, 'error');
+                addLog(`❌ Errore: ${error.message}`, 'error');
                 showStatus(`❌ Errore: ${error.message}`, 'error');
                 showToast(`❌ Errore: ${error.message}`, 'error', 4000);
                 updateConnectionStatus('disconnected', 'Errore');
