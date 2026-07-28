@@ -530,25 +530,11 @@
             text-align: center;
         }
 
-        .toast.success {
-            background: #27ae60;
-        }
-
-        .toast.error {
-            background: #e74c3c;
-        }
-
-        .toast.warning {
-            background: #f39c12;
-        }
-
-        .toast.info {
-            background: #3498db;
-        }
-
-        .toast.hidden {
-            display: none;
-        }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #e74c3c; }
+        .toast.warning { background: #f39c12; }
+        .toast.info { background: #3498db; }
+        .toast.hidden { display: none; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
@@ -571,38 +557,14 @@
         }
 
         @media (max-width: 600px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
-            
-            .characters-grid {
-                grid-template-columns: 1fr;
-            }
-            
+            .container { padding: 15px; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .characters-grid { grid-template-columns: 1fr; }
             .controls .input-group,
-            .controls .guess-group {
-                grid-template-columns: 1fr;
-            }
-            
-            .game-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .room-code .code {
-                font-size: 1.8em;
-                letter-spacing: 4px;
-            }
-
-            .share-section .btn {
-                min-width: 80px;
-                font-size: 14px;
-                padding: 10px 15px;
-            }
+            .controls .guess-group { grid-template-columns: 1fr; }
+            .game-header { flex-direction: column; align-items: stretch; }
+            .room-code .code { font-size: 1.8em; letter-spacing: 4px; }
+            .share-section .btn { min-width: 80px; font-size: 14px; padding: 10px 15px; }
         }
 
         #selectionScreen .selection-header {
@@ -828,7 +790,8 @@
             maxReconnectAttempts: 5,
             pingInterval: null,
             pongTimeout: null,
-            intentionalDisconnect: false
+            intentionalDisconnect: false,
+            charactersLoaded: false
         };
 
         // ============================================
@@ -841,9 +804,7 @@
             toast.className = `toast ${type}`;
             toast.classList.remove('hidden');
             if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.add('hidden');
-            }, duration);
+            toastTimeout = setTimeout(() => { toast.classList.add('hidden'); }, duration);
         }
 
         // ============================================
@@ -1217,7 +1178,12 @@
                     updateConnectionStatus('connected', 'Connesso!');
                     showToast('🔗 Amico connesso!', 'success', 2000);
                     startPing();
-                    if (GameState.isHost) updateReadyButton();
+                    
+                    // QUANDO L'HOST RICEVE UNA CONNESSIONE, CARICA I PERSONAGGI E MOSTRA LA SELEZIONE
+                    if (GameState.isHost) {
+                        loadBoardAndSendToClient();
+                    }
+                    updateReadyButton();
                 });
                 
                 GameState.peer.on('open', (assignedId) => {
@@ -1589,6 +1555,7 @@
             GameState.opponentReady = false;
             GameState.boardCharacters = [];
             GameState.intentionalDisconnect = false;
+            GameState.charactersLoaded = false;
             selectedCharacterId = null;
             
             const chatBox = document.getElementById('chatBox');
@@ -1620,12 +1587,12 @@
             
             try {
                 await initPeer();
-                await loadBoardAndSendToClient();
+                // NON caricare i personaggi qui! Aspetta che un giocatore si connetta
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
                 addChatMessage('system', null, `🏠 Stanza creata! Codice: ${GameState.peerId}`);
-                showStatus(`📋 Codice: ${GameState.peerId}`, 'info');
+                showStatus(`📋 Codice: ${GameState.peerId} - In attesa di un giocatore...`, 'info');
                 updateReadyButton();
             } catch (error) {
                 addLog(`Errore: ${error.message}`, 'error');
@@ -1658,16 +1625,19 @@
             try {
                 await initPeer();
                 updateConnectionStatus('connecting', 'Connessione...');
+                showStatus('⏳ Connessione in corso...', 'info');
                 const conn = GameState.peer.connect(remoteId);
                 GameState.connection = conn;
                 setupConnection(conn);
                 
                 conn.on('open', () => {
                     updateConnectionStatus('connected', 'Connesso!');
+                    showToast('✅ Connesso! In attesa del tabellone...', 'success', 3000);
                     startPing();
                     sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: name });
                     document.getElementById('joinSection').classList.add('hidden');
                     document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+                    // Il client rimane nella lobby finché non riceve la board dei personaggi
                 });
                 
                 setTimeout(() => {
@@ -1683,11 +1653,17 @@
         }
 
         async function loadBoardAndSendToClient() {
-            showScreen('selectionScreen');
+            // Mostra la selezione solo all'host (il client riceverà la board via messaggio)
+            if (GameState.isHost) {
+                showScreen('selectionScreen');
+            }
             document.getElementById('charBoard').innerHTML = '<div class="loader"></div><p>Caricamento personaggi...</p>';
             const chars = await fetchAnimeCharacters();
             GameState.boardCharacters = chars;
+            GameState.charactersLoaded = true;
             renderCharacterBoard(chars);
+            
+            // Invia la board al client
             if (GameState.connection && GameState.connection.open) {
                 sendMessage({ type: 'characters_board', characters: chars });
             }
