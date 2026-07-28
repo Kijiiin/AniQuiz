@@ -308,12 +308,6 @@
             min-height: 30px;
             color: #a78bfa;
         }
-        .timer {
-            color: #fcd34d;
-            font-weight: 700;
-            font-size: 1.2rem;
-            text-align: center;
-        }
         .hidden {
             display: none !important;
         }
@@ -389,13 +383,12 @@
             <!-- Opzioni per modalità NORMALE (4 bottoni) -->
             <div class="options-grid" id="optionsGrid"></div>
 
-            <!-- Campo input per modalità DIFFICILE -->
+            <!-- Campo input per modalità DIFFICILE (senza timer) -->
             <div class="input-area hidden" id="inputArea">
                 <input type="text" id="answerInput" placeholder="Scrivi il titolo dell'anime..." autocomplete="off" />
                 <button class="btn" id="submitBtn">✏️ Invia</button>
             </div>
 
-            <div class="timer" id="timerDisplay">⏱️ 10</div>
             <div class="feedback" id="feedback"></div>
 
             <div class="game-actions">
@@ -430,7 +423,6 @@
             const inputArea = document.getElementById('inputArea');
             const answerInput = document.getElementById('answerInput');
             const submitBtn = document.getElementById('submitBtn');
-            const timerDisplay = document.getElementById('timerDisplay');
             const feedback = document.getElementById('feedback');
             const skipBtn = document.getElementById('skipBtn');
             const nextRoundBtn = document.getElementById('nextRoundBtn');
@@ -447,11 +439,9 @@
             let isPlaying = false;
             let isWaiting = false;
             let currentTarget = null;
-            let currentOptions = []; // per modalità normale
+            let currentOptions = [];
             let answered = false;
-            let timerInterval = null;
-            let timeLeft = 10;
-            let difficulty = 'normal'; // 'normal' o 'hard'
+            let difficulty = 'normal';
 
             // --- Utility ---
             function shuffle(arr) {
@@ -462,7 +452,6 @@
                 return arr;
             }
 
-            // --- Normalizza per il confronto (modalità difficile) ---
             function normalize(str) {
                 return str.toLowerCase().trim().replace(/\s+/g, ' ');
             }
@@ -474,14 +463,12 @@
                 return allAliases.some(alias => normalizedInput === alias);
             }
 
-            // --- Pesca un anime casuale (per modalità difficile) ---
             function pickRandomAnime() {
                 if (ANIME_DB.length === 0) throw new Error('Database vuoto!');
                 const index = Math.floor(Math.random() * ANIME_DB.length);
                 return ANIME_DB[index];
             }
 
-            // --- Pesca 4 anime unici (per modalità normale) ---
             function pickRandomAnimes(count = 4) {
                 if (ANIME_DB.length < count) throw new Error(`Il database ha solo ${ANIME_DB.length} anime.`);
                 const shuffled = shuffle([...ANIME_DB]);
@@ -500,7 +487,6 @@
                 answered = false;
                 feedback.textContent = '';
                 nextRoundBtn.style.display = 'none';
-                clearInterval(timerInterval);
 
                 // Nascondi tutto ciò che non serve
                 optionsGrid.innerHTML = '';
@@ -527,7 +513,6 @@
 
                         synopsisText.textContent = target.synopsis;
 
-                        // Mostra opzioni
                         optionsGrid.style.display = 'grid';
                         optionsGrid.innerHTML = '';
                         currentOptions.forEach((opt, index) => {
@@ -540,47 +525,21 @@
                         });
                         enableOptions(true);
 
-                        // Non mostriamo il timer per la modalità normale (o lo nascondiamo)
-                        timerDisplay.textContent = '⏱️ —';
-
-                        // Disabilita l'input area (non serve)
                         inputArea.classList.add('hidden');
 
                     } else {
-                        // --- MODALITÀ DIFFICILE: input testuale ---
+                        // --- MODALITÀ DIFFICILE: input testuale (senza timer) ---
                         const anime = pickRandomAnime();
                         currentTarget = anime;
 
                         synopsisText.textContent = anime.synopsis;
 
-                        // Nascondi opzioni, mostra input
                         optionsGrid.style.display = 'none';
                         inputArea.classList.remove('hidden');
                         answerInput.disabled = false;
                         submitBtn.disabled = false;
                         answerInput.focus();
-
-                        // Timer
-                        timeLeft = 10;
-                        timerDisplay.textContent = `⏱️ ${timeLeft}`;
-                        timerInterval = setInterval(() => {
-                            timeLeft--;
-                            timerDisplay.textContent = `⏱️ ${timeLeft}`;
-                            if (timeLeft <= 0) {
-                                clearInterval(timerInterval);
-                                if (!answered) {
-                                    answered = true;
-                                    answerInput.disabled = true;
-                                    submitBtn.disabled = true;
-                                    const playerName = players[currentPlayerIndex];
-                                    scores[playerName] = (scores[playerName] || 0) - 1;
-                                    feedback.textContent = `⏰ Tempo scaduto! ${playerName} perde 1 punto.`;
-                                    updateUI();
-                                    nextPlayer();
-                                    nextRoundBtn.style.display = 'inline-block';
-                                }
-                            }
-                        }, 1000);
+                        // NESSUN TIMER
                     }
 
                     round++;
@@ -597,7 +556,6 @@
                 }
             }
 
-            // --- Abilita/Disabilita pulsanti opzioni (normale) ---
             function enableOptions(enabled) {
                 const btns = optionsGrid.querySelectorAll('.option-btn');
                 btns.forEach(b => b.disabled = !enabled);
@@ -645,8 +603,6 @@
                     feedback.textContent = '✏️ Scrivi un titolo prima di inviare!';
                     return;
                 }
-
-                clearInterval(timerInterval);
 
                 const playerName = players[currentPlayerIndex];
                 const isCorrect = isAnswerCorrect(input, currentTarget);
@@ -701,12 +657,10 @@
             function endGame() {
                 isPlaying = false;
                 isWaiting = true;
-                clearInterval(timerInterval);
                 turnIndicator.textContent = '🏆 PARTITA FINITA!';
                 synopsisText.textContent = 'Il gioco è terminato! Guarda la classifica finale.';
                 optionsGrid.style.display = 'none';
                 inputArea.classList.add('hidden');
-                timerDisplay.textContent = '⏱️ 0';
                 feedback.textContent = '🎉 Complimenti a tutti!';
                 nextRoundBtn.style.display = 'none';
                 skipBtn.style.display = 'none';
@@ -729,7 +683,6 @@
             // --- Gestione skip ---
             function handleSkip() {
                 if (isWaiting || answered || round > MAX_ROUNDS) return;
-                clearInterval(timerInterval);
                 const playerName = players[currentPlayerIndex];
                 feedback.textContent = `⏭️ ${playerName} ha saltato. (nessun punto)`;
                 answered = true;
@@ -753,7 +706,6 @@
                     return;
                 }
 
-                // Leggi difficoltà selezionata
                 const selected = document.querySelector('input[name="difficulty"]:checked');
                 difficulty = selected ? selected.value : 'normal';
 
@@ -771,7 +723,6 @@
                 skipBtn.style.display = 'inline-block';
                 nextRoundBtn.style.display = 'none';
                 feedback.textContent = '';
-                timerDisplay.textContent = '⏱️ —';
 
                 // Reset UI
                 optionsGrid.style.display = 'none';
@@ -803,7 +754,6 @@
                 if (e.key === 'Enter') startGame();
             });
 
-            // Evidenzia la label selezionata
             difficultyRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
                     easyLabel.classList.toggle('selected', this.value === 'normal' && this.checked);
