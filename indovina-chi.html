@@ -1191,6 +1191,21 @@
                 
                 GameState.peer = new Peer(id, { debug: 0 });
                 
+                // === FIX 1: Listener per connessioni in arrivo ===
+                GameState.peer.on('connection', (conn) => {
+                    addLog(`📞 Connessione ricevuta da: ${conn.peer}`, 'success');
+                    GameState.connection = conn;
+                    setupConnection(conn);
+                    addChatMessage('system', null, '🔗 Un amico si è connesso!');
+                    document.getElementById('waitingSection').classList.add('hidden');
+                    updateConnectionStatus('connected', 'Connesso!');
+                    showToast('🔗 Amico connesso!', 'success', 2000);
+                    startPing();
+                    if (GameState.isHost && GameState.boardCharacters.length > 0) {
+                        sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
+                    }
+                });
+                
                 GameState.peer.on('open', (assignedId) => {
                     GameState.peerId = assignedId;
                     document.getElementById('myPeerId').textContent = assignedId;
@@ -1675,6 +1690,8 @@
             GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
             try {
                 await initPeer(); // genera codice 4 cifre automatico
+                // === FIX 2: Carica i personaggi subito dopo la creazione ===
+                await loadBoardAndSendToClient();
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
@@ -1754,7 +1771,10 @@
             const chars = await fetchAnimeCharacters();
             GameState.boardCharacters = chars;
             renderCharacterBoard(chars);
-            sendMessage({ type: 'characters_board', characters: chars });
+            // Se c'è già una connessione, invia la board subito
+            if (GameState.connection && GameState.connection.open) {
+                sendMessage({ type: 'characters_board', characters: chars });
+            }
             document.getElementById('opponentStatus').textContent = '⏳ In attesa che l\'avversario scelga...';
         }
 
