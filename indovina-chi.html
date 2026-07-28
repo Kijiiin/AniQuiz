@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AniQuiz - Indovina Chi Multiplayer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,7 +15,6 @@
             align-items: center;
             padding: 20px;
         }
-
         .container {
             background: white;
             border-radius: 20px;
@@ -29,29 +23,15 @@
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 2.2em;
-        }
-
+        h1 { color: #333; text-align: center; margin-bottom: 20px; font-size: 2.2em; }
         .h1-span {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
-        .screen {
-            display: none;
-        }
-
-        .screen.active {
-            display: block;
-        }
-
+        .screen { display: none; }
+        .screen.active { display: block; }
         input {
             padding: 15px;
             border: 2px solid #e0e0e0;
@@ -61,12 +41,7 @@
             width: 100%;
             margin-bottom: 10px;
         }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
+        input:focus { outline: none; border-color: #667eea; }
         .btn {
             padding: 12px 25px;
             border: none;
@@ -80,68 +55,19 @@
             width: 100%;
             margin: 5px 0;
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .btn-success {
-            background: #27ae60;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #229954;
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-
-        .btn-warning {
-            background: #f39c12;
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background: #e67e22;
-        }
-
-        .btn-info {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background: #2980b9;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-warning:hover { background: #e67e22; }
+        .btn-info { background: #3498db; color: white; }
+        .btn-info:hover { background: #2980b9; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .room-code {
             background: #f8f9fa;
             padding: 25px;
@@ -150,7 +76,6 @@
             margin: 15px 0;
             border: 3px dashed #667eea;
         }
-
         .room-code .code {
             font-size: 2.8em;
             font-weight: bold;
@@ -160,28 +85,9 @@
             word-break: break-all;
             user-select: all;
         }
-
-        .room-code .label {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .share-section {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin: 15px 0;
-        }
-
-        .share-section .btn {
-            width: auto;
-            flex: 1;
-            min-width: 120px;
-        }
-
+        .room-code .label { font-size: 0.9em; color: #666; margin-bottom: 10px; display: block; }
+        .share-section { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 15px 0; }
+        .share-section .btn { width: auto; flex: 1; min-width: 120px; }
         .game-header {
             display: flex;
             justify-content: space-between;
@@ -192,13 +98,7 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-
-        .players-list {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
+        .players-list { display: flex; gap: 10px; flex-wrap: wrap; }
         .player-badge {
             background: #f8f9fa;
             padding: 8px 15px;
@@ -209,26 +109,9 @@
             gap: 8px;
             font-size: 14px;
         }
-
-        .player-badge.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .player-badge .score {
-            background: rgba(0,0,0,0.1);
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 12px;
-        }
-
-        .characters-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 15px 0;
-        }
-
+        .player-badge.active { background: #667eea; color: white; }
+        .player-badge .score { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .characters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
         .character-card {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             border-radius: 15px;
@@ -238,35 +121,11 @@
             border: 3px solid #e0e0e0;
             transition: all 0.3s;
         }
-
-        .character-card.my-character {
-            border-color: #27ae60;
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-        }
-
-        .character-card.opponent-character {
-            border-color: #e74c3c;
-            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
-        }
-
-        .character-card .emoji {
-            font-size: 3em;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .character-card .name {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .character-card .details {
-            color: #666;
-            margin-top: 5px;
-            font-size: 0.9em;
-        }
-
+        .character-card.my-character { border-color: #27ae60; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+        .character-card.opponent-character { border-color: #e74c3c; background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); }
+        .character-card .emoji { font-size: 3em; display: block; margin-bottom: 5px; }
+        .character-card .name { font-size: 1.3em; font-weight: bold; color: #2c3e50; }
+        .character-card .details { color: #666; margin-top: 5px; font-size: 0.9em; }
         .character-card .label {
             font-size: 0.8em;
             font-weight: 600;
@@ -276,17 +135,8 @@
             border-radius: 10px;
             background: rgba(0,0,0,0.05);
         }
-
-        .character-card .label.mine {
-            background: #27ae60;
-            color: white;
-        }
-
-        .character-card .label.theirs {
-            background: #e74c3c;
-            color: white;
-        }
-
+        .character-card .label.mine { background: #27ae60; color: white; }
+        .character-card .label.theirs { background: #e74c3c; color: white; }
         .chat-box {
             border: 2px solid #e0e0e0;
             border-radius: 10px;
@@ -296,7 +146,6 @@
             margin: 15px 0;
             background: #fafafa;
         }
-
         .chat-message {
             margin-bottom: 10px;
             padding: 8px 12px;
@@ -305,62 +154,16 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             animation: fadeIn 0.3s;
         }
-
-        .chat-message .sender {
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .chat-message .time {
-            font-size: 11px;
-            color: #999;
-            margin-left: 10px;
-        }
-
-        .chat-message.system {
-            background: #f0f0f0;
-            text-align: center;
-            font-style: italic;
-        }
-
-        .chat-message.question {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-        }
-
-        .chat-message.answer {
-            background: #f3e5f5;
-            border-left: 4px solid #9c27b0;
-        }
-
-        .chat-message.guess {
-            background: #fff3e0;
-            border-left: 4px solid #ff9800;
-        }
-
-        .chat-message.success {
-            background: #e8f5e9;
-            border-left: 4px solid #4caf50;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-
-        .controls .input-group {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 10px;
-        }
-
-        .controls .guess-group {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 10px;
-        }
-
+        .chat-message .sender { font-weight: 600; color: #667eea; }
+        .chat-message .time { font-size: 11px; color: #999; margin-left: 10px; }
+        .chat-message.system { background: #f0f0f0; text-align: center; font-style: italic; }
+        .chat-message.question { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .chat-message.answer { background: #f3e5f5; border-left: 4px solid #9c27b0; }
+        .chat-message.guess { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .chat-message.success { background: #e8f5e9; border-left: 4px solid #4caf50; }
+        .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .controls .input-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
+        .controls .guess-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
         .status-message {
             text-align: center;
             padding: 12px;
@@ -369,14 +172,11 @@
             font-weight: 600;
             animation: fadeIn 0.3s;
         }
-
         .status-message.info { background: #d1ecf1; color: #0c5460; }
         .status-message.success { background: #d4edda; color: #155724; }
         .status-message.error { background: #f8d7da; color: #721c24; }
         .status-message.warning { background: #fff3cd; color: #856404; }
-
         .hidden { display: none !important; }
-
         .connection-status {
             display: flex;
             align-items: center;
@@ -386,77 +186,20 @@
             font-size: 14px;
             font-weight: 600;
         }
-
         .connection-status.connected { background: #d4edda; color: #155724; }
         .connection-status.connecting { background: #fff3cd; color: #856404; }
         .connection-status.disconnected { background: #f8d7da; color: #721c24; }
-
-        .connection-status .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
+        .connection-status .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
         .connection-status.connected .dot { background: #28a745; }
         .connection-status.connecting .dot { background: #f39c12; animation: pulse 1s infinite; }
         .connection-status.disconnected .dot { background: #dc3545; }
-
-        .debug-log {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 100px;
-            overflow-y: auto;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .debug-log .log-entry { padding: 2px 0; border-bottom: 1px solid #34495e; }
-        .debug-log .log-entry.error { color: #e74c3c; }
-        .debug-log .log-entry.success { color: #2ecc71; }
-
-        .quick-response {
-            margin: 10px 0;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            animation: fadeIn 0.3s;
-        }
-
-        .quick-response input {
-            flex: 1;
-            padding: 8px;
-            border-radius: 8px;
-            border: 2px solid #667eea;
-            margin: 0;
-        }
-
+        .quick-response { margin: 10px 0; display: flex; gap: 10px; align-items: center; animation: fadeIn 0.3s; }
+        .quick-response input { flex: 1; padding: 8px; border-radius: 8px; border: 2px solid #667eea; margin: 0; }
         .quick-response .btn { width: auto; padding: 8px 20px; margin: 0; }
-
-        .turn-indicator {
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
+        .turn-indicator { padding: 5px 15px; border-radius: 20px; font-weight: 600; font-size: 14px; }
         .turn-indicator.my-turn { background: #d4edda; color: #155724; }
         .turn-indicator.other-turn { background: #fff3cd; color: #856404; }
-
-        .round-info {
-            text-align: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin: 10px 0;
-            font-weight: 600;
-            color: #666;
-        }
-
+        .round-info { text-align: center; padding: 10px; background: #f8f9fa; border-radius: 10px; margin: 10px 0; font-weight: 600; color: #666; }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -472,52 +215,37 @@
             max-width: 90%;
             text-align: center;
         }
-
         .toast.success { background: #27ae60; }
         .toast.error { background: #e74c3c; }
         .toast.warning { background: #f39c12; }
         .toast.info { background: #3498db; }
         .toast.hidden { display: none; }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
-
         @keyframes slideUp {
             from { opacity: 0; transform: translateX(-50%) translateY(20px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-
         @keyframes spin { 
             0% { transform: rotate(0deg); } 
             100% { transform: rotate(360deg); } 
         }
-
         @media (max-width: 600px) {
             .container { padding: 15px; }
             .grid-2 { grid-template-columns: 1fr; }
             .characters-grid { grid-template-columns: 1fr; }
-            .controls .input-group,
-            .controls .guess-group { grid-template-columns: 1fr; }
+            .controls .input-group, .controls .guess-group { grid-template-columns: 1fr; }
             .game-header { flex-direction: column; align-items: stretch; }
             .room-code .code { font-size: 1.8em; letter-spacing: 4px; }
             .share-section .btn { min-width: 80px; font-size: 14px; padding: 10px 15px; }
         }
-
-        #selectionScreen .selection-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+        #selectionScreen .selection-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         #selectionScreen .selection-actions { display: flex; gap: 10px; }
         #selectionScreen .selection-actions .btn { width: auto; padding: 10px 20px; }
         .character-board {
@@ -544,14 +272,7 @@
         }
         .character-board .char-card:hover { transform: scale(1.03); border-color: #667eea; }
         .character-board .char-card.selected { border-color: #27ae60; background: #e8f5e9; }
-        .character-board .char-card img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 50%;
-            background: #eee;
-            margin-bottom: 6px;
-        }
+        .character-board .char-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; background: #eee; margin-bottom: 6px; }
         .character-board .char-card .char-name { font-weight: 600; font-size: 0.9em; color: #333; }
         .character-board .char-card .char-anime { font-size: 0.75em; color: #777; }
         .selection-status { text-align: center; margin-top: 10px; font-weight: 500; }
@@ -564,6 +285,9 @@
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
+        #loadingScreen { text-align: center; padding: 50px; }
+        #loadingScreen .loader { margin: 20px auto; }
+        #loadingScreen p { color: #666; font-size: 1.1em; }
     </style>
 </head>
 <body>
@@ -602,9 +326,6 @@
                 </div>
                 <div style="margin-top: 10px;">
                     <div class="status-message info">⏳ In attesa che un amico si connetta...</div>
-                    <div class="status-message warning" style="margin-top: 5px; font-size: 0.9em;">
-                        💡 Puoi uscire dal browser per mandare il link, la connessione rimarrà attiva!
-                    </div>
                 </div>
             </div>
             <div id="debugLog" class="debug-log">
@@ -612,6 +333,13 @@
                 <div id="logEntries"></div>
             </div>
             <button class="btn btn-secondary" onclick="toggleDebug()" style="margin-top: 10px; width: auto; padding: 5px 15px; font-size: 12px;">🔧 Mostra Log</button>
+        </div>
+
+        <!-- LOADING SCREEN (per il client in attesa) -->
+        <div id="loadingScreen" class="screen">
+            <div class="loader"></div>
+            <p>Connesso! Caricamento personaggi...</p>
+            <p style="font-size: 0.9em; color: #999;">Attendi che l'host invii il tabellone</p>
         </div>
 
         <!-- SELEZIONE PERSONAGGIO -->
@@ -625,7 +353,7 @@
             </div>
             <div id="charBoard" class="character-board">
                 <div class="loader"></div>
-                <p style="text-align:center;grid-column:1/-1;">Caricamento personaggi da Anilist...</p>
+                <p style="text-align:center;grid-column:1/-1;">Caricamento personaggi...</p>
             </div>
             <div class="selection-status" id="selectionStatus">Seleziona un personaggio cliccando sulla card</div>
             <div class="selection-status" id="opponentStatus" style="color:#666;">⏳ In attesa che l'avversario scelga...</div>
@@ -665,7 +393,7 @@
             </div>
             <div class="controls" id="gameControls" style="display:none;">
                 <div class="input-group">
-                    <input type="text" id="questionInput" placeholder="❓ Fai una domanda... (es. Il tuo personaggio ha i capelli neri?)">
+                    <input type="text" id="questionInput" placeholder="❓ Fai una domanda...">
                     <button class="btn btn-primary" onclick="askQuestion()">Chiedi</button>
                 </div>
                 <div class="guess-group">
@@ -673,18 +401,13 @@
                     <button class="btn btn-secondary" onclick="makeGuess()">Indovina!</button>
                 </div>
             </div>
-            <button class="btn btn-danger" onclick="disconnectGame()" style="margin-top: 10px; width: auto; padding: 10px 20px; font-size: 14px;">
-                🚪 Esci
-            </button>
+            <button class="btn btn-danger" onclick="disconnectGame()" style="margin-top: 10px; width: auto; padding: 10px 20px; font-size: 14px;">🚪 Esci</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <script>
-        // ============================================
-        // VARIABILI GLOBALI
-        // ============================================
         let toastTimeout = null;
         let debugVisible = false;
         let selectedCharacterId = null;
@@ -706,8 +429,6 @@
             connection: null,
             isHost: false,
             peerId: null,
-            reconnectAttempts: 0,
-            maxReconnectAttempts: 5,
             pingInterval: null,
             pongTimeout: null,
             intentionalDisconnect: false,
@@ -792,8 +513,7 @@
             if (!container) return;
             container.innerHTML = GameState.players.map(p => `
                 <div class="player-badge ${p.id === GameState.myId ? 'active' : ''}">
-                    ${p.name}
-                    <span class="score">⭐ ${p.score || 0}</span>
+                    ${p.name} <span class="score">⭐ ${p.score || 0}</span>
                     ${p.id === GameState.myId ? ' (Tu)' : ''}
                     ${p.id === GameState.currentPlayerId ? ' 🎯' : ''}
                 </div>
@@ -841,19 +561,13 @@
         function updateReadyButton() {
             const readyBtn = document.getElementById('readyBtn');
             if (!readyBtn) return;
-            if (GameState.gameStarted) {
-                readyBtn.disabled = true;
-                return;
-            }
+            if (GameState.gameStarted) { readyBtn.disabled = true; return; }
             let canBeReady = selectedCharacterId !== null;
             if (GameState.isHost) {
                 const otherPlayers = GameState.players.filter(p => p.id !== GameState.myId);
                 canBeReady = canBeReady && otherPlayers.length > 0;
             }
             readyBtn.disabled = !canBeReady;
-            if (!canBeReady && selectedCharacterId !== null && GameState.isHost) {
-                document.getElementById('selectionStatus').textContent = '⏳ In attesa che un amico si connetta...';
-            }
         }
 
         // ============================================
@@ -862,79 +576,34 @@
         function copyPeerId() {
             const id = document.getElementById('myPeerId').textContent;
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(id).then(() => {
-                    showToast('✅ Codice copiato!', 'success');
-                }).catch(() => fallbackCopy(id));
-            } else {
-                fallbackCopy(id);
+                navigator.clipboard.writeText(id).then(() => showToast('✅ Codice copiato!', 'success'));
             }
-        }
-
-        function fallbackCopy(text) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast('✅ Codice copiato!', 'success');
-            } catch (err) {
-                showToast('❌ Errore copia', 'error');
-            }
-            document.body.removeChild(textArea);
         }
 
         function shareViaWhatsApp() {
             const id = document.getElementById('myPeerId').textContent;
-            const message = `🎮 Unisciti alla mia partita di AniQuiz! Codice: ${id}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+            window.open(`https://wa.me/?text=${encodeURIComponent('🎮 Unisciti ad AniQuiz! Codice: ' + id)}`, '_blank');
         }
 
         function shareViaTelegram() {
             const id = document.getElementById('myPeerId').textContent;
-            const message = `🎮 Unisciti alla mia partita di AniQuiz! Codice: ${id}`;
-            window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(message)}`, '_blank');
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('🎮 Unisciti ad AniQuiz! Codice: ' + id)}`, '_blank');
         }
 
         // ============================================
         // ANILIST API
         // ============================================
         async function fetchAnimeCharacters() {
-            const query = `
-                query {
-                    Page(page: 1, perPage: 24) {
-                        characters(sort: POPULARITY_DESC) {
-                            id
-                            name {
-                                first
-                                last
-                            }
-                            image {
-                                large
-                            }
-                            media(sort: POPULARITY_DESC, perPage: 1) {
-                                nodes {
-                                    title {
-                                        romaji
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            `;
             try {
                 const response = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ query })
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        query: `query { Page(page: 1, perPage: 24) { characters(sort: POPULARITY_DESC) { id name { first last } image { large } media(sort: POPULARITY_DESC, perPage: 1) { nodes { title { romaji } } } } } }`
+                    })
                 });
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0].message);
-                
                 const characters = data.data.Page.characters
                     .filter(c => c.image && c.image.large)
                     .map(c => ({
@@ -944,31 +613,26 @@
                         image: c.image.large,
                         emoji: '🎭'
                     }));
-                
                 if (characters.length === 0) throw new Error('Nessun personaggio trovato');
                 return characters;
             } catch (error) {
                 addLog(`Errore Anilist: ${error.message}`, 'error');
                 showToast('⚠️ Uso lista di fallback', 'warning', 3000);
-                return getFallbackCharacters();
+                return [
+                    { id: 1, name: 'Goku', anime: 'Dragon Ball', image: 'https://via.placeholder.com/150/FF6B6B/FFFFFF?text=Goku', emoji: '🐉' },
+                    { id: 2, name: 'Naruto', anime: 'Naruto', image: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Naruto', emoji: '🍥' },
+                    { id: 3, name: 'Luffy', anime: 'One Piece', image: 'https://via.placeholder.com/150/45B7D1/FFFFFF?text=Luffy', emoji: '🏴‍☠️' },
+                    { id: 4, name: 'Saitama', anime: 'One Punch Man', image: 'https://via.placeholder.com/150/96CEB4/FFFFFF?text=Saitama', emoji: '👊' },
+                    { id: 5, name: 'Eren', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/FFEAA7/333333?text=Eren', emoji: '⚔️' },
+                    { id: 6, name: 'Ichigo', anime: 'Bleach', image: 'https://via.placeholder.com/150/DDA0DD/FFFFFF?text=Ichigo', emoji: '⚡' },
+                    { id: 7, name: 'Tanjiro', anime: 'Demon Slayer', image: 'https://via.placeholder.com/150/98D8C8/333333?text=Tanjiro', emoji: '🔥' },
+                    { id: 8, name: 'Deku', anime: 'My Hero Academia', image: 'https://via.placeholder.com/150/F7DC6F/333333?text=Deku', emoji: '💚' },
+                    { id: 9, name: 'Gojo', anime: 'Jujutsu Kaisen', image: 'https://via.placeholder.com/150/BB8FCE/FFFFFF?text=Gojo', emoji: '👁️' },
+                    { id: 10, name: 'Mikasa', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/85C1E9/333333?text=Mikasa', emoji: '⚔️' },
+                    { id: 11, name: 'Levi', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/F8C471/333333?text=Levi', emoji: '⚔️' },
+                    { id: 12, name: 'Kaneki', anime: 'Tokyo Ghoul', image: 'https://via.placeholder.com/150/82E0AA/333333?text=Kaneki', emoji: '🐱' }
+                ];
             }
-        }
-
-        function getFallbackCharacters() {
-            return [
-                { id: 1, name: 'Goku', anime: 'Dragon Ball', image: 'https://via.placeholder.com/150/FF6B6B/FFFFFF?text=Goku', emoji: '🐉' },
-                { id: 2, name: 'Naruto', anime: 'Naruto', image: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Naruto', emoji: '🍥' },
-                { id: 3, name: 'Luffy', anime: 'One Piece', image: 'https://via.placeholder.com/150/45B7D1/FFFFFF?text=Luffy', emoji: '🏴‍☠️' },
-                { id: 4, name: 'Saitama', anime: 'One Punch Man', image: 'https://via.placeholder.com/150/96CEB4/FFFFFF?text=Saitama', emoji: '👊' },
-                { id: 5, name: 'Eren', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/FFEAA7/333333?text=Eren', emoji: '⚔️' },
-                { id: 6, name: 'Ichigo', anime: 'Bleach', image: 'https://via.placeholder.com/150/DDA0DD/FFFFFF?text=Ichigo', emoji: '⚡' },
-                { id: 7, name: 'Tanjiro', anime: 'Demon Slayer', image: 'https://via.placeholder.com/150/98D8C8/333333?text=Tanjiro', emoji: '🔥' },
-                { id: 8, name: 'Deku', anime: 'My Hero Academia', image: 'https://via.placeholder.com/150/F7DC6F/333333?text=Deku', emoji: '💚' },
-                { id: 9, name: 'Gojo', anime: 'Jujutsu Kaisen', image: 'https://via.placeholder.com/150/BB8FCE/FFFFFF?text=Gojo', emoji: '👁️' },
-                { id: 10, name: 'Mikasa', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/85C1E9/333333?text=Mikasa', emoji: '⚔️' },
-                { id: 11, name: 'Levi', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150/F8C471/333333?text=Levi', emoji: '⚔️' },
-                { id: 12, name: 'Kaneki', anime: 'Tokyo Ghoul', image: 'https://via.placeholder.com/150/82E0AA/333333?text=Kaneki', emoji: '🐱' }
-            ];
         }
 
         // ============================================
@@ -997,49 +661,30 @@
         }
 
         function selectCharacter(id) {
-            if (GameState.ready) {
-                showToast('Hai già confermato!', 'warning', 2000);
-                return;
-            }
+            if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
             document.querySelectorAll('#charBoard .char-card').forEach(card => card.classList.remove('selected'));
             const card = document.querySelector(`#charBoard .char-card[data-id="${id}"]`);
             if (card) {
                 card.classList.add('selected');
                 selectedCharacterId = id;
                 const char = GameState.boardCharacters.find(c => c.id === id);
-                if (char) {
-                    document.getElementById('selectionStatus').textContent = `Hai scelto: ${char.name}`;
-                }
+                if (char) document.getElementById('selectionStatus').textContent = `Hai scelto: ${char.name}`;
                 updateReadyButton();
             }
         }
 
         function pickRandomCharacter() {
-            if (GameState.ready) {
-                showToast('Hai già confermato!', 'warning', 2000);
-                return;
-            }
+            if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
             const chars = GameState.boardCharacters;
             if (chars.length === 0) return;
-            const random = chars[Math.floor(Math.random() * chars.length)];
-            selectCharacter(random.id);
+            selectCharacter(chars[Math.floor(Math.random() * chars.length)].id);
         }
 
         function confirmSelection() {
-            if (!selectedCharacterId) {
-                showToast('Seleziona un personaggio prima!', 'warning', 2000);
-                return;
-            }
-            if (GameState.ready) {
-                showToast('Hai già confermato!', 'warning', 2000);
-                return;
-            }
-            if (GameState.isHost) {
-                const otherPlayers = GameState.players.filter(p => p.id !== GameState.myId);
-                if (otherPlayers.length === 0) {
-                    showToast('⏳ Aspetta che un amico si connetta!', 'warning', 3000);
-                    return;
-                }
+            if (!selectedCharacterId) { showToast('Seleziona un personaggio prima!', 'warning', 2000); return; }
+            if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
+            if (GameState.isHost && GameState.players.filter(p => p.id !== GameState.myId).length === 0) {
+                showToast('⏳ Aspetta che un amico si connetta!', 'warning', 3000); return;
             }
             const char = GameState.boardCharacters.find(c => c.id === selectedCharacterId);
             if (!char) return;
@@ -1050,9 +695,7 @@
             document.getElementById('selectionStatus').textContent = `✅ Hai scelto ${char.name}! Attendi l'avversario...`;
             document.querySelectorAll('#charBoard .char-card').forEach(card => card.style.pointerEvents = 'none');
             sendMessage({ type: 'player_ready', playerId: GameState.myId });
-            if (GameState.isHost && GameState.opponentReady) {
-                startGameAfterSelection();
-            }
+            if (GameState.isHost && GameState.opponentReady) startGameAfterSelection();
         }
 
         function startGameAfterSelection() {
@@ -1060,12 +703,7 @@
             GameState.gameStarted = true;
             GameState.round = 1;
             GameState.currentPlayerId = GameState.players[0].id;
-            sendMessage({
-                type: 'start_game',
-                players: GameState.players,
-                currentPlayerId: GameState.currentPlayerId,
-                round: GameState.round
-            });
+            sendMessage({ type: 'start_game', players: GameState.players, currentPlayerId: GameState.currentPlayerId, round: GameState.round });
             showScreen('gameScreen');
             updatePlayersList();
             updateCharacters();
@@ -1077,13 +715,12 @@
         }
 
         // ============================================
-        // PEERJS - VERSIONE CORRETTA
+        // PEERJS - HOST
         // ============================================
         function generateRoomCode() {
             return String(Math.floor(1000 + Math.random() * 9000));
         }
 
-        // HOST: crea un peer con ID specifico e aspetta connessioni
         function initHost() {
             return new Promise((resolve, reject) => {
                 const id = generateRoomCode();
@@ -1096,6 +733,10 @@
                     document.getElementById('myPeerId').textContent = assignedId;
                     addLog(`HOST: Stanza aperta con ID: ${assignedId}`, 'success');
                     updateConnectionStatus('connected', 'In attesa di giocatori');
+                    
+                    // L'HOST carica SUBITO i personaggi in background
+                    loadCharactersInBackground();
+                    
                     resolve(assignedId);
                 });
                 
@@ -1111,9 +752,10 @@
                         showToast('🔗 Amico connesso!', 'success', 2000);
                         startPing();
                         
-                        // Carica la board e inviala al client
-                        if (GameState.isHost && !GameState.charactersLoaded) {
-                            loadBoardAndSendToClient();
+                        // Se i personaggi sono già caricati, mostra la selezione e invia la board
+                        if (GameState.charactersLoaded && GameState.boardCharacters.length > 0) {
+                            showScreen('selectionScreen');
+                            sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
                         }
                         updateReadyButton();
                     });
@@ -1122,7 +764,6 @@
                 GameState.peer.on('error', (err) => {
                     if (err.type === 'unavailable-id') {
                         addLog('HOST: ID già in uso, ne genero uno nuovo', 'warning');
-                        const newId = generateRoomCode();
                         GameState.peer.destroy();
                         initHost().then(resolve).catch(reject);
                         return;
@@ -1137,19 +778,35 @@
             });
         }
 
-        // CLIENT: si connette all'host usando il codice inserito
+        // Carica i personaggi in background (per l'host)
+        async function loadCharactersInBackground() {
+            addLog('HOST: Caricamento personaggi in background...', 'info');
+            const chars = await fetchAnimeCharacters();
+            GameState.boardCharacters = chars;
+            GameState.charactersLoaded = true;
+            addLog('HOST: Personaggi caricati!', 'success');
+            
+            // Se il client è già connesso, invia la board
+            if (GameState.connection && GameState.connection.open) {
+                showScreen('selectionScreen');
+                renderCharacterBoard(chars);
+                sendMessage({ type: 'characters_board', characters: chars });
+            }
+        }
+
+        // ============================================
+        // PEERJS - CLIENT
+        // ============================================
         function connectToHost(hostId) {
             return new Promise((resolve, reject) => {
                 addLog(`CLIENT: Connessione all'host: ${hostId}`, 'info');
                 
-                // Il client crea un peer con ID casuale (non importa quale)
                 GameState.peer = new Peer({ debug: 0 });
                 
                 GameState.peer.on('open', (myId) => {
                     GameState.peerId = myId;
                     addLog(`CLIENT: Il mio ID temporaneo: ${myId}`, 'info');
                     
-                    // Ora connettiti all'host
                     const conn = GameState.peer.connect(hostId, { reliable: true });
                     GameState.connection = conn;
                     setupConnection(conn);
@@ -1161,15 +818,14 @@
                         startPing();
                         
                         // Invia info giocatore all'host
-                        sendMessage({ 
-                            type: 'player_joined', 
-                            playerId: GameState.myId, 
-                            playerName: GameState.myName 
-                        });
+                        sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: GameState.myName });
                         
                         document.getElementById('joinSection').classList.add('hidden');
                         document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
-                        showStatus('✅ Connesso! In attesa del tabellone...', 'success');
+                        
+                        // Mostra schermata di caricamento
+                        showScreen('loadingScreen');
+                        
                         resolve(conn);
                     });
                     
@@ -1190,15 +846,9 @@
 
         function setupConnection(conn) {
             conn.on('data', (data) => {
-                if (data.type === 'ping') {
-                    if (conn.open) conn.send({ type: 'pong' });
-                    return;
-                }
+                if (data.type === 'ping') { if (conn.open) conn.send({ type: 'pong' }); return; }
                 if (data.type === 'pong') {
-                    if (GameState.pongTimeout) {
-                        clearTimeout(GameState.pongTimeout);
-                        GameState.pongTimeout = null;
-                    }
+                    if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
                     return;
                 }
                 addLog(`Ricevuto: ${data.type}`, 'info');
@@ -1243,11 +893,17 @@
                     updatePlayersList();
                     addChatMessage('system', null, `👋 ${data.playerName} si è unito!`);
                     showStatus(`✅ ${data.playerName} si è unito!`, 'success');
+                    
                     if (GameState.isHost) {
                         sendMessage({ type: 'player_list', players: GameState.players });
-                        // Invia la board se già caricata
-                        if (GameState.boardCharacters.length > 0) {
+                        // INVIA SUBITO LA BOARD SE DISPONIBILE
+                        if (GameState.charactersLoaded && GameState.boardCharacters.length > 0) {
+                            addLog('HOST: Invio board al client', 'success');
                             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
+                            showScreen('selectionScreen');
+                            renderCharacterBoard(GameState.boardCharacters);
+                        } else {
+                            addLog('HOST: Board non ancora pronta, verrà inviata appena caricata', 'warning');
                         }
                         updateReadyButton();
                     }
@@ -1260,8 +916,9 @@
                     break;
                     
                 case 'characters_board':
-                    addLog('Ricevuta board personaggi!', 'success');
+                    addLog('CLIENT: Ricevuta board personaggi!', 'success');
                     GameState.boardCharacters = data.characters;
+                    GameState.charactersLoaded = true;
                     renderCharacterBoard(GameState.boardCharacters);
                     showScreen('selectionScreen');
                     showToast('📋 Scegli il tuo personaggio!', 'info', 3000);
@@ -1332,11 +989,8 @@
                 case 'guess_result':
                     if (data.correct) {
                         GameState.players = data.players;
-                        if (data.guesserId === GameState.myId) {
-                            GameState.opponentCharacter = data.character;
-                        } else {
-                            GameState.myCharacter = data.character;
-                        }
+                        if (data.guesserId === GameState.myId) GameState.opponentCharacter = data.character;
+                        else GameState.myCharacter = data.character;
                         updateCharacters();
                         const guesser = GameState.players.find(p => p.id === data.guesserId);
                         addChatMessage('success', null, `🎉 ${guesser ? guesser.name : '?'} ha indovinato! Era ${data.character.name}!`);
@@ -1346,19 +1000,12 @@
                                 const nextIndex = (GameState.players.findIndex(p => p.id === GameState.currentPlayerId) + 1) % GameState.players.length;
                                 GameState.currentPlayerId = GameState.players[nextIndex].id;
                                 GameState.round++;
-                                sendMessage({
-                                    type: 'new_round',
-                                    round: GameState.round,
-                                    currentPlayerId: GameState.currentPlayerId,
-                                    players: GameState.players
-                                });
+                                sendMessage({ type: 'new_round', round: GameState.round, currentPlayerId: GameState.currentPlayerId, players: GameState.players });
                                 updatePlayersList();
                             }, 3000);
                         }
                     } else {
-                        if (data.guesserId === GameState.myId) {
-                            addChatMessage('me', null, `❌ ${data.guess} (Non corretto)`);
-                        }
+                        if (data.guesserId === GameState.myId) addChatMessage('me', null, `❌ ${data.guess} (Non corretto)`);
                         showStatus('❌ Non è corretto!', 'error');
                         setTimeout(() => hideStatus(), 2000);
                     }
@@ -1383,22 +1030,12 @@
         // ============================================
         function handleGuess(guesserId, guess) {
             let targetCharacter = guesserId === GameState.myId ? GameState.opponentCharacter : GameState.myCharacter;
-            if (!targetCharacter) {
-                sendMessage({ type: 'guess_result', guesserId, correct: false, guess });
-                return;
-            }
+            if (!targetCharacter) { sendMessage({ type: 'guess_result', guesserId, correct: false, guess }); return; }
             const isCorrect = guess.toLowerCase().trim() === targetCharacter.name.toLowerCase().trim();
             const player = GameState.players.find(p => p.id === guesserId);
-            
             if (isCorrect) {
                 if (player) player.score = (player.score || 0) + 1;
-                sendMessage({
-                    type: 'guess_result',
-                    guesserId,
-                    correct: true,
-                    character: targetCharacter,
-                    players: GameState.players
-                });
+                sendMessage({ type: 'guess_result', guesserId, correct: true, character: targetCharacter, players: GameState.players });
                 updatePlayersList();
             } else {
                 sendMessage({ type: 'guess_result', guesserId, correct: false, guess });
@@ -1415,14 +1052,12 @@
             responseDiv.id = 'quickResponse';
             responseDiv.className = 'quick-response';
             responseDiv.innerHTML = `
-                <input type="text" id="quickAnswer" placeholder="Rispondi: ${question.substring(0, 50)}...">
+                <input type="text" id="quickAnswer" placeholder="Rispondi...">
                 <button class="btn btn-primary" onclick="sendQuickAnswer()">Invia</button>
             `;
             chatBox.appendChild(responseDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
-            document.getElementById('quickAnswer').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') sendQuickAnswer();
-            });
+            document.getElementById('quickAnswer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuickAnswer(); });
             document.getElementById('quickAnswer').focus();
         }
 
@@ -1460,23 +1095,9 @@
         }
 
         function stopPing() {
-            if (GameState.pingInterval) {
-                clearInterval(GameState.pingInterval);
-                GameState.pingInterval = null;
-            }
-            if (GameState.pongTimeout) {
-                clearTimeout(GameState.pongTimeout);
-                GameState.pongTimeout = null;
-            }
+            if (GameState.pingInterval) { clearInterval(GameState.pingInterval); GameState.pingInterval = null; }
+            if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
         }
-
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && !GameState.intentionalDisconnect) {
-                if (GameState.connection && GameState.connection.open) {
-                    sendMessage({ type: 'ping' });
-                }
-            }
-        });
 
         // ============================================
         // RESET
@@ -1492,7 +1113,6 @@
             GameState.connection = null;
             GameState.peer = null;
             GameState.round = 1;
-            GameState.reconnectAttempts = 0;
             GameState.ready = false;
             GameState.opponentReady = false;
             GameState.boardCharacters = [];
@@ -1533,8 +1153,7 @@
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
                 addChatMessage('system', null, `🏠 Stanza creata! Codice: ${GameState.peerId}`);
-                showStatus(`📋 Codice: ${GameState.peerId} - In attesa di un giocatore...`, 'info');
-                updateReadyButton();
+                showStatus(`📋 Codice: ${GameState.peerId} - In attesa...`, 'info');
             } catch (error) {
                 addLog(`Errore: ${error.message}`, 'error');
                 showStatus(`❌ Errore: ${error.message}`, 'error');
@@ -1544,9 +1163,7 @@
         function showJoin() {
             const section = document.getElementById('joinSection');
             section.classList.toggle('hidden');
-            if (!section.classList.contains('hidden')) {
-                document.getElementById('peerIdInput').focus();
-            }
+            if (!section.classList.contains('hidden')) document.getElementById('peerIdInput').focus();
         }
 
         async function joinGame() {
@@ -1558,7 +1175,6 @@
                 return;
             }
             
-            addLog(`Tentativo di connessione a: ${remoteId}`, 'info');
             GameState.myId = 'client_' + Date.now();
             GameState.isHost = false;
             GameState.myName = name;
@@ -1575,30 +1191,12 @@
             }
         }
 
-        async function loadBoardAndSendToClient() {
-            addLog('Caricamento board personaggi...', 'info');
-            showScreen('selectionScreen');
-            document.getElementById('charBoard').innerHTML = '<div class="loader"></div><p>Caricamento personaggi...</p>';
-            
-            const chars = await fetchAnimeCharacters();
-            GameState.boardCharacters = chars;
-            GameState.charactersLoaded = true;
-            renderCharacterBoard(chars);
-            
-            if (GameState.connection && GameState.connection.open) {
-                addLog('Invio board al client', 'success');
-                sendMessage({ type: 'characters_board', characters: chars });
-            }
-            updateReadyButton();
-        }
-
         function askQuestion() {
             const input = document.getElementById('questionInput');
             const question = input.value.trim();
             if (!question) { showToast('Scrivi una domanda!', 'warning'); return; }
             if (!GameState.gameStarted) { showToast('Partita non iniziata!', 'warning'); return; }
             if (!GameState.isMyTurn) { showToast('Non è il tuo turno!', 'warning'); return; }
-            
             addChatMessage('me', null, `❓ ${question}`);
             sendMessage({ type: 'question', playerId: GameState.myId, question });
             input.value = '';
@@ -1610,7 +1208,6 @@
             if (!guess) { showToast('Scrivi un nome!', 'warning'); return; }
             if (!GameState.gameStarted) { showToast('Partita non iniziata!', 'warning'); return; }
             if (!GameState.isMyTurn) { showToast('Non è il tuo turno!', 'warning'); return; }
-            
             addChatMessage('me', null, `🔍 ${guess}`);
             sendMessage({ type: 'guess', playerId: GameState.myId, guess });
             input.value = '';
@@ -1632,25 +1229,15 @@
             showToast('👋 Disconnesso', 'info', 2000);
         }
 
-        // ============================================
-        // GESTIONE USCITA
-        // ============================================
         window.addEventListener('beforeunload', () => {
             if (GameState.connection && GameState.connection.open) {
-                try {
-                    GameState.connection.send({ type: 'disconnect', playerName: GameState.myName });
-                } catch (err) {}
+                try { GameState.connection.send({ type: 'disconnect', playerName: GameState.myName }); } catch (err) {}
             }
             GameState.intentionalDisconnect = true;
-            if (GameState.peer) {
-                try { GameState.peer.destroy(); } catch (e) {}
-            }
+            if (GameState.peer) { try { GameState.peer.destroy(); } catch (e) {} }
             stopPing();
         });
 
-        // ============================================
-        // AUTO-JOIN
-        // ============================================
         function checkAutoJoin() {
             const params = new URLSearchParams(window.location.search);
             const joinId = params.get('join');
@@ -1661,9 +1248,6 @@
             }
         }
 
-        // ============================================
-        // EVENTI TASTIERA
-        // ============================================
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const active = document.activeElement;
@@ -1674,9 +1258,6 @@
             }
         });
 
-        // ============================================
-        // INIT
-        // ============================================
         addLog('🎮 AniQuiz Indovina Chi caricato!', 'success');
         showScreen('lobbyScreen');
         checkAutoJoin();
