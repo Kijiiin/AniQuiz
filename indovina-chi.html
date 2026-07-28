@@ -335,7 +335,7 @@
             <button class="btn btn-secondary" onclick="toggleDebug()" style="margin-top: 10px; width: auto; padding: 5px 15px; font-size: 12px;">🔧 Mostra Log</button>
         </div>
 
-        <!-- LOADING SCREEN -->
+        <!-- LOADING SCREEN (client in attesa) -->
         <div id="loadingScreen" class="screen">
             <div class="loader"></div>
             <p>Connesso! Caricamento personaggi...</p>
@@ -408,10 +408,9 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <script>
-        let toastTimeout = null;
-        let debugVisible = false;
-        let selectedCharacterId = null;
-
+        // ============================================
+        // STATO GLOBALE
+        // ============================================
         const GameState = {
             players: [],
             currentPlayerId: null,
@@ -435,8 +434,12 @@
             charactersLoaded: false
         };
 
+        let toastTimeout = null;
+        let debugVisible = false;
+        let selectedCharacterId = null;
+
         // ============================================
-        // TOAST
+        // TOAST & DEBUG
         // ============================================
         function showToast(message, type = 'info', duration = 4000) {
             const toast = document.getElementById('toast');
@@ -448,13 +451,9 @@
             toastTimeout = setTimeout(() => { toast.classList.add('hidden'); }, duration);
         }
 
-        // ============================================
-        // DEBUG
-        // ============================================
         function toggleDebug() {
             debugVisible = !debugVisible;
-            const debugEl = document.getElementById('debugLog');
-            if (debugEl) debugEl.style.display = debugVisible ? 'block' : 'none';
+            document.getElementById('debugLog').style.display = debugVisible ? 'block' : 'none';
         }
 
         function addLog(message, type = 'info') {
@@ -462,20 +461,18 @@
             if (!container) return;
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            const time = new Date().toLocaleTimeString();
-            entry.textContent = `[${time}] ${message}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
             console.log(`[AniQuiz] ${message}`);
         }
 
         // ============================================
-        // UI
+        // UI HELPERS
         // ============================================
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            const screen = document.getElementById(screenId);
-            if (screen) screen.classList.add('active');
+            document.getElementById(screenId).classList.add('active');
         }
 
         function showStatus(message, type = 'info') {
@@ -604,7 +601,7 @@
                 });
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0].message);
-                const characters = data.data.Page.characters
+                return data.data.Page.characters
                     .filter(c => c.image && c.image.large)
                     .map(c => ({
                         id: c.id,
@@ -613,8 +610,6 @@
                         image: c.image.large,
                         emoji: '🎭'
                     }));
-                if (characters.length === 0) throw new Error('Nessun personaggio trovato');
-                return characters;
             } catch (error) {
                 addLog(`Errore Anilist: ${error.message}`, 'error');
                 showToast('⚠️ Uso lista di fallback', 'warning', 3000);
@@ -636,7 +631,7 @@
         }
 
         // ============================================
-        // SELEZIONE PERSONAGGIO
+        // GESTIONE PERSONAGGI
         // ============================================
         function renderCharacterBoard(characters) {
             const board = document.getElementById('charBoard');
@@ -662,7 +657,7 @@
 
         function selectCharacter(id) {
             if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
-            document.querySelectorAll('#charBoard .char-card').forEach(card => card.classList.remove('selected'));
+            document.querySelectorAll('#charBoard .char-card').forEach(c => c.classList.remove('selected'));
             const card = document.querySelector(`#charBoard .char-card[data-id="${id}"]`);
             if (card) {
                 card.classList.add('selected');
@@ -675,9 +670,8 @@
 
         function pickRandomCharacter() {
             if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
-            const chars = GameState.boardCharacters;
-            if (chars.length === 0) return;
-            selectCharacter(chars[Math.floor(Math.random() * chars.length)].id);
+            if (GameState.boardCharacters.length === 0) return;
+            selectCharacter(GameState.boardCharacters[Math.floor(Math.random() * GameState.boardCharacters.length)].id);
         }
 
         function confirmSelection() {
@@ -693,7 +687,7 @@
             document.getElementById('readyBtn').disabled = true;
             document.getElementById('readyBtn').textContent = '✅ In attesa...';
             document.getElementById('selectionStatus').textContent = `✅ Hai scelto ${char.name}! Attendi l'avversario...`;
-            document.querySelectorAll('#charBoard .char-card').forEach(card => card.style.pointerEvents = 'none');
+            document.querySelectorAll('#charBoard .char-card').forEach(c => c.style.pointerEvents = 'none');
             sendMessage({ type: 'player_ready', playerId: GameState.myId });
             if (GameState.isHost && GameState.opponentReady) startGameAfterSelection();
         }
@@ -715,186 +709,174 @@
         }
 
         // ============================================
-        // PEERJS
+        // PEERJS CORE
         // ============================================
         function generateRoomCode() {
             return String(Math.floor(1000 + Math.random() * 9000));
         }
 
-        // HOST
-        async function initHostAndLoadCharacters() {
-            const id = generateRoomCode();
-            addLog(`HOST: Creazione stanza con ID: ${id}`, 'info');
-            
-            return new Promise((resolve, reject) => {
-                GameState.peer = new Peer(id, { debug: 0 });
-                
-                GameState.peer.on('open', async (assignedId) => {
-                    GameState.peerId = assignedId;
-                    document.getElementById('myPeerId').textContent = assignedId;
-                    addLog(`HOST: Stanza aperta: ${assignedId}`, 'success');
-                    updateConnectionStatus('connected', 'Caricamento personaggi...');
-                    
-                    try {
-                        const chars = await fetchAnimeCharacters();
-                        GameState.boardCharacters = chars;
-                        GameState.charactersLoaded = true;
-                        // prerenderizza la board in memoria (non mostrata)
-                        addLog('HOST: Personaggi caricati con successo', 'success');
-                    } catch (err) {
-                        addLog(`Errore caricamento personaggi: ${err.message}`, 'error');
-                        reject(err);
-                        return;
-                    }
-                    
-                    updateConnectionStatus('connected', 'In attesa di giocatori');
-                    resolve(assignedId);
-                });
-                
-                GameState.peer.on('connection', (conn) => {
-                    addLog(`HOST: Connessione ricevuta da: ${conn.peer}`, 'success');
-                    GameState.connection = conn;
-                    setupConnection(conn);
-                    
-                    // Se la connessione è già aperta, esegui subito onConnectionOpen
-                    if (conn.open) {
-                        onConnectionOpen(conn);
-                    } else {
-                        conn.on('open', () => onConnectionOpen(conn));
-                    }
-                });
-                
-                GameState.peer.on('error', (err) => {
-                    if (err.type === 'unavailable-id') {
-                        addLog('HOST: ID già in uso, ne genero uno nuovo', 'warning');
-                        GameState.peer.destroy();
-                        initHostAndLoadCharacters().then(resolve).catch(reject);
-                        return;
-                    }
-                    addLog(`HOST: Errore: ${err.message}`, 'error');
-                    reject(err);
-                });
-                
-                setTimeout(() => {
-                    if (!GameState.peerId) reject(new Error('Timeout inizializzazione host'));
-                }, 15000);
+        function sendMessage(data) {
+            if (GameState.connection && GameState.connection.open) {
+                GameState.connection.send(data);
+                addLog(`📤 Inviato: ${data.type}`, 'info');
+            } else {
+                addLog(`⚠️ Connessione chiusa, impossibile inviare`, 'error');
+            }
+        }
+
+        function setupConnection(conn) {
+            conn.on('data', (data) => {
+                if (data.type === 'ping') { conn.send({ type: 'pong' }); return; }
+                if (data.type === 'pong') {
+                    if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
+                    return;
+                }
+                addLog(`📨 Ricevuto: ${data.type}`, 'info');
+                handleMessage(data);
+            });
+            conn.on('close', () => {
+                addLog('🔌 Connessione chiusa', 'error');
+                if (GameState.intentionalDisconnect) return;
+                addChatMessage('system', null, '🔌 Connessione persa!');
+                showToast('🔌 Connessione persa!', 'warning', 3000);
+                updateConnectionStatus('disconnected', 'Disconnesso');
+                GameState.gameStarted = false;
+                stopPing();
+            });
+            conn.on('error', (err) => {
+                addLog(`❌ Errore connessione: ${err.message}`, 'error');
             });
         }
 
-        function onConnectionOpen(conn) {
-            addLog('HOST: Connessione stabilita con client', 'success');
+        // ============================================
+        // HOST
+        // ============================================
+        async function initHost() {
+            const roomCode = generateRoomCode();
+            addLog(`🏠 Host: avvio stanza ${roomCode}`, 'info');
+            GameState.peer = new Peer(roomCode, { debug: 0 });
+
+            GameState.peer.on('open', async (id) => {
+                GameState.peerId = id;
+                document.getElementById('myPeerId').textContent = id;
+                addLog(`✅ Stanza ${id} aperta`, 'success');
+                updateConnectionStatus('connected', 'Caricamento personaggi...');
+
+                // Carica subito i personaggi
+                const chars = await fetchAnimeCharacters();
+                GameState.boardCharacters = chars;
+                GameState.charactersLoaded = true;
+                addLog('🎭 Personaggi caricati', 'success');
+                updateConnectionStatus('connected', 'In attesa di giocatori');
+            });
+
+            GameState.peer.on('connection', (conn) => {
+                addLog(`📞 Nuova connessione da ${conn.peer}`, 'success');
+                GameState.connection = conn;
+                setupConnection(conn);
+                if (conn.open) {
+                    onHostConnectionReady(conn);
+                } else {
+                    conn.on('open', () => onHostConnectionReady(conn));
+                }
+            });
+
+            GameState.peer.on('error', (err) => {
+                addLog(`❌ Errore: ${err.message}`, 'error');
+                if (err.type === 'unavailable-id') {
+                    GameState.peer.destroy();
+                    initHost(); // riprova con un nuovo ID
+                }
+            });
+        }
+
+        function onHostConnectionReady(conn) {
+            addLog('✅ Connessione host-client attiva', 'success');
             document.getElementById('waitingSection').classList.add('hidden');
             updateConnectionStatus('connected', 'Giocatore connesso!');
             showToast('🔗 Amico connesso!', 'success', 2000);
             startPing();
-            
-            // Invia subito la board (pronta)
+
+            // Invia la board e mostra la selezione
             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
-            // Mostra la selezione per l'host
             showScreen('selectionScreen');
             renderCharacterBoard(GameState.boardCharacters);
             updateReadyButton();
         }
 
+        // ============================================
         // CLIENT
+        // ============================================
         function connectToHost(hostId) {
-            return new Promise((resolve, reject) => {
-                addLog(`CLIENT: Connessione all'host: ${hostId}`, 'info');
-                
-                GameState.peer = new Peer({ debug: 0 });
-                
-                GameState.peer.on('open', (myId) => {
-                    GameState.peerId = myId;
-                    addLog(`CLIENT: Mio ID temporaneo: ${myId}`, 'info');
-                    
-                    const conn = GameState.peer.connect(hostId, { reliable: true });
-                    GameState.connection = conn;
-                    setupConnection(conn);
-                    
-                    if (conn.open) {
-                        onClientConnectionOpen(conn);
-                    } else {
-                        conn.on('open', () => onClientConnectionOpen(conn));
-                    }
-                    
-                    setTimeout(() => {
-                        if (!conn.open) {
-                            addLog('CLIENT: Timeout connessione', 'error');
-                            reject(new Error('Timeout connessione'));
-                        }
-                    }, 15000);
-                });
-                
-                GameState.peer.on('error', (err) => {
-                    addLog(`CLIENT: Errore: ${err.message}`, 'error');
-                    reject(err);
-                });
+            addLog(`🔗 Client: connessione a ${hostId}`, 'info');
+            GameState.peer = new Peer({ debug: 0 });
+
+            GameState.peer.on('open', (myId) => {
+                GameState.peerId = myId;
+                addLog(`👤 Mio ID: ${myId}`, 'info');
+                const conn = GameState.peer.connect(hostId, { reliable: true });
+                GameState.connection = conn;
+                setupConnection(conn);
+                if (conn.open) {
+                    onClientConnectionReady(conn);
+                } else {
+                    conn.on('open', () => onClientConnectionReady(conn));
+                }
+            });
+
+            GameState.peer.on('error', (err) => {
+                addLog(`❌ Errore client: ${err.message}`, 'error');
+                showStatus('❌ Connessione fallita', 'error');
+                updateConnectionStatus('disconnected', 'Errore');
             });
         }
 
-        function onClientConnectionOpen(conn) {
-            addLog('CLIENT: Connessione stabilita con host!', 'success');
+        function onClientConnectionReady(conn) {
+            addLog('✅ Connessione client-host attiva', 'success');
             updateConnectionStatus('connected', 'Connesso!');
             showToast('✅ Connesso! Ricezione personaggi...', 'success', 3000);
             startPing();
-            
+
             sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: GameState.myName });
-            
             document.getElementById('joinSection').classList.add('hidden');
             document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
             showScreen('loadingScreen');
         }
 
-        function setupConnection(conn) {
-            conn.on('data', (data) => {
-                if (data.type === 'ping') { if (conn.open) conn.send({ type: 'pong' }); return; }
-                if (data.type === 'pong') {
-                    if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
-                    return;
+        // ============================================
+        // PING
+        // ============================================
+        function startPing() {
+            stopPing();
+            GameState.pingInterval = setInterval(() => {
+                if (GameState.connection && GameState.connection.open) {
+                    sendMessage({ type: 'ping' });
+                    GameState.pongTimeout = setTimeout(() => {
+                        addLog('⏰ Ping timeout', 'error');
+                        GameState.connection.close();
+                        updateConnectionStatus('disconnected', 'Timeout');
+                    }, 10000);
                 }
-                addLog(`Ricevuto: ${data.type}`, 'info');
-                handleMessage(data);
-            });
-            
-            conn.on('close', () => {
-                addLog('Connessione chiusa', 'error');
-                if (GameState.intentionalDisconnect) return;
-                addChatMessage('system', null, '🔌 Connessione persa!');
-                showToast('🔌 Connessione persa!', 'warning', 3000);
-                updateConnectionStatus('disconnected', 'Riconnessione...');
-                GameState.gameStarted = false;
-                stopPing();
-            });
-            
-            conn.on('error', (err) => {
-                addLog(`Errore connessione: ${err.message}`, 'error');
-            });
+            }, 5000);
         }
 
-        function sendMessage(data) {
-            if (GameState.connection && GameState.connection.open) {
-                GameState.connection.send(data);
-                addLog(`Inviato: ${data.type}`, 'info');
-            } else {
-                addLog('Impossibile inviare: connessione non aperta', 'error');
-            }
+        function stopPing() {
+            if (GameState.pingInterval) { clearInterval(GameState.pingInterval); GameState.pingInterval = null; }
+            if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
         }
 
         // ============================================
         // GESTIONE MESSAGGI
         // ============================================
         function handleMessage(data) {
-            addLog(`Elaborazione: ${data.type}`, 'info');
             switch(data.type) {
-                case 'player_joined':
+                case 'player_joined': {
                     const newPlayer = { id: data.playerId, name: data.playerName, score: 0 };
                     if (!GameState.players.find(p => p.id === data.playerId)) {
                         GameState.players.push(newPlayer);
                     }
                     updatePlayersList();
                     addChatMessage('system', null, `👋 ${data.playerName} si è unito!`);
-                    showStatus(`✅ ${data.playerName} si è unito!`, 'success');
-                    
                     if (GameState.isHost) {
                         sendMessage({ type: 'player_list', players: GameState.players });
                         if (GameState.boardCharacters.length > 0) {
@@ -902,32 +884,27 @@
                         }
                         updateReadyButton();
                     }
-                    setTimeout(() => hideStatus(), 2000);
                     break;
-                    
+                }
                 case 'player_list':
                     GameState.players = data.players;
                     updatePlayersList();
                     break;
-                    
                 case 'characters_board':
-                    addLog('Ricevuta board personaggi!', 'success');
+                    addLog('🎉 Board ricevuta', 'success');
                     GameState.boardCharacters = data.characters;
                     GameState.charactersLoaded = true;
                     renderCharacterBoard(GameState.boardCharacters);
                     showScreen('selectionScreen');
                     showToast('📋 Scegli il tuo personaggio!', 'info', 3000);
                     break;
-                    
                 case 'player_ready':
                     if (data.playerId !== GameState.myId) {
                         GameState.opponentReady = true;
                         document.getElementById('opponentStatus').textContent = "✅ L'avversario è pronto!";
-                        showToast("✅ L'avversario è pronto!", 'success', 2000);
                         if (GameState.isHost && GameState.ready) startGameAfterSelection();
                     }
                     break;
-                    
                 case 'start_game':
                     GameState.gameStarted = true;
                     GameState.players = data.players;
@@ -935,28 +912,15 @@
                     GameState.round = data.round || 1;
                     updatePlayersList();
                     updateCharacters();
-                    addChatMessage('system', null, '🎮 La partita è iniziata!');
                     showScreen('gameScreen');
                     updateConnectionStatus('connected', 'In partita');
-                    if (GameState.currentPlayerId === GameState.myId) {
-                        showStatus('🎯 È il tuo turno!', 'info');
-                    } else {
-                        const cp = GameState.players.find(p => p.id === GameState.currentPlayerId);
-                        showStatus(`⏳ Turno di ${cp ? cp.name : '?'}`, 'info');
-                    }
-                    setTimeout(() => hideStatus(), 3000);
                     break;
-                    
                 case 'new_round':
                     GameState.round = data.round;
                     GameState.players = data.players;
                     GameState.currentPlayerId = data.currentPlayerId;
                     updatePlayersList();
-                    const currentP = GameState.players.find(p => p.id === GameState.currentPlayerId);
-                    addChatMessage('system', null, `🔄 Round ${GameState.round}! Tocca a ${currentP ? currentP.name : '?'}`);
-                    setTimeout(() => hideStatus(), 3000);
                     break;
-                    
                 case 'question':
                     const asker = GameState.players.find(p => p.id === data.playerId);
                     if (data.playerId === GameState.myId) {
@@ -966,7 +930,6 @@
                         if (GameState.gameStarted) showQuickResponse(data.question);
                     }
                     break;
-                    
                 case 'answer':
                     const answerer = GameState.players.find(p => p.id === data.playerId);
                     if (data.playerId === GameState.myId) {
@@ -976,19 +939,15 @@
                     }
                     removeQuickResponse();
                     break;
-                    
                 case 'guess':
                     handleGuess(data.playerId, data.guess);
                     break;
-                    
                 case 'guess_result':
                     if (data.correct) {
                         GameState.players = data.players;
                         if (data.guesserId === GameState.myId) GameState.opponentCharacter = data.character;
                         else GameState.myCharacter = data.character;
                         updateCharacters();
-                        const guesser = GameState.players.find(p => p.id === data.guesserId);
-                        addChatMessage('success', null, `🎉 ${guesser ? guesser.name : '?'} ha indovinato! Era ${data.character.name}!`);
                         updatePlayersList();
                         if (GameState.isHost) {
                             setTimeout(() => {
@@ -1001,40 +960,24 @@
                         }
                     } else {
                         if (data.guesserId === GameState.myId) addChatMessage('me', null, `❌ ${data.guess} (Non corretto)`);
-                        showStatus('❌ Non è corretto!', 'error');
-                        setTimeout(() => hideStatus(), 2000);
                     }
                     break;
-                    
                 case 'disconnect':
-                    addChatMessage('system', null, `👋 ${data.playerName} ha lasciato la partita`);
-                    showStatus('❌ L\'altro giocatore ha lasciato', 'error');
-                    updateConnectionStatus('disconnected', 'Partita terminata');
+                    addChatMessage('system', null, `👋 ${data.playerName} ha lasciato`);
                     resetGameState();
                     showScreen('lobbyScreen');
-                    document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
-                    document.getElementById('joinSection').classList.add('hidden');
-                    document.getElementById('waitingSection').classList.add('hidden');
-                    stopPing();
                     break;
             }
         }
 
-        // ============================================
-        // LOGICA DI GIOCO
-        // ============================================
         function handleGuess(guesserId, guess) {
-            let targetCharacter = guesserId === GameState.myId ? GameState.opponentCharacter : GameState.myCharacter;
-            if (!targetCharacter) { sendMessage({ type: 'guess_result', guesserId, correct: false, guess }); return; }
-            const isCorrect = guess.toLowerCase().trim() === targetCharacter.name.toLowerCase().trim();
-            const player = GameState.players.find(p => p.id === guesserId);
-            if (isCorrect) {
-                if (player) player.score = (player.score || 0) + 1;
-                sendMessage({ type: 'guess_result', guesserId, correct: true, character: targetCharacter, players: GameState.players });
-                updatePlayersList();
-            } else {
-                sendMessage({ type: 'guess_result', guesserId, correct: false, guess });
+            const target = guesserId === GameState.myId ? GameState.opponentCharacter : GameState.myCharacter;
+            if (!target) return;
+            const correct = guess.toLowerCase().trim() === target.name.toLowerCase().trim();
+            if (correct && GameState.players.find(p => p.id === guesserId)) {
+                GameState.players.find(p => p.id === guesserId).score = (GameState.players.find(p => p.id === guesserId).score || 0) + 1;
             }
+            sendMessage({ type: 'guess_result', guesserId, correct, guess, character: target, players: GameState.players });
         }
 
         // ============================================
@@ -1043,22 +986,22 @@
         function showQuickResponse(question) {
             removeQuickResponse();
             const chatBox = document.getElementById('chatBox');
-            const responseDiv = document.createElement('div');
-            responseDiv.id = 'quickResponse';
-            responseDiv.className = 'quick-response';
-            responseDiv.innerHTML = `
+            const div = document.createElement('div');
+            div.id = 'quickResponse';
+            div.className = 'quick-response';
+            div.innerHTML = `
                 <input type="text" id="quickAnswer" placeholder="Rispondi...">
                 <button class="btn btn-primary" onclick="sendQuickAnswer()">Invia</button>
             `;
-            chatBox.appendChild(responseDiv);
+            chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
             document.getElementById('quickAnswer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuickAnswer(); });
             document.getElementById('quickAnswer').focus();
         }
 
         function removeQuickResponse() {
-            const existing = document.getElementById('quickResponse');
-            if (existing) existing.remove();
+            const el = document.getElementById('quickResponse');
+            if (el) el.remove();
         }
 
         function sendQuickAnswer() {
@@ -1073,56 +1016,29 @@
         }
 
         // ============================================
-        // PING
-        // ============================================
-        function startPing() {
-            stopPing();
-            GameState.pingInterval = setInterval(() => {
-                if (GameState.connection && GameState.connection.open) {
-                    sendMessage({ type: 'ping' });
-                    GameState.pongTimeout = setTimeout(() => {
-                        addLog('Nessun pong ricevuto', 'error');
-                        if (GameState.connection) GameState.connection.close();
-                        updateConnectionStatus('disconnected', 'Timeout');
-                    }, 10000);
-                }
-            }, 5000);
-        }
-
-        function stopPing() {
-            if (GameState.pingInterval) { clearInterval(GameState.pingInterval); GameState.pingInterval = null; }
-            if (GameState.pongTimeout) { clearTimeout(GameState.pongTimeout); GameState.pongTimeout = null; }
-        }
-
-        // ============================================
-        // RESET
+        // RESET & DISCONNECT
         // ============================================
         function resetGameState() {
             stopPing();
-            GameState.players = [];
-            GameState.gameStarted = false;
-            GameState.myCharacter = null;
-            GameState.opponentCharacter = null;
-            GameState.currentPlayerId = null;
-            GameState.isMyTurn = false;
-            GameState.connection = null;
-            GameState.peer = null;
-            GameState.round = 1;
-            GameState.ready = false;
-            GameState.opponentReady = false;
-            GameState.boardCharacters = [];
-            GameState.intentionalDisconnect = false;
-            GameState.charactersLoaded = false;
+            Object.assign(GameState, {
+                players: [],
+                currentPlayerId: null,
+                gameStarted: false,
+                myCharacter: null,
+                opponentCharacter: null,
+                ready: false,
+                opponentReady: false,
+                boardCharacters: [],
+                charactersLoaded: false,
+                intentionalDisconnect: false
+            });
             selectedCharacterId = null;
-            
             const chatBox = document.getElementById('chatBox');
-            if (chatBox) {
-                chatBox.innerHTML = `
-                    <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
-                    <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
-                    <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
-                `;
-            }
+            if (chatBox) chatBox.innerHTML = `
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            `;
             hideStatus();
             document.getElementById('waitingSection').classList.add('hidden');
             document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
@@ -1130,82 +1046,6 @@
             updateConnectionStatus('disconnected', 'Disconnesso');
             document.getElementById('readyBtn').disabled = true;
             document.getElementById('readyBtn').textContent = '✅ Pronto';
-        }
-
-        // ============================================
-        // AZIONI UTENTE
-        // ============================================
-        async function createGame() {
-            const name = document.getElementById('playerName').value.trim() || 'Giocatore1';
-            GameState.myId = 'host_' + Date.now();
-            GameState.isHost = true;
-            GameState.myName = name;
-            GameState.players = [{ id: GameState.myId, name, score: 0 }];
-            
-            try {
-                await initHostAndLoadCharacters();
-                document.getElementById('waitingSection').classList.remove('hidden');
-                document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
-                document.getElementById('joinSection').classList.add('hidden');
-                addChatMessage('system', null, `🏠 Stanza creata! Codice: ${GameState.peerId}`);
-                showStatus(`📋 Codice: ${GameState.peerId} - In attesa...`, 'info');
-            } catch (error) {
-                addLog(`Errore: ${error.message}`, 'error');
-                showStatus(`❌ Errore: ${error.message}`, 'error');
-            }
-        }
-
-        function showJoin() {
-            const section = document.getElementById('joinSection');
-            section.classList.toggle('hidden');
-            if (!section.classList.contains('hidden')) document.getElementById('peerIdInput').focus();
-        }
-
-        async function joinGame() {
-            const name = document.getElementById('playerName').value.trim() || 'Giocatore2';
-            const remoteId = document.getElementById('peerIdInput').value.trim();
-            
-            if (!remoteId || remoteId.length !== 4 || !/^\d{4}$/.test(remoteId)) {
-                showStatus('❌ Inserisci un codice a 4 cifre!', 'error');
-                return;
-            }
-            
-            GameState.myId = 'client_' + Date.now();
-            GameState.isHost = false;
-            GameState.myName = name;
-            GameState.players = [{ id: GameState.myId, name, score: 0 }];
-            
-            try {
-                updateConnectionStatus('connecting', 'Connessione...');
-                showStatus('⏳ Connessione in corso...', 'info');
-                await connectToHost(remoteId);
-            } catch (error) {
-                addLog(`Errore connessione: ${error.message}`, 'error');
-                showStatus(`❌ Errore: ${error.message}`, 'error');
-                updateConnectionStatus('disconnected', 'Errore');
-            }
-        }
-
-        function askQuestion() {
-            const input = document.getElementById('questionInput');
-            const question = input.value.trim();
-            if (!question) { showToast('Scrivi una domanda!', 'warning'); return; }
-            if (!GameState.gameStarted) { showToast('Partita non iniziata!', 'warning'); return; }
-            if (!GameState.isMyTurn) { showToast('Non è il tuo turno!', 'warning'); return; }
-            addChatMessage('me', null, `❓ ${question}`);
-            sendMessage({ type: 'question', playerId: GameState.myId, question });
-            input.value = '';
-        }
-
-        function makeGuess() {
-            const input = document.getElementById('guessInput');
-            const guess = input.value.trim();
-            if (!guess) { showToast('Scrivi un nome!', 'warning'); return; }
-            if (!GameState.gameStarted) { showToast('Partita non iniziata!', 'warning'); return; }
-            if (!GameState.isMyTurn) { showToast('Non è il tuo turno!', 'warning'); return; }
-            addChatMessage('me', null, `🔍 ${guess}`);
-            sendMessage({ type: 'guess', playerId: GameState.myId, guess });
-            input.value = '';
         }
 
         function disconnectGame() {
@@ -1218,30 +1058,77 @@
             if (GameState.peer) GameState.peer.destroy();
             resetGameState();
             showScreen('lobbyScreen');
-            document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
-            document.getElementById('joinSection').classList.add('hidden');
-            document.getElementById('waitingSection').classList.add('hidden');
             showToast('👋 Disconnesso', 'info', 2000);
         }
 
-        window.addEventListener('beforeunload', () => {
-            if (GameState.connection && GameState.connection.open) {
-                try { GameState.connection.send({ type: 'disconnect', playerName: GameState.myName }); } catch (err) {}
-            }
-            GameState.intentionalDisconnect = true;
-            if (GameState.peer) { try { GameState.peer.destroy(); } catch (e) {} }
-            stopPing();
-        });
-
-        function checkAutoJoin() {
-            const params = new URLSearchParams(window.location.search);
-            const joinId = params.get('join');
-            if (joinId) {
-                document.getElementById('peerIdInput').value = joinId;
-                document.getElementById('playerName').value = 'Giocatore2';
-                setTimeout(() => joinGame(), 500);
+        // ============================================
+        // AZIONI PRINCIPALI
+        // ============================================
+        async function createGame() {
+            const name = document.getElementById('playerName').value.trim() || 'Giocatore1';
+            GameState.myId = 'host_' + Date.now();
+            GameState.isHost = true;
+            GameState.myName = name;
+            GameState.players = [{ id: GameState.myId, name, score: 0 }];
+            try {
+                await initHost();
+                document.getElementById('waitingSection').classList.remove('hidden');
+                document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+                document.getElementById('joinSection').classList.add('hidden');
+            } catch (err) {
+                addLog(`Errore creazione partita: ${err.message}`, 'error');
             }
         }
+
+        function showJoin() {
+            const section = document.getElementById('joinSection');
+            section.classList.toggle('hidden');
+            if (!section.classList.contains('hidden')) document.getElementById('peerIdInput').focus();
+        }
+
+        async function joinGame() {
+            const name = document.getElementById('playerName').value.trim() || 'Giocatore2';
+            const remoteId = document.getElementById('peerIdInput').value.trim();
+            if (!remoteId || remoteId.length !== 4 || !/^\d{4}$/.test(remoteId)) {
+                showStatus('❌ Codice non valido', 'error');
+                return;
+            }
+            GameState.myId = 'client_' + Date.now();
+            GameState.isHost = false;
+            GameState.myName = name;
+            GameState.players = [{ id: GameState.myId, name, score: 0 }];
+            updateConnectionStatus('connecting', 'Connessione...');
+            connectToHost(remoteId);
+        }
+
+        function askQuestion() {
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+            if (!question || !GameState.gameStarted || !GameState.isMyTurn) return;
+            addChatMessage('me', null, `❓ ${question}`);
+            sendMessage({ type: 'question', playerId: GameState.myId, question });
+            input.value = '';
+        }
+
+        function makeGuess() {
+            const input = document.getElementById('guessInput');
+            const guess = input.value.trim();
+            if (!guess || !GameState.gameStarted || !GameState.isMyTurn) return;
+            addChatMessage('me', null, `🔍 ${guess}`);
+            sendMessage({ type: 'guess', playerId: GameState.myId, guess });
+            input.value = '';
+        }
+
+        // ============================================
+        // EVENTI GLOBALI
+        // ============================================
+        window.addEventListener('beforeunload', () => {
+            if (GameState.connection && GameState.connection.open) {
+                try { GameState.connection.send({ type: 'disconnect', playerName: GameState.myName }); } catch (e) {}
+            }
+            stopPing();
+            if (GameState.peer) GameState.peer.destroy();
+        });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -1253,9 +1140,19 @@
             }
         });
 
+        // Auto-join via parametro ?join=XXXX
+        (function checkAutoJoin() {
+            const params = new URLSearchParams(window.location.search);
+            const joinId = params.get('join');
+            if (joinId) {
+                document.getElementById('peerIdInput').value = joinId;
+                document.getElementById('playerName').value = 'Giocatore2';
+                setTimeout(joinGame, 500);
+            }
+        })();
+
         addLog('🎮 AniQuiz Indovina Chi caricato!', 'success');
         showScreen('lobbyScreen');
-        checkAutoJoin();
     </script>
 </body>
 </html>
