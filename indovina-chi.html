@@ -370,29 +370,12 @@
             animation: fadeIn 0.3s;
         }
 
-        .status-message.info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
+        .status-message.info { background: #d1ecf1; color: #0c5460; }
+        .status-message.success { background: #d4edda; color: #155724; }
+        .status-message.error { background: #f8d7da; color: #721c24; }
+        .status-message.warning { background: #fff3cd; color: #856404; }
 
-        .status-message.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-message.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-message.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .hidden {
-            display: none !important;
-        }
+        .hidden { display: none !important; }
 
         .connection-status {
             display: flex;
@@ -404,20 +387,9 @@
             font-weight: 600;
         }
 
-        .connection-status.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .connection-status.connecting {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .connection-status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
+        .connection-status.connected { background: #d4edda; color: #155724; }
+        .connection-status.connecting { background: #fff3cd; color: #856404; }
+        .connection-status.disconnected { background: #f8d7da; color: #721c24; }
 
         .connection-status .dot {
             width: 10px;
@@ -426,18 +398,9 @@
             display: inline-block;
         }
 
-        .connection-status.connected .dot {
-            background: #28a745;
-        }
-
-        .connection-status.connecting .dot {
-            background: #f39c12;
-            animation: pulse 1s infinite;
-        }
-
-        .connection-status.disconnected .dot {
-            background: #dc3545;
-        }
+        .connection-status.connected .dot { background: #28a745; }
+        .connection-status.connecting .dot { background: #f39c12; animation: pulse 1s infinite; }
+        .connection-status.disconnected .dot { background: #dc3545; }
 
         .debug-log {
             background: #2c3e50;
@@ -452,18 +415,9 @@
             display: none;
         }
 
-        .debug-log .log-entry {
-            padding: 2px 0;
-            border-bottom: 1px solid #34495e;
-        }
-
-        .debug-log .log-entry.error {
-            color: #e74c3c;
-        }
-
-        .debug-log .log-entry.success {
-            color: #2ecc71;
-        }
+        .debug-log .log-entry { padding: 2px 0; border-bottom: 1px solid #34495e; }
+        .debug-log .log-entry.error { color: #e74c3c; }
+        .debug-log .log-entry.success { color: #2ecc71; }
 
         .quick-response {
             margin: 10px 0;
@@ -481,11 +435,7 @@
             margin: 0;
         }
 
-        .quick-response .btn {
-            width: auto;
-            padding: 8px 20px;
-            margin: 0;
-        }
+        .quick-response .btn { width: auto; padding: 8px 20px; margin: 0; }
 
         .turn-indicator {
             padding: 5px 15px;
@@ -494,15 +444,8 @@
             font-size: 14px;
         }
 
-        .turn-indicator.my-turn {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .turn-indicator.other-turn {
-            background: #fff3cd;
-            color: #856404;
-        }
+        .turn-indicator.my-turn { background: #d4edda; color: #155724; }
+        .turn-indicator.other-turn { background: #fff3cd; color: #856404; }
 
         .round-info {
             text-align: center;
@@ -575,14 +518,8 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        #selectionScreen .selection-actions {
-            display: flex;
-            gap: 10px;
-        }
-        #selectionScreen .selection-actions .btn {
-            width: auto;
-            padding: 10px 20px;
-        }
+        #selectionScreen .selection-actions { display: flex; gap: 10px; }
+        #selectionScreen .selection-actions .btn { width: auto; padding: 10px 20px; }
         .character-board {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -605,14 +542,8 @@
             transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .character-board .char-card:hover {
-            transform: scale(1.03);
-            border-color: #667eea;
-        }
-        .character-board .char-card.selected {
-            border-color: #27ae60;
-            background: #e8f5e9;
-        }
+        .character-board .char-card:hover { transform: scale(1.03); border-color: #667eea; }
+        .character-board .char-card.selected { border-color: #27ae60; background: #e8f5e9; }
         .character-board .char-card img {
             width: 80px;
             height: 80px;
@@ -621,20 +552,9 @@
             background: #eee;
             margin-bottom: 6px;
         }
-        .character-board .char-card .char-name {
-            font-weight: 600;
-            font-size: 0.9em;
-            color: #333;
-        }
-        .character-board .char-card .char-anime {
-            font-size: 0.75em;
-            color: #777;
-        }
-        .selection-status {
-            text-align: center;
-            margin-top: 10px;
-            font-weight: 500;
-        }
+        .character-board .char-card .char-name { font-weight: 600; font-size: 0.9em; color: #333; }
+        .character-board .char-card .char-anime { font-size: 0.75em; color: #777; }
+        .selection-status { text-align: center; margin-top: 10px; font-weight: 500; }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #667eea;
@@ -1157,58 +1077,114 @@
         }
 
         // ============================================
-        // PEERJS
+        // PEERJS - VERSIONE CORRETTA
         // ============================================
         function generateRoomCode() {
             return String(Math.floor(1000 + Math.random() * 9000));
         }
 
-        function initPeer(customId = null) {
+        // HOST: crea un peer con ID specifico e aspetta connessioni
+        function initHost() {
             return new Promise((resolve, reject) => {
-                const id = customId || generateRoomCode();
-                addLog(`Inizializzazione con ID: ${id}`, 'info');
+                const id = generateRoomCode();
+                addLog(`HOST: Creazione stanza con ID: ${id}`, 'info');
                 
                 GameState.peer = new Peer(id, { debug: 0 });
-                
-                GameState.peer.on('connection', (conn) => {
-                    addLog(`Connessione ricevuta da: ${conn.peer}`, 'success');
-                    GameState.connection = conn;
-                    setupConnection(conn);
-                    document.getElementById('waitingSection').classList.add('hidden');
-                    updateConnectionStatus('connected', 'Connesso!');
-                    showToast('🔗 Amico connesso!', 'success', 2000);
-                    startPing();
-                    
-                    // QUANDO L'HOST RICEVE UNA CONNESSIONE, CARICA I PERSONAGGI E MOSTRA LA SELEZIONE
-                    if (GameState.isHost) {
-                        loadBoardAndSendToClient();
-                    }
-                    updateReadyButton();
-                });
                 
                 GameState.peer.on('open', (assignedId) => {
                     GameState.peerId = assignedId;
                     document.getElementById('myPeerId').textContent = assignedId;
-                    addLog(`Peer aperto con ID: ${assignedId}`, 'success');
-                    updateConnectionStatus('connected', 'In attesa');
+                    addLog(`HOST: Stanza aperta con ID: ${assignedId}`, 'success');
+                    updateConnectionStatus('connected', 'In attesa di giocatori');
                     resolve(assignedId);
+                });
+                
+                GameState.peer.on('connection', (conn) => {
+                    addLog(`HOST: Connessione ricevuta da: ${conn.peer}`, 'success');
+                    GameState.connection = conn;
+                    setupConnection(conn);
+                    
+                    conn.on('open', () => {
+                        addLog('HOST: Connessione stabilita con client', 'success');
+                        document.getElementById('waitingSection').classList.add('hidden');
+                        updateConnectionStatus('connected', 'Giocatore connesso!');
+                        showToast('🔗 Amico connesso!', 'success', 2000);
+                        startPing();
+                        
+                        // Carica la board e inviala al client
+                        if (GameState.isHost && !GameState.charactersLoaded) {
+                            loadBoardAndSendToClient();
+                        }
+                        updateReadyButton();
+                    });
                 });
                 
                 GameState.peer.on('error', (err) => {
                     if (err.type === 'unavailable-id') {
-                        addLog('ID già in uso, genero nuovo ID', 'warning');
+                        addLog('HOST: ID già in uso, ne genero uno nuovo', 'warning');
                         const newId = generateRoomCode();
                         GameState.peer.destroy();
-                        initPeer(newId).then(resolve).catch(reject);
+                        initHost().then(resolve).catch(reject);
                         return;
                     }
-                    addLog(`Errore: ${err.message}`, 'error');
+                    addLog(`HOST: Errore: ${err.message}`, 'error');
                     reject(err);
                 });
                 
                 setTimeout(() => {
-                    if (!GameState.peerId) reject(new Error('Timeout inizializzazione'));
+                    if (!GameState.peerId) reject(new Error('Timeout inizializzazione host'));
                 }, 10000);
+            });
+        }
+
+        // CLIENT: si connette all'host usando il codice inserito
+        function connectToHost(hostId) {
+            return new Promise((resolve, reject) => {
+                addLog(`CLIENT: Connessione all'host: ${hostId}`, 'info');
+                
+                // Il client crea un peer con ID casuale (non importa quale)
+                GameState.peer = new Peer({ debug: 0 });
+                
+                GameState.peer.on('open', (myId) => {
+                    GameState.peerId = myId;
+                    addLog(`CLIENT: Il mio ID temporaneo: ${myId}`, 'info');
+                    
+                    // Ora connettiti all'host
+                    const conn = GameState.peer.connect(hostId, { reliable: true });
+                    GameState.connection = conn;
+                    setupConnection(conn);
+                    
+                    conn.on('open', () => {
+                        addLog('CLIENT: Connessione stabilita con host!', 'success');
+                        updateConnectionStatus('connected', 'Connesso!');
+                        showToast('✅ Connesso! Ricezione personaggi...', 'success', 3000);
+                        startPing();
+                        
+                        // Invia info giocatore all'host
+                        sendMessage({ 
+                            type: 'player_joined', 
+                            playerId: GameState.myId, 
+                            playerName: GameState.myName 
+                        });
+                        
+                        document.getElementById('joinSection').classList.add('hidden');
+                        document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+                        showStatus('✅ Connesso! In attesa del tabellone...', 'success');
+                        resolve(conn);
+                    });
+                    
+                    setTimeout(() => {
+                        if (!conn.open) {
+                            addLog('CLIENT: Timeout connessione', 'error');
+                            reject(new Error('Timeout connessione'));
+                        }
+                    }, 15000);
+                });
+                
+                GameState.peer.on('error', (err) => {
+                    addLog(`CLIENT: Errore: ${err.message}`, 'error');
+                    reject(err);
+                });
             });
         }
 
@@ -1229,13 +1205,6 @@
                 handleMessage(data);
             });
             
-            conn.on('open', () => {
-                addLog('Connessione aperta', 'success');
-                updateConnectionStatus('connected', 'Connesso!');
-                showToast('✅ Connessione stabilita!', 'success', 2000);
-                startPing();
-            });
-            
             conn.on('close', () => {
                 addLog('Connessione chiusa', 'error');
                 if (GameState.intentionalDisconnect) return;
@@ -1244,34 +1213,11 @@
                 updateConnectionStatus('disconnected', 'Riconnessione...');
                 GameState.gameStarted = false;
                 stopPing();
-                attemptReconnect();
             });
             
             conn.on('error', (err) => {
                 addLog(`Errore connessione: ${err.message}`, 'error');
             });
-        }
-
-        function attemptReconnect() {
-            if (GameState.intentionalDisconnect) return;
-            if (GameState.reconnectAttempts >= GameState.maxReconnectAttempts) {
-                showToast('❌ Impossibile riconnettersi', 'error', 5000);
-                return;
-            }
-            GameState.reconnectAttempts++;
-            addLog(`Tentativo riconnessione ${GameState.reconnectAttempts}/${GameState.maxReconnectAttempts}`, 'info');
-            setTimeout(() => {
-                if (GameState.peer && !GameState.connection) {
-                    const remoteId = GameState.isHost ? 
-                        GameState.players.find(p => p.id !== GameState.myId)?.id : 
-                        GameState.peerId;
-                    if (remoteId) {
-                        const conn = GameState.peer.connect(remoteId);
-                        GameState.connection = conn;
-                        setupConnection(conn);
-                    }
-                }
-            }, 3000);
         }
 
         function sendMessage(data) {
@@ -1280,7 +1226,6 @@
                 addLog(`Inviato: ${data.type}`, 'info');
             } else {
                 addLog('Impossibile inviare: connessione non aperta', 'error');
-                if (!GameState.intentionalDisconnect) attemptReconnect();
             }
         }
 
@@ -1288,6 +1233,7 @@
         // GESTIONE MESSAGGI
         // ============================================
         function handleMessage(data) {
+            addLog(`Elaborazione: ${data.type}`, 'info');
             switch(data.type) {
                 case 'player_joined':
                     const newPlayer = { id: data.playerId, name: data.playerName, score: 0 };
@@ -1299,6 +1245,7 @@
                     showStatus(`✅ ${data.playerName} si è unito!`, 'success');
                     if (GameState.isHost) {
                         sendMessage({ type: 'player_list', players: GameState.players });
+                        // Invia la board se già caricata
                         if (GameState.boardCharacters.length > 0) {
                             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
                         }
@@ -1313,15 +1260,18 @@
                     break;
                     
                 case 'characters_board':
+                    addLog('Ricevuta board personaggi!', 'success');
                     GameState.boardCharacters = data.characters;
                     renderCharacterBoard(GameState.boardCharacters);
                     showScreen('selectionScreen');
+                    showToast('📋 Scegli il tuo personaggio!', 'info', 3000);
                     break;
                     
                 case 'player_ready':
                     if (data.playerId !== GameState.myId) {
                         GameState.opponentReady = true;
                         document.getElementById('opponentStatus').textContent = "✅ L'avversario è pronto!";
+                        showToast("✅ L'avversario è pronto!", 'success', 2000);
                         if (GameState.isHost && GameState.ready) startGameAfterSelection();
                     }
                     break;
@@ -1352,11 +1302,6 @@
                     updatePlayersList();
                     const currentP = GameState.players.find(p => p.id === GameState.currentPlayerId);
                     addChatMessage('system', null, `🔄 Round ${GameState.round}! Tocca a ${currentP ? currentP.name : '?'}`);
-                    if (GameState.currentPlayerId === GameState.myId) {
-                        showStatus('🎯 È il tuo turno!', 'info');
-                    } else {
-                        showStatus(`⏳ Turno di ${currentP ? currentP.name : '?'}`, 'info');
-                    }
                     setTimeout(() => hideStatus(), 3000);
                     break;
                     
@@ -1509,7 +1454,6 @@
                         addLog('Nessun pong ricevuto', 'error');
                         if (GameState.connection) GameState.connection.close();
                         updateConnectionStatus('disconnected', 'Timeout');
-                        if (!GameState.intentionalDisconnect) attemptReconnect();
                     }, 10000);
                 }
             }, 5000);
@@ -1528,9 +1472,7 @@
 
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && !GameState.intentionalDisconnect) {
-                if (!GameState.connection || !GameState.connection.open) {
-                    attemptReconnect();
-                } else {
+                if (GameState.connection && GameState.connection.open) {
                     sendMessage({ type: 'ping' });
                 }
             }
@@ -1586,8 +1528,7 @@
             GameState.players = [{ id: GameState.myId, name, score: 0 }];
             
             try {
-                await initPeer();
-                // NON caricare i personaggi qui! Aspetta che un giocatore si connetta
+                await initHost();
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
@@ -1617,54 +1558,35 @@
                 return;
             }
             
+            addLog(`Tentativo di connessione a: ${remoteId}`, 'info');
             GameState.myId = 'client_' + Date.now();
             GameState.isHost = false;
             GameState.myName = name;
             GameState.players = [{ id: GameState.myId, name, score: 0 }];
             
             try {
-                await initPeer();
                 updateConnectionStatus('connecting', 'Connessione...');
                 showStatus('⏳ Connessione in corso...', 'info');
-                const conn = GameState.peer.connect(remoteId);
-                GameState.connection = conn;
-                setupConnection(conn);
-                
-                conn.on('open', () => {
-                    updateConnectionStatus('connected', 'Connesso!');
-                    showToast('✅ Connesso! In attesa del tabellone...', 'success', 3000);
-                    startPing();
-                    sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: name });
-                    document.getElementById('joinSection').classList.add('hidden');
-                    document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
-                    // Il client rimane nella lobby finché non riceve la board dei personaggi
-                });
-                
-                setTimeout(() => {
-                    if (!conn.open) {
-                        showStatus('❌ Timeout connessione', 'error');
-                        updateConnectionStatus('disconnected', 'Timeout');
-                    }
-                }, 15000);
+                await connectToHost(remoteId);
             } catch (error) {
-                addLog(`Errore: ${error.message}`, 'error');
+                addLog(`Errore connessione: ${error.message}`, 'error');
                 showStatus(`❌ Errore: ${error.message}`, 'error');
+                updateConnectionStatus('disconnected', 'Errore');
             }
         }
 
         async function loadBoardAndSendToClient() {
-            // Mostra la selezione solo all'host (il client riceverà la board via messaggio)
-            if (GameState.isHost) {
-                showScreen('selectionScreen');
-            }
+            addLog('Caricamento board personaggi...', 'info');
+            showScreen('selectionScreen');
             document.getElementById('charBoard').innerHTML = '<div class="loader"></div><p>Caricamento personaggi...</p>';
+            
             const chars = await fetchAnimeCharacters();
             GameState.boardCharacters = chars;
             GameState.charactersLoaded = true;
             renderCharacterBoard(chars);
             
-            // Invia la board al client
             if (GameState.connection && GameState.connection.open) {
+                addLog('Invio board al client', 'success');
                 sendMessage({ type: 'characters_board', characters: chars });
             }
             updateReadyButton();
