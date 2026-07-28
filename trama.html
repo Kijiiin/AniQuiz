@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anime Mystery Box - Offline</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(145deg, #0b0c1e 0%, #1a1040 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #f0eaff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 215, 255, 0.15);
+            border-radius: 40px;
+            padding: 30px 25px;
+            max-width: 750px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(155, 80, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            font-weight: 800;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #ffb3ff, #a0e9ff, #f9d976);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.7;
+            font-weight: 300;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+        .setup-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .setup-screen label {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #d4caff;
+        }
+        .setup-screen input {
+            padding: 16px 20px;
+            border-radius: 60px;
+            border: 2px solid #3c2d6e;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            width: 100%;
+        }
+        .setup-screen input:focus {
+            border-color: #b47aff;
+            box-shadow: 0 0 20px rgba(150, 80, 255, 0.3);
+        }
+        .setup-screen .hint {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-top: -10px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #8b5cf6, #c084fc);
+            border: none;
+            padding: 16px 28px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn:hover {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 12px 35px rgba(139, 92, 246, 0.5);
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+        .game-screen {
+            display: none;
+            flex-direction: column;
+            gap: 22px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 18px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .turn-indicator {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #fcd34d;
+        }
+        .round-counter {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 5px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .scoreboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 20px;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 12px 16px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        .score-item .name {
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        .score-item .pts {
+            background: #8b5cf6;
+            padding: 0px 12px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            min-width: 28px;
+            text-align: center;
+        }
+        .score-item.active-player .name {
+            color: #fcd34d;
+            font-weight: 700;
+        }
+        .score-item.active-player .pts {
+            background: #fcd34d;
+            color: #1a1040;
+        }
+        .synopsis-box {
+            background: rgba(0, 0, 0, 0.45);
+            border-left: 6px solid #c084fc;
+            padding: 24px 20px;
+            border-radius: 24px;
+            min-height: 120px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: #e5d9ff;
+            box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-style: italic;
+        }
+        .synopsis-box .label {
+            font-style: normal;
+            font-weight: 700;
+            color: #b47aff;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 10px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            word-break: break-word;
+        }
+        .option-btn:hover:not(:disabled) {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: #8b5cf6;
+            transform: scale(1.02);
+        }
+        .option-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        .option-btn.correct {
+            background: rgba(52, 211, 153, 0.3);
+            border-color: #34d399;
+            box-shadow: 0 0 25px rgba(52, 211, 153, 0.2);
+        }
+        .option-btn.wrong {
+            background: rgba(251, 113, 133, 0.3);
+            border-color: #fb7185;
+            box-shadow: 0 0 25px rgba(251, 113, 133, 0.2);
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .game-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .feedback {
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            min-height: 30px;
+            color: #a78bfa;
+        }
+        .hidden {
+            display: none !important;
+        }
+        @media (max-width: 500px) {
+            .container {
+                padding: 20px 15px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .scoreboard {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app">
+        <h1>📦 Anime Mystery</h1>
+        <div class="subtitle">🎌 Offline Party Game · Indovina dalla trama</div>
+
+        <!-- SETUP -->
+        <div id="setupScreen" class="setup-screen">
+            <label for="playersInput">👥 Nomi dei giocatori (separati da virgola)</label>
+            <input type="text" id="playersInput" placeholder="es. Marco, Giulia, Sara" value="Giocatore 1, Giocatore 2" />
+            <div class="hint">✨ Inserisci almeno 2 nomi per iniziare la sfida.</div>
+            <button class="btn" id="startBtn">▶️ Inizia Partita</button>
+        </div>
+
+        <!-- GAME -->
+        <div id="gameScreen" class="game-screen">
+            <div class="top-bar">
+                <div class="turn-indicator" id="turnIndicator">🎯 Turno: —</div>
+                <div class="round-counter" id="roundCounter">Round 0 / 10</div>
+            </div>
+
+            <div class="scoreboard" id="scoreboard"></div>
+
+            <div class="synopsis-box">
+                <span class="label">📖 Trama misteriosa</span>
+                <div id="synopsisText">Premi "Inizia" per giocare!</div>
+            </div>
+
+            <div class="options-grid" id="optionsGrid"></div>
+
+            <div class="feedback" id="feedback"></div>
+
+            <div class="game-actions">
+                <button class="btn btn-secondary" id="skipBtn">⏭️ Salta (passa turno)</button>
+                <button class="btn" id="nextRoundBtn" style="display:none;">🔄 Prossimo Round</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caricamento del database esterno -->
+    <script src="anime_db.js"></script>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // Verifica che il database sia stato caricato
+            if (typeof ANIME_DB === 'undefined') {
+                alert('ERRORE: non trovo il database anime_db.js. Assicurati che il file sia nella stessa cartella.');
+                return;
+            }
+
+            // --- DOM refs ---
+            const setupScreen = document.getElementById('setupScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            const playersInput = document.getElementById('playersInput');
+            const startBtn = document.getElementById('startBtn');
+            const turnIndicator = document.getElementById('turnIndicator');
+            const roundCounter = document.getElementById('roundCounter');
+            const scoreboardEl = document.getElementById('scoreboard');
+            const synopsisText = document.getElementById('synopsisText');
+            const optionsGrid = document.getElementById('optionsGrid');
+            const feedback = document.getElementById('feedback');
+            const skipBtn = document.getElementById('skipBtn');
+            const nextRoundBtn = document.getElementById('nextRoundBtn');
+
+            // --- Stato ---
+            let players = [];
+            let scores = {};
+            let currentPlayerIndex = 0;
+            let round = 0;
+            const MAX_ROUNDS = 10;
+            let isPlaying = false;
+            let isWaiting = false;
+            let currentOptions = [];
+            let answered = false;
+
+            // --- Utility ---
+            function shuffle(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // --- Prende 4 anime unici dal DB locale ---
+            function pickRandomAnimes(count = 4) {
+                if (ANIME_DB.length < count) {
+                    throw new Error(`Il database ha solo ${ANIME_DB.length} anime, ne servono almeno ${count}.`);
+                }
+                // Copia casuale
+                const shuffled = shuffle([...ANIME_DB]);
+                return shuffled.slice(0, count);
+            }
+
+            // --- Avvia round ---
+            function startNewRound() {
+                if (isWaiting) return;
+                if (round >= MAX_ROUNDS) {
+                    endGame();
+                    return;
+                }
+
+                isWaiting = true;
+                answered = false;
+                feedback.textContent = '';
+                nextRoundBtn.style.display = 'none';
+                optionsGrid.innerHTML = '';
+                synopsisText.textContent = '⏳ Caricamento...';
+
+                try {
+                    const animes = pickRandomAnimes(4);
+                    const target = animes[0];
+
+                    const optionTitles = animes.map(a => a.title);
+                    const shuffledTitles = shuffle([...optionTitles]);
+
+                    currentOptions = shuffledTitles.map(title => ({
+                        title: title,
+                        isCorrect: title === target.title
+                    }));
+
+                    synopsisText.textContent = target.synopsis;
+
+                    optionsGrid.innerHTML = '';
+                    currentOptions.forEach((opt, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'option-btn';
+                        btn.textContent = opt.title;
+                        btn.dataset.index = index;
+                        btn.addEventListener('click', () => handleOptionClick(index));
+                        optionsGrid.appendChild(btn);
+                    });
+
+                    round++;
+                    updateUI();
+                    isWaiting = false;
+                    enableOptions(true);
+
+                } catch (error) {
+                    synopsisText.textContent = '❌ ' + error.message;
+                    feedback.textContent = '⚠️ Aggiungi più anime al database (almeno 4).';
+                    isWaiting = false;
+                    nextRoundBtn.style.display = 'inline-block';
+                    enableOptions(false);
+                }
+            }
+
+            function enableOptions(enabled) {
+                const btns = optionsGrid.querySelectorAll('.option-btn');
+                btns.forEach(b => b.disabled = !enabled);
+            }
+
+            // --- Click opzione ---
+            function handleOptionClick(index) {
+                if (isWaiting || answered) return;
+                const opt = currentOptions[index];
+                if (!opt) return;
+
+                answered = true;
+                enableOptions(false);
+
+                const btns = optionsGrid.querySelectorAll('.option-btn');
+                btns.forEach((btn, i) => {
+                    btn.disabled = true;
+                    if (currentOptions[i].isCorrect) {
+                        btn.classList.add('correct');
+                    } else if (i === index && !currentOptions[i].isCorrect) {
+                        btn.classList.add('wrong');
+                    }
+                });
+
+                if (opt.isCorrect) {
+                    const playerName = players[currentPlayerIndex];
+                    scores[playerName] = (scores[playerName] || 0) + 1;
+                    feedback.textContent = `✅ ${playerName} ha indovinato! +1 punto!`;
+                } else {
+                    const correctTitle = currentOptions.find(o => o.isCorrect).title;
+                    feedback.textContent = `❌ Sbagliato! Era "${correctTitle}".`;
+                }
+
+                updateUI();
+                nextPlayer();
+                nextRoundBtn.style.display = 'inline-block';
+            }
+
+            function nextPlayer() {
+                if (players.length === 0) return;
+                currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                updateUI();
+            }
+
+            function updateUI() {
+                if (players.length > 0) {
+                    turnIndicator.textContent = `🎯 Turno: ${players[currentPlayerIndex]}`;
+                }
+                roundCounter.textContent = `Round ${Math.min(round, MAX_ROUNDS)} / ${MAX_ROUNDS}`;
+
+                scoreboardEl.innerHTML = '';
+                players.forEach((name, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'score-item';
+                    if (idx === currentPlayerIndex && !isWaiting && !answered) {
+                        div.classList.add('active-player');
+                    }
+                    div.innerHTML = `
+                        <span class="name">${name}</span>
+                        <span class="pts">${scores[name] || 0}</span>
+                    `;
+                    scoreboardEl.appendChild(div);
+                });
+            }
+
+            function endGame() {
+                isPlaying = false;
+                isWaiting = true;
+                turnIndicator.textContent = '🏆 PARTITA FINITA!';
+                synopsisText.textContent = 'Il gioco è terminato! Guarda la classifica finale.';
+                optionsGrid.innerHTML = '';
+                feedback.textContent = '🎉 Complimenti a tutti!';
+                nextRoundBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+
+                let maxPts = -1;
+                let winners = [];
+                players.forEach(name => {
+                    const pts = scores[name] || 0;
+                    if (pts > maxPts) { maxPts = pts;
+                        winners = [name]; } else if (pts === maxPts) { winners.push(name); }
+                });
+
+                if (winners.length === 1) {
+                    feedback.textContent = `👑 Il vincitore è ${winners[0]} con ${maxPts} punti!`;
+                } else if (winners.length > 1) {
+                    feedback.textContent = `🤝 Pareggio tra ${winners.join(' e ')} con ${maxPts} punti!`;
+                }
+            }
+
+            function handleSkip() {
+                if (isWaiting || answered || round > MAX_ROUNDS) return;
+                feedback.textContent = `⏭️ ${players[currentPlayerIndex]} ha saltato.`;
+                nextPlayer();
+                nextRoundBtn.style.display = 'inline-block';
+                enableOptions(false);
+                answered = true;
+            }
+
+            function startGame() {
+                const raw = playersInput.value.trim();
+                const names = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+                if (names.length < 2) {
+                    alert('Inserisci almeno 2 nomi separati da virgola!');
+                    return;
+                }
+
+                players = names;
+                scores = {};
+                players.forEach(name => scores[name] = 0);
+                currentPlayerIndex = 0;
+                round = 0;
+                isPlaying = true;
+                isWaiting = false;
+                answered = false;
+
+                setupScreen.style.display = 'none';
+                gameScreen.style.display = 'flex';
+                skipBtn.style.display = 'inline-block';
+                nextRoundBtn.style.display = 'none';
+                feedback.textContent = '';
+
+                updateUI();
+                startNewRound();
+            }
+
+            // --- Event listeners ---
+            startBtn.addEventListener('click', startGame);
+            skipBtn.addEventListener('click', handleSkip);
+            nextRoundBtn.addEventListener('click', () => {
+                if (round >= MAX_ROUNDS) {
+                    endGame();
+                } else {
+                    nextRoundBtn.style.display = 'none';
+                    startNewRound();
+                }
+            });
+            playersInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') startGame();
+            });
+
+            setupScreen.style.display = 'flex';
+            gameScreen.style.display = 'none';
+
+            console.log(`🎌 Anime Mystery Box caricato con ${ANIME_DB.length} anime nel database.`);
+        })();
+    </script>
+
+</body>
+</html>
