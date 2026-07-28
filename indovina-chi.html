@@ -911,6 +911,8 @@
                     ${p.id === GameState.currentPlayerId ? ' 🎯' : ''}
                 </div>
             `).join('');
+            // Aggiorna lo stato del pulsante Pronto ogni volta che cambia la lista giocatori
+            updateReadyButton();
             const current = GameState.players.find(p => p.id === GameState.currentPlayerId);
             const indicator = document.getElementById('turnIndicator');
             if (GameState.currentPlayerId === GameState.myId) {
@@ -952,6 +954,38 @@
                 el.innerHTML = `<span class="dot"></span> ${message || 'Connessione in corso...'}`;
             } else {
                 el.innerHTML = `<span class="dot"></span> ${message || 'Disconnesso'}`;
+            }
+        }
+
+        // ============================================
+        // GESTIONE PULSANTE PRONTO
+        // ============================================
+        function updateReadyButton() {
+            const readyBtn = document.getElementById('readyBtn');
+            // Disabilitato se:
+            // - non è stata selezionata una card (selectedCharacterId == null)
+            // - l'host non ha ancora nessun altro giocatore connesso (GameState.players.length < 2) 
+            //   (solo se è l'host)
+            // - il gioco è già iniziato
+            if (GameState.gameStarted) {
+                readyBtn.disabled = true;
+                return;
+            }
+            // Per l'host, serve almeno un altro giocatore connesso
+            let canBeReady = selectedCharacterId !== null;
+            if (GameState.isHost) {
+                // Se l'host, deve esserci almeno un altro giocatore oltre a sé
+                const otherPlayers = GameState.players.filter(p => p.id !== GameState.myId);
+                canBeReady = canBeReady && otherPlayers.length > 0;
+            }
+            readyBtn.disabled = !canBeReady;
+            if (!canBeReady && selectedCharacterId !== null && GameState.isHost) {
+                // Se ha selezionato un personaggio ma non c'è nessun altro giocatore,
+                // mostriamo un messaggio nel selectionStatus
+                if (GameState.isHost) {
+                    document.getElementById('selectionStatus').textContent = 
+                        '⏳ In attesa che un amico si connetta...';
+                }
             }
         }
 
@@ -1095,6 +1129,8 @@
             selectedCharacterId = null;
             document.getElementById('readyBtn').disabled = true;
             document.getElementById('selectionStatus').textContent = 'Seleziona un personaggio cliccando sulla card';
+            // Aggiorna lo stato del pulsante (disabilitato finché non seleziona)
+            updateReadyButton();
         }
 
         function selectCharacter(id) {
@@ -1109,8 +1145,9 @@
             if (card) {
                 card.classList.add('selected');
                 selectedCharacterId = id;
-                document.getElementById('readyBtn').disabled = false;
                 document.getElementById('selectionStatus').textContent = `Hai scelto: ${GameState.boardCharacters.find(c => c.id === id).name}`;
+                // Aggiorna il pulsante Pronto: ora è selezionato
+                updateReadyButton();
             }
         }
 
@@ -1133,6 +1170,15 @@
             if (GameState.ready) {
                 showToast('Hai già confermato!', 'warning', 2000);
                 return;
+            }
+            // Controllo aggiuntivo per l'host: deve esserci un altro giocatore
+            if (GameState.isHost) {
+                const otherPlayers = GameState.players.filter(p => p.id !== GameState.myId);
+                if (otherPlayers.length === 0) {
+                    showToast('⏳ Aspetta che un amico si connetta!', 'warning', 3000);
+                    document.getElementById('selectionStatus').textContent = '⏳ In attesa che un amico si connetta...';
+                    return;
+                }
             }
             const char = GameState.boardCharacters.find(c => c.id === selectedCharacterId);
             GameState.myCharacter = { ...char };
@@ -1191,7 +1237,7 @@
                 
                 GameState.peer = new Peer(id, { debug: 0 });
                 
-                // === FIX 1: Listener per connessioni in arrivo ===
+                // === Listener per connessioni in arrivo ===
                 GameState.peer.on('connection', (conn) => {
                     addLog(`📞 Connessione ricevuta da: ${conn.peer}`, 'success');
                     GameState.connection = conn;
@@ -1201,8 +1247,11 @@
                     updateConnectionStatus('connected', 'Connesso!');
                     showToast('🔗 Amico connesso!', 'success', 2000);
                     startPing();
-                    if (GameState.isHost && GameState.boardCharacters.length > 0) {
-                        sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
+                    // Quando l'host riceve una connessione, aggiorna la lista giocatori
+                    // e riabilita il pulsante Pronto se ha già selezionato un personaggio
+                    if (GameState.isHost) {
+                        // La lista dei giocatori verrà aggiornata quando riceverà il player_joined
+                        updateReadyButton();
                     }
                 });
                 
@@ -1336,6 +1385,13 @@
                         if (GameState.boardCharacters.length > 0) {
                             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
                         }
+                        // Ora che c'è un giocatore, abilita il pulsante Pronto se ha già selezionato
+                        updateReadyButton();
+                        // Aggiorna il selectionStatus per l'host
+                        if (selectedCharacterId !== null) {
+                            document.getElementById('selectionStatus').textContent = 
+                                `✅ Hai scelto ${GameState.boardCharacters.find(c => c.id === selectedCharacterId).name}! Attendi l'avversario...`;
+                        }
                     }
                     setTimeout(() => hideStatus(), 2000);
                     break;
@@ -1349,6 +1405,7 @@
                     GameState.boardCharacters = data.characters;
                     renderCharacterBoard(GameState.boardCharacters);
                     showScreen('selectionScreen');
+                    // Il client ora può selezionare
                     break;
                 }
                 case 'player_ready': {
@@ -1677,6 +1734,10 @@
             document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
             document.getElementById('joinSection').classList.add('hidden');
             updateConnectionStatus('disconnected', 'Disconnesso');
+            // Reset del pulsante Pronto
+            document.getElementById('readyBtn').disabled = true;
+            document.getElementById('readyBtn').textContent = '✅ Pronto';
+            selectedCharacterId = null;
         }
 
         // ============================================
@@ -1690,7 +1751,7 @@
             GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
             try {
                 await initPeer(); // genera codice 4 cifre automatico
-                // === FIX 2: Carica i personaggi subito dopo la creazione ===
+                // Carica i personaggi subito dopo la creazione
                 await loadBoardAndSendToClient();
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
@@ -1699,6 +1760,9 @@
                 showStatus(`📋 Codice: ${GameState.peerId} - Condividilo con il tuo amico`, 'info');
                 showToast('🏠 Stanza creata!', 'success', 2000);
                 addLog('✅ Stanza creata con successo', 'success');
+                // Il pulsante Pronto è già disabilitato perché non c'è nessun altro giocatore
+                // e non ha selezionato un personaggio
+                updateReadyButton();
             } catch (error) {
                 addLog(`❌ Errore: ${error.message}`, 'error');
                 showStatus(`❌ Errore: ${error.message}`, 'error');
@@ -1776,6 +1840,14 @@
                 sendMessage({ type: 'characters_board', characters: chars });
             }
             document.getElementById('opponentStatus').textContent = '⏳ In attesa che l\'avversario scelga...';
+            // Per l'host: se non c'è nessun altro giocatore, mostra messaggio
+            if (GameState.isHost) {
+                const otherPlayers = GameState.players.filter(p => p.id !== GameState.myId);
+                if (otherPlayers.length === 0) {
+                    document.getElementById('selectionStatus').textContent = '⏳ In attesa che un amico si connetta...';
+                }
+            }
+            updateReadyButton();
         }
 
         function askQuestion() {
