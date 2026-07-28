@@ -408,9 +408,28 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <script>
-        // ============================================
-        // STATO GLOBALE
-        // ============================================
+        // Server STUN/TURN pubblici per migliorare la connessione NAT
+        const ICE_SERVERS = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ]
+        };
+
+        // Stato globale
         const GameState = {
             players: [],
             currentPlayerId: null,
@@ -431,7 +450,8 @@
             pingInterval: null,
             pongTimeout: null,
             intentionalDisconnect: false,
-            charactersLoaded: false
+            charactersLoaded: false,
+            connectionTimeout: null
         };
 
         let toastTimeout = null;
@@ -588,7 +608,7 @@
         }
 
         // ============================================
-        // ANILIST API (corretta)
+        // ANILIST API
         // ============================================
         async function fetchAnimeCharacters() {
             try {
@@ -715,6 +735,11 @@
             return String(Math.floor(1000 + Math.random() * 9000));
         }
 
+        function createPeer(id) {
+            // Usa sempre gli ICE_SERVERS per entrambi i peer
+            return new Peer(id, { debug: 0, config: ICE_SERVERS });
+        }
+
         function sendMessage(data) {
             if (GameState.connection && GameState.connection.open) {
                 GameState.connection.send(data);
@@ -754,7 +779,7 @@
         async function initHost() {
             const roomCode = generateRoomCode();
             addLog(`🏠 Host: avvio stanza ${roomCode}`, 'info');
-            GameState.peer = new Peer(roomCode, { debug: 0 });
+            GameState.peer = createPeer(roomCode);
 
             GameState.peer.on('open', async (id) => {
                 GameState.peerId = id;
@@ -762,7 +787,6 @@
                 addLog(`✅ Stanza ${id} aperta`, 'success');
                 updateConnectionStatus('connected', 'Caricamento personaggi...');
 
-                // Carica subito i personaggi
                 const chars = await fetchAnimeCharacters();
                 GameState.boardCharacters = chars;
                 GameState.charactersLoaded = true;
@@ -775,9 +799,21 @@
                 GameState.connection = conn;
                 setupConnection(conn);
                 if (conn.open) {
+                    clearTimeout(GameState.connectionTimeout);
                     onHostConnectionReady(conn);
                 } else {
-                    conn.on('open', () => onHostConnectionReady(conn));
+                    conn.on('open', () => {
+                        clearTimeout(GameState.connectionTimeout);
+                        onHostConnectionReady(conn);
+                    });
+                    // Timeout di sicurezza: dopo 20 secondi avvisa
+                    GameState.connectionTimeout = setTimeout(() => {
+                        if (!conn.open) {
+                            addLog('⏰ Timeout connessione host', 'error');
+                            showToast('⚠️ Connessione lenta, riprova', 'warning', 4000);
+                            conn.close();
+                        }
+                    }, 20000);
                 }
             });
 
@@ -785,7 +821,7 @@
                 addLog(`❌ Errore: ${err.message}`, 'error');
                 if (err.type === 'unavailable-id') {
                     GameState.peer.destroy();
-                    initHost(); // riprova con un nuovo ID
+                    initHost();
                 }
             });
         }
@@ -797,7 +833,6 @@
             showToast('🔗 Amico connesso!', 'success', 2000);
             startPing();
 
-            // Invia la board e mostra la selezione
             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
             showScreen('selectionScreen');
             renderCharacterBoard(GameState.boardCharacters);
@@ -809,18 +844,30 @@
         // ============================================
         function connectToHost(hostId) {
             addLog(`🔗 Client: connessione a ${hostId}`, 'info');
-            GameState.peer = new Peer({ debug: 0 });
+            GameState.peer = createPeer(); // ID casuale
 
             GameState.peer.on('open', (myId) => {
                 GameState.peerId = myId;
                 addLog(`👤 Mio ID: ${myId}`, 'info');
-                const conn = GameState.peer.connect(hostId, { reliable: true });
+                const conn = GameState.peer.connect(hostId, { reliable: true, config: ICE_SERVERS });
                 GameState.connection = conn;
                 setupConnection(conn);
                 if (conn.open) {
+                    clearTimeout(GameState.connectionTimeout);
                     onClientConnectionReady(conn);
                 } else {
-                    conn.on('open', () => onClientConnectionReady(conn));
+                    conn.on('open', () => {
+                        clearTimeout(GameState.connectionTimeout);
+                        onClientConnectionReady(conn);
+                    });
+                    GameState.connectionTimeout = setTimeout(() => {
+                        if (!conn.open) {
+                            addLog('⏰ Timeout connessione client', 'error');
+                            showStatus('❌ Connessione fallita (timeout)', 'error');
+                            updateConnectionStatus('disconnected', 'Timeout');
+                            conn.close();
+                        }
+                    }, 20000);
                 }
             });
 
@@ -1020,6 +1067,7 @@
         // ============================================
         function resetGameState() {
             stopPing();
+            if (GameState.connectionTimeout) { clearTimeout(GameState.connectionTimeout); GameState.connectionTimeout = null; }
             Object.assign(GameState, {
                 players: [],
                 currentPlayerId: null,
@@ -1051,6 +1099,7 @@
         function disconnectGame() {
             GameState.intentionalDisconnect = true;
             stopPing();
+            if (GameState.connectionTimeout) { clearTimeout(GameState.connectionTimeout); GameState.connectionTimeout = null; }
             if (GameState.connection) {
                 sendMessage({ type: 'disconnect', playerName: GameState.myName });
                 GameState.connection.close();
