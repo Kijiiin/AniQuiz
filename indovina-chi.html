@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniQuiz - Indovina Chi Multiplayer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 850px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+        }
+
+        .h1-span {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        input {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-info {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2980b9;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .room-code {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            border: 3px dashed #667eea;
+        }
+
+        .room-code .code {
+            font-size: 2.8em;
+            font-weight: bold;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+            word-break: break-all;
+            user-select: all;
+        }
+
+        .room-code .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .share-section {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .share-section .btn {
+            width: auto;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .players-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .player-badge {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .player-badge.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .player-badge .score {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .characters-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .character-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 0.5s;
+            border: 3px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .character-card.my-character {
+            border-color: #27ae60;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        .character-card.opponent-character {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+        }
+
+        .character-card .emoji {
+            font-size: 3em;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .character-card .name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .character-card .details {
+            color: #666;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .character-card .label {
+            font-size: 0.8em;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.05);
+        }
+
+        .character-card .label.mine {
+            background: #27ae60;
+            color: white;
+        }
+
+        .character-card .label.theirs {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .chat-box {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            height: 180px;
+            overflow-y: auto;
+            padding: 15px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            animation: fadeIn 0.3s;
+        }
+
+        .chat-message .sender {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .chat-message .time {
+            font-size: 11px;
+            color: #999;
+            margin-left: 10px;
+        }
+
+        .chat-message.system {
+            background: #f0f0f0;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .chat-message.question {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .chat-message.answer {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .chat-message.guess {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .chat-message.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .controls .input-group {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 10px;
+        }
+
+        .controls .guess-group {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 10px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: 600;
+            animation: fadeIn 0.3s;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-message.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .connection-status .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .connection-status.connected .dot {
+            background: #28a745;
+        }
+
+        .connection-status.connecting .dot {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        .connection-status.disconnected .dot {
+            background: #dc3545;
+        }
+
+        .debug-log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .debug-log .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .debug-log .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .debug-log .log-entry.success {
+            color: #2ecc71;
+        }
+
+        .quick-response {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .quick-response input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            margin: 0;
+        }
+
+        .quick-response .btn {
+            width: auto;
+            padding: 8px 20px;
+            margin: 0;
+        }
+
+        .turn-indicator {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .turn-indicator.my-turn {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .turn-indicator.other-turn {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .round-info {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .toast.success {
+            background: #27ae60;
+        }
+
+        .toast.error {
+            background: #e74c3c;
+        }
+
+        .toast.warning {
+            background: #f39c12;
+        }
+
+        .toast.info {
+            background: #3498db;
+        }
+
+        .toast.hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .characters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls .input-group,
+            .controls .guess-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .room-code .code {
+                font-size: 1.8em;
+                letter-spacing: 4px;
+            }
+
+            .share-section .btn {
+                min-width: 80px;
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 <span class="h1-span">AniQuiz</span> Indovina Chi</h1>
+        
+        <!-- Toast per notifiche -->
+        <div id="toast" class="toast hidden"></div>
+        
+        <!-- Schermata: Lobby -->
+        <div id="lobbyScreen" class="screen active">
+            <div style="margin: 20px 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Il tuo nome:</label>
+                <input type="text" id="playerName" placeholder="Inserisci il tuo nome" maxlength="20" value="Giocatore1">
+            </div>
+            
+            <div class="grid-2">
+                <button class="btn btn-primary" onclick="createGame()">🎯 Crea Partita</button>
+                <button class="btn btn-secondary" onclick="showJoin()">🔗 Unisciti</button>
+            </div>
+            
+            <div id="joinSection" class="hidden" style="margin-top: 15px;">
+                <input type="text" id="peerIdInput" placeholder="Incolla l'ID del tuo amico">
+                <button class="btn btn-success" onclick="joinGame()">📞 Connetti</button>
+                <button class="btn btn-secondary" onclick="showJoin()" style="margin-top: 5px;">Annulla</button>
+            </div>
+
+            <div id="waitingSection" class="hidden" style="margin-top: 20px;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <p style="color: #666; margin-bottom: 10px;">📋 Condividi questo ID con il tuo amico:</p>
+                    <div class="room-code">
+                        <span class="label">ID PARTITA</span>
+                        <div class="code" id="myPeerId">Caricamento...</div>
+                    </div>
+                </div>
+                
+                <div class="share-section">
+                    <button class="btn btn-info" onclick="copyPeerId()">📋 Copia ID</button>
+                    <button class="btn btn-primary" onclick="shareViaWhatsApp()">💬 WhatsApp</button>
+                    <button class="btn btn-success" onclick="shareViaTelegram()">✈️ Telegram</button>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div class="status-message info">⏳ In attesa che un amico si connetta...</div>
+                    <div class="status-message warning" style="margin-top: 5px; font-size: 0.9em;">
+                        💡 Puoi uscire dal browser per mandare il link, la connessione rimarrà attiva!
+                    </div>
+                </div>
+            </div>
+
+            <div id="debugLog" class="debug-log">
+                <div style="font-weight: bold; margin-bottom: 5px; color: #3498db;">📋 Log di connessione:</div>
+                <div id="logEntries"></div>
+            </div>
+            <button class="btn btn-secondary" onclick="toggleDebug()" style="margin-top: 10px; width: auto; padding: 5px 15px; font-size: 12px;">🔧 Mostra Log</button>
+        </div>
+
+        <!-- Schermata: Gioco -->
+        <div id="gameScreen" class="screen">
+            <div class="game-header">
+                <div class="players-list" id="playersList"></div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div id="turnIndicator" class="turn-indicator">🎯 Turno: -</div>
+                    <div id="connectionStatus" class="connection-status disconnected">
+                        <span class="dot"></span> Disconnesso
+                    </div>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="status-message hidden"></div>
+
+            <div class="round-info" id="roundInfo">🎯 Round 1</div>
+
+            <div class="characters-grid">
+                <div id="myCharacterCard" class="character-card my-character">
+                    <span class="emoji">🎭</span>
+                    <div class="name" id="myCharName">Il tuo personaggio</div>
+                    <div class="details" id="myCharDetails"></div>
+                    <span class="label mine">👤 TU</span>
+                </div>
+                <div id="opponentCharacterCard" class="character-card opponent-character">
+                    <span class="emoji">❓</span>
+                    <div class="name" id="opponentCharName">Personaggio avversario</div>
+                    <div class="details" id="opponentCharDetails"></div>
+                    <span class="label theirs">👤 AVVERSARIO</span>
+                </div>
+            </div>
+
+            <div class="chat-box" id="chatBox">
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            </div>
+
+            <div class="controls" id="gameControls">
+                <div class="input-group">
+                    <input type="text" id="questionInput" placeholder="❓ Fai una domanda... (es. Il tuo personaggio ha i capelli neri?)">
+                    <button class="btn btn-primary" onclick="askQuestion()">Chiedi</button>
+                </div>
+                <div class="guess-group">
+                    <input type="text" id="guessInput" placeholder="🔍 Chi pensi che sia l'avversario?">
+                    <button class="btn btn-secondary" onclick="makeGuess()">Indovina!</button>
+                </div>
+            </div>
+
+            <button class="btn btn-danger" onclick="disconnectGame()" style="margin-top: 10px; width: auto; padding: 10px 20px; font-size: 14px;">
+                🚪 Esci
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    
+    <script>
+        // ============================================
+        // TOAST NOTIFICHE
+        // ============================================
+        let toastTimeout = null;
+
+        function showToast(message, type = 'info', duration = 4000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.remove('hidden');
+            
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, duration);
+        }
+
+        // ============================================
+        // DEBUG
+        // ============================================
+        let debugVisible = false;
+
+        function toggleDebug() {
+            debugVisible = !debugVisible;
+            document.getElementById('debugLog').style.display = debugVisible ? 'block' : 'none';
+        }
+
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('logEntries');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            console.log(`[AniQuiz] ${message}`);
+        }
+
+        // ============================================
+        // STATO DEL GIOCO
+        // ============================================
+        const GameState = {
+            players: [],
+            currentPlayerId: null,
+            myId: null,
+            myName: '',
+            round: 1,
+            
+            characters: [
+                { id: 1, name: 'Goku', anime: 'Dragon Ball', emoji: '🐉', trait: 'Saiyan' },
+                { id: 2, name: 'Naruto', anime: 'Naruto', emoji: '🍥', trait: 'Rasengan' },
+                { id: 3, name: 'Luffy', anime: 'One Piece', emoji: '🏴‍☠️', trait: 'Gom Gom' },
+                { id: 4, name: 'Saitama', anime: 'One Punch Man', emoji: '👊', trait: 'One Punch' },
+                { id: 5, name: 'Eren', anime: 'Attack on Titan', emoji: '⚔️', trait: 'Titan' },
+                { id: 6, name: 'Ichigo', anime: 'Bleach', emoji: '⚡', trait: 'Bankai' },
+                { id: 7, name: 'Tanjiro', anime: 'Demon Slayer', emoji: '🔥', trait: 'Water Breathing' },
+                { id: 8, name: 'Deku', anime: 'My Hero Academia', emoji: '💚', trait: 'One For All' },
+                { id: 9, name: 'Gojo', anime: 'Jujutsu Kaisen', emoji: '👁️', trait: 'Infinity' },
+                { id: 10, name: 'Mikasa', anime: 'Attack on Titan', emoji: '⚔️', trait: 'Ackerman' }
+            ],
+            
+            myCharacter: null,
+            opponentCharacter: null,
+            
+            isMyTurn: false,
+            gameStarted: false,
+            
+            peer: null,
+            connection: null,
+            isHost: false,
+            peerId: null,
+            isConnecting: false,
+            reconnectAttempts: 0,
+            maxReconnectAttempts: 5,
+            pingInterval: null
+        };
+
+        // ============================================
+        // FUNZIONI UI
+        // ============================================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showStatus(message, type = 'info') {
+            const el = document.getElementById('statusMessage');
+            el.textContent = message;
+            el.className = `status-message ${type}`;
+            el.classList.remove('hidden');
+            addLog(message, type);
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+
+        function addChatMessage(type, sender, message) {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `chat-message ${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            
+            if (type === 'system') {
+                div.innerHTML = `<span class="sender">📢</span> ${message}`;
+            } else if (type === 'me') {
+                div.innerHTML = `<span class="sender">👤 Tu</span> <span class="time">${time}</span><br>${message}`;
+            } else {
+                div.innerHTML = `<span class="sender">👤 ${sender}</span> <span class="time">${time}</span><br>${message}`;
+            }
+            
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function updatePlayersList() {
+            const container = document.getElementById('playersList');
+            container.innerHTML = GameState.players.map(p => `
+                <div class="player-badge ${p.id === GameState.myId ? 'active' : ''}">
+                    ${p.name}
+                    <span class="score">⭐ ${p.score || 0}</span>
+                    ${p.id === GameState.myId ? ' (Tu)' : ''}
+                    ${p.id === GameState.currentPlayerId ? ' 🎯' : ''}
+                </div>
+            `).join('');
+            
+            const current = GameState.players.find(p => p.id === GameState.currentPlayerId);
+            const indicator = document.getElementById('turnIndicator');
+            
+            if (GameState.currentPlayerId === GameState.myId) {
+                indicator.className = 'turn-indicator my-turn';
+                indicator.textContent = `🎯 Il tuo turno!`;
+                GameState.isMyTurn = true;
+            } else {
+                indicator.className = 'turn-indicator other-turn';
+                indicator.textContent = `🎯 Turno: ${current ? current.name : '-'}`;
+                GameState.isMyTurn = false;
+            }
+            
+            const controls = document.getElementById('gameControls');
+            if (GameState.gameStarted) {
+                controls.style.display = 'block';
+            } else {
+                controls.style.display = 'none';
+            }
+            
+            document.getElementById('roundInfo').textContent = `🎯 Round ${GameState.round}`;
+        }
+
+        function updateCharacters() {
+            if (GameState.myCharacter) {
+                const myCard = document.getElementById('myCharacterCard');
+                document.getElementById('myCharName').textContent = `${GameState.myCharacter.emoji} ${GameState.myCharacter.name}`;
+                document.getElementById('myCharDetails').textContent = `📺 ${GameState.myCharacter.anime} | ⚡ ${GameState.myCharacter.trait}`;
+                myCard.classList.remove('hidden');
+            }
+
+            if (GameState.opponentCharacter) {
+                const oppCard = document.getElementById('opponentCharacterCard');
+                document.getElementById('opponentCharName').textContent = `${GameState.opponentCharacter.emoji} ${GameState.opponentCharacter.name}`;
+                document.getElementById('opponentCharDetails').textContent = `📺 ${GameState.opponentCharacter.anime} | ⚡ ${GameState.opponentCharacter.trait}`;
+                oppCard.classList.remove('hidden');
+            }
+        }
+
+        function updateConnectionStatus(status, message) {
+            const el = document.getElementById('connectionStatus');
+            el.className = `connection-status ${status}`;
+            const dot = el.querySelector('.dot');
+            if (status === 'connected') {
+                el.innerHTML = `<span class="dot"></span> ${message || 'Connesso'}`;
+            } else if (status === 'connecting') {
+                el.innerHTML = `<span class="dot"></span> ${message || 'Connessione in corso...'}`;
+            } else {
+                el.innerHTML = `<span class="dot"></span> ${message || 'Disconnesso'}`;
+            }
+        }
+
+        // ============================================
+        // SHARE FUNCTIONS
+        // ============================================
+        function getShareLink() {
+            const url = window.location.href;
+            const id = GameState.peerId;
+            return `${url}?join=${id}`;
+        }
+
+        function copyPeerId() {
+            const id = document.getElementById('myPeerId').textContent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(id).then(() => {
+                    showToast('✅ ID copiato!', 'success');
+                    addLog('📋 ID copiato', 'success');
+                }).catch(() => {
+                    fallbackCopy(id);
+                });
+            } else {
+                fallbackCopy(id);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('✅ ID copiato!', 'success');
+                addLog('📋 ID copiato (fallback)', 'success');
+            } catch (err) {
+                showToast('❌ Errore copia', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function shareViaWhatsApp() {
+            const id = document.getElementById('myPeerId').textContent;
+            const message = `🎮 Unisciti alla mia partita di AniQuiz! Inserisci questo ID: ${id}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+            showToast('📤 Apertura WhatsApp...', 'info', 2000);
+        }
+
+        function shareViaTelegram() {
+            const id = document.getElementById('myPeerId').textContent;
+            const message = `🎮 Unisciti alla mia partita di AniQuiz! Inserisci questo ID: ${id}`;
+            const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+            showToast('📤 Apertura Telegram...', 'info', 2000);
+        }
+
+        // ============================================
+        // GESTIONE PARTITA
+        // ============================================
+        function getRandomCharacter() {
+            return GameState.characters[Math.floor(Math.random() * GameState.characters.length)];
+        }
+
+        function getDifferentCharacter(exclude) {
+            let chars = GameState.characters.filter(c => c.id !== exclude.id);
+            return chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        function startNewRound() {
+            if (!GameState.isHost) return; // solo l'host avvia il round
+
+            GameState.round++;
+            
+            // Genera nuovi personaggi: host e client
+            const hostChar = getRandomCharacter();
+            const clientChar = getDifferentCharacter(hostChar);
+            
+            // Aggiorna i personaggi locali
+            GameState.myCharacter = hostChar;        // per l'host
+            GameState.opponentCharacter = clientChar; // per l'host, l'avversario è il client
+            
+            // Calcola prossimo turno
+            const currentIndex = GameState.players.findIndex(p => p.id === GameState.currentPlayerId);
+            const nextIndex = (currentIndex + 1) % GameState.players.length;
+            GameState.currentPlayerId = GameState.players[nextIndex].id;
+            
+            const currentPlayer = GameState.players.find(p => p.id === GameState.currentPlayerId);
+            
+            updatePlayersList();
+            updateCharacters();
+            
+            addChatMessage('system', null, `🔄 Round ${GameState.round}! Tocca a ${currentPlayer.name}`);
+            
+            if (GameState.currentPlayerId === GameState.myId) {
+                showStatus(`🎯 È il tuo turno! Fai domande su ${GameState.opponentCharacter.name}`, 'info');
+                showToast(`🎯 Il tuo turno! Indovina ${GameState.opponentCharacter.name}`, 'info', 3000);
+            } else {
+                showStatus(`⏳ Turno di ${currentPlayer.name}`, 'info');
+            }
+            
+            // Invia al client: hostCharacter = il mio, clientCharacter = il suo
+            sendMessage({
+                type: 'new_round',
+                round: GameState.round,
+                currentPlayerId: GameState.currentPlayerId,
+                hostCharacter: GameState.myCharacter,
+                clientCharacter: GameState.opponentCharacter,
+                players: GameState.players
+            });
+            
+            setTimeout(() => hideStatus(), 3000);
+        }
+
+        function handleGuess(guesserId, guess) {
+            const targetCharacter = GameState.opponentCharacter;
+            const isCorrect = guess.toLowerCase().trim() === targetCharacter.name.toLowerCase().trim();
+            const player = GameState.players.find(p => p.id === guesserId);
+            
+            if (isCorrect) {
+                if (player) player.score = (player.score || 0) + 1;
+                addChatMessage('success', null, `🎉 ${player.name} ha indovinato! Era ${targetCharacter.name}!`);
+                showStatus(`🎉 ${player.name} ha indovinato!`, 'success');
+                showToast(`🎉 ${player.name} ha indovinato!`, 'success', 3000);
+                
+                sendMessage({
+                    type: 'guess_result',
+                    guesserId: guesserId,
+                    correct: true,
+                    character: targetCharacter,
+                    players: GameState.players
+                });
+                
+                updatePlayersList();
+                
+                // Non chiamare startNewRound qui, verrà gestito in guess_result (solo host)
+            } else {
+                if (guesserId === GameState.myId) {
+                    addChatMessage('me', null, `❌ ${guess} (Non è il personaggio dell'avversario)`);
+                } else {
+                    addChatMessage('guess', player ? player.name : 'Qualcuno', `❌ Ha indovinato: ${guess} (Non corretto)`);
+                }
+                
+                showStatus(`❌ Non è corretto! Riprova.`, 'error');
+                
+                sendMessage({
+                    type: 'guess_result',
+                    guesserId: guesserId,
+                    correct: false,
+                    guess: guess
+                });
+                
+                setTimeout(() => hideStatus(), 2000);
+            }
+        }
+
+        // ============================================
+        // PING / KEEP-ALIVE
+        // ============================================
+        function startPing() {
+            if (GameState.pingInterval) clearInterval(GameState.pingInterval);
+            
+            GameState.pingInterval = setInterval(() => {
+                if (GameState.connection && GameState.connection.open) {
+                    sendMessage({ type: 'ping' });
+                }
+            }, 5000);
+        }
+
+        function stopPing() {
+            if (GameState.pingInterval) {
+                clearInterval(GameState.pingInterval);
+                GameState.pingInterval = null;
+            }
+        }
+
+        // ============================================
+        // PEERJS - COMUNICAZIONE
+        // ============================================
+        function initPeer() {
+            return new Promise((resolve, reject) => {
+                addLog('Inizializzazione PeerJS...', 'info');
+                showToast('🔌 Connessione in corso...', 'info', 2000);
+                
+                GameState.peer = new Peer({
+                    debug: 2
+                });
+                
+                GameState.peer.on('open', (id) => {
+                    GameState.peerId = id;
+                    document.getElementById('myPeerId').textContent = id;
+                    addLog(`✅ Peer aperto con ID: ${id}`, 'success');
+                    updateConnectionStatus('connected', 'In attesa di connessioni');
+                    showToast('✅ Connesso!', 'success', 2000);
+                    resolve(id);
+                });
+                
+                GameState.peer.on('connection', (conn) => {
+                    addLog(`📞 Connessione ricevuta da: ${conn.peer}`, 'success');
+                    GameState.connection = conn;
+                    setupConnection(conn);
+                    addChatMessage('system', null, '🔗 Un amico si è connesso!');
+                    document.getElementById('waitingSection').classList.add('hidden');
+                    updateConnectionStatus('connected', 'Connesso!');
+                    showToast('🔗 Amico connesso!', 'success', 2000);
+                    startPing();
+                    
+                    setTimeout(() => {
+                        if (GameState.isHost) {
+                            startGame();
+                        }
+                    }, 1000);
+                });
+                
+                GameState.peer.on('error', (err) => {
+                    addLog(`❌ Errore PeerJS: ${err.message}`, 'error');
+                    showToast(`❌ Errore: ${err.message}`, 'error', 4000);
+                    updateConnectionStatus('disconnected', 'Errore');
+                    reject(err);
+                });
+                
+                setTimeout(() => {
+                    if (!GameState.peerId) {
+                        addLog('⚠️ Timeout: Peer non inizializzato', 'error');
+                        showToast('⚠️ Timeout connessione', 'error', 3000);
+                        reject(new Error('Timeout inizializzazione Peer'));
+                    }
+                }, 10000);
+            });
+        }
+
+        function setupConnection(conn) {
+            conn.on('data', (data) => {
+                if (data.type === 'ping') {
+                    if (conn.open) {
+                        conn.send({ type: 'pong' });
+                    }
+                    return;
+                }
+                if (data.type === 'pong') {
+                    addLog('💓 Ping ricevuto', 'info');
+                    return;
+                }
+                addLog(`📨 Ricevuto: ${data.type}`, 'info');
+                handleMessage(data);
+            });
+            
+            conn.on('open', () => {
+                addLog('🔓 Connessione aperta', 'success');
+                updateConnectionStatus('connected', 'Connesso!');
+                showToast('✅ Connessione stabilita!', 'success', 2000);
+                startPing();
+            });
+            
+            conn.on('close', () => {
+                addLog('🔌 Connessione chiusa', 'error');
+                addChatMessage('system', null, '🔌 Connessione persa! Tentativo di riconnessione...');
+                showToast('🔌 Connessione persa! Riconnessione...', 'warning', 3000);
+                updateConnectionStatus('disconnected', 'Riconnessione...');
+                GameState.gameStarted = false;
+                stopPing();
+                
+                attemptReconnect();
+            });
+            
+            conn.on('error', (err) => {
+                addLog(`❌ Errore connessione: ${err.message}`, 'error');
+                showToast(`❌ Errore: ${err.message}`, 'error', 3000);
+            });
+        }
+
+        function attemptReconnect() {
+            if (GameState.reconnectAttempts >= GameState.maxReconnectAttempts) {
+                showToast('❌ Impossibile riconnettersi', 'error', 5000);
+                addLog('❌ Riconnessione fallita dopo 5 tentativi', 'error');
+                return;
+            }
+            
+            GameState.reconnectAttempts++;
+            addLog(`🔄 Tentativo di riconnessione ${GameState.reconnectAttempts}/${GameState.maxReconnectAttempts}`, 'info');
+            showToast(`🔄 Riconnessione tentativo ${GameState.reconnectAttempts}...`, 'warning', 3000);
+            
+            setTimeout(() => {
+                if (GameState.peer && !GameState.connection) {
+                    const remoteId = GameState.isHost ? 
+                        GameState.players.find(p => p.id !== GameState.myId)?.id : 
+                        GameState.peerId;
+                    
+                    if (remoteId) {
+                        addLog(`🔗 Tentativo di riconnessione a ${remoteId}`, 'info');
+                        const conn = GameState.peer.connect(remoteId);
+                        GameState.connection = conn;
+                        setupConnection(conn);
+                    }
+                }
+            }, 3000);
+        }
+
+        function sendMessage(data) {
+            if (GameState.connection && GameState.connection.open) {
+                GameState.connection.send(data);
+                addLog(`📤 Inviato: ${data.type}`, 'info');
+            } else {
+                addLog(`⚠️ Impossibile inviare: connessione non aperta`, 'error');
+                showToast('⚠️ Connessione persa, tentativo di riconnessione...', 'warning', 2000);
+                attemptReconnect();
+            }
+        }
+
+        function handleMessage(data) {
+            addLog(`📨 Elaborazione: ${data.type}`, 'info');
+            
+            switch(data.type) {
+                case 'player_joined':
+                    // Il client invia il suo ID e nome, l'host lo aggiunge alla lista
+                    const newPlayer = { id: data.playerId, name: data.playerName, score: 0 };
+                    GameState.players.push(newPlayer);
+                    updatePlayersList();
+                    addChatMessage('system', null, `👋 ${data.playerName} si è unito!`);
+                    showStatus(`✅ ${data.playerName} si è unito!`, 'success');
+                    showToast(`👋 ${data.playerName} si è unito!`, 'success', 3000);
+                    if (GameState.isHost) {
+                        // Invia la lista aggiornata al client
+                        sendMessage({
+                            type: 'player_list',
+                            players: GameState.players
+                        });
+                    }
+                    setTimeout(() => hideStatus(), 2000);
+                    break;
+                    
+                case 'player_list':
+                    // Client riceve la lista completa dall'host
+                    GameState.players = data.players;
+                    updatePlayersList();
+                    break;
+                    
+                case 'start_game':
+                    GameState.gameStarted = true;
+                    GameState.players = data.players;
+                    GameState.currentPlayerId = data.currentPlayerId;
+                    // Assegna i personaggi: per il client, il suo è clientCharacter, l'avversario è hostCharacter
+                    GameState.myCharacter = data.clientCharacter;
+                    GameState.opponentCharacter = data.hostCharacter;
+                    GameState.round = data.round || 1;
+                    
+                    updatePlayersList();
+                    updateCharacters();
+                    addChatMessage('system', null, '🎮 La partita è iniziata!');
+                    showScreen('gameScreen');
+                    updateConnectionStatus('connected', 'In partita');
+                    showToast('🎮 Partita iniziata!', 'success', 3000);
+                    
+                    if (GameState.currentPlayerId === GameState.myId) {
+                        showStatus(`🎯 È il tuo turno! Fai domande su ${GameState.opponentCharacter.name}`, 'info');
+                        showToast(`🎯 Il tuo turno!`, 'info', 3000);
+                    } else {
+                        const currentPlayer = GameState.players.find(p => p.id === GameState.currentPlayerId);
+                        showStatus(`⏳ Turno di ${currentPlayer.name}`, 'info');
+                    }
+                    setTimeout(() => hideStatus(), 3000);
+                    break;
+                    
+                case 'new_round':
+                    GameState.round = data.round;
+                    GameState.players = data.players;
+                    GameState.currentPlayerId = data.currentPlayerId;
+                    // Il client riceve: hostCharacter (avversario) e clientCharacter (mio)
+                    GameState.myCharacter = data.clientCharacter;
+                    GameState.opponentCharacter = data.hostCharacter;
+                    
+                    updatePlayersList();
+                    updateCharacters();
+                    
+                    const currentP = GameState.players.find(p => p.id === GameState.currentPlayerId);
+                    addChatMessage('system', null, `🔄 Round ${GameState.round}! Tocca a ${currentP.name}`);
+                    
+                    if (GameState.currentPlayerId === GameState.myId) {
+                        showStatus(`🎯 È il tuo turno! Fai domande su ${GameState.opponentCharacter.name}`, 'info');
+                        showToast(`🎯 Il tuo turno!`, 'info', 3000);
+                    } else {
+                        showStatus(`⏳ Turno di ${currentP.name}`, 'info');
+                    }
+                    setTimeout(() => hideStatus(), 3000);
+                    break;
+                    
+                case 'question':
+                    const asker = GameState.players.find(p => p.id === data.playerId);
+                    const askerName = asker ? asker.name : 'Qualcuno';
+                    
+                    if (data.playerId === GameState.myId) {
+                        addChatMessage('me', null, `❓ ${data.question}`);
+                    } else {
+                        addChatMessage('question', askerName, `❓ ${data.question}`);
+                    }
+                    
+                    if (data.playerId !== GameState.myId && GameState.gameStarted) {
+                        showQuickResponse(data.question);
+                    }
+                    break;
+                    
+                case 'answer':
+                    const answerer = GameState.players.find(p => p.id === data.playerId);
+                    const answererName = answerer ? answerer.name : 'Qualcuno';
+                    
+                    if (data.playerId === GameState.myId) {
+                        addChatMessage('me', null, `💬 ${data.answer}`);
+                    } else {
+                        addChatMessage('answer', answererName, `💬 ${data.answer}`);
+                    }
+                    removeQuickResponse();
+                    break;
+                    
+                case 'guess':
+                    handleGuess(data.playerId, data.guess);
+                    break;
+                    
+                case 'guess_result':
+                    if (data.correct) {
+                        GameState.players = data.players;
+                        // Rivela il personaggio corretto in base a chi ha indovinato
+                        if (data.guesserId === GameState.myId) {
+                            // Ho indovinato io: rivelo il mio opponentCharacter
+                            GameState.opponentCharacter = data.character;
+                        } else {
+                            // L'avversario ha indovinato: rivelo il mio myCharacter
+                            GameState.myCharacter = data.character;
+                        }
+                        updateCharacters();
+                        
+                        const guesser = GameState.players.find(p => p.id === data.guesserId);
+                        addChatMessage('success', null, `🎉 ${guesser ? guesser.name : 'Qualcuno'} ha indovinato! Era ${data.character.name}!`);
+                        showStatus(`🎉 È stato indovinato!`, 'success');
+                        showToast(`🎉 Indovinato!`, 'success', 3000);
+                        updatePlayersList();
+                        
+                        // Solo l'host avvia il nuovo round
+                        if (GameState.isHost) {
+                            setTimeout(() => {
+                                startNewRound();
+                            }, 3000);
+                        }
+                    } else {
+                        if (data.guesserId === GameState.myId) {
+                            addChatMessage('me', null, `❌ ${data.guess} (Non è il personaggio dell'avversario)`);
+                        } else {
+                            addChatMessage('guess', 'Qualcuno', `❌ Tentativo: ${data.guess} (Non corretto)`);
+                        }
+                        showStatus(`❌ Non è corretto!`, 'error');
+                        setTimeout(() => hideStatus(), 2000);
+                    }
+                    break;
+                    
+                case 'disconnect':
+                    addChatMessage('system', null, `👋 ${data.playerName} ha lasciato la partita`);
+                    showStatus('❌ L\'altro giocatore ha lasciato', 'error');
+                    showToast(`👋 ${data.playerName} ha lasciato`, 'error', 4000);
+                    updateConnectionStatus('disconnected', 'Partita terminata');
+                    GameState.gameStarted = false;
+                    stopPing();
+                    break;
+            }
+        }
+
+        // ============================================
+        // RISPOSTA RAPIDA
+        // ============================================
+        function showQuickResponse(question) {
+            removeQuickResponse();
+            
+            const chatBox = document.getElementById('chatBox');
+            const responseDiv = document.createElement('div');
+            responseDiv.id = 'quickResponse';
+            responseDiv.className = 'quick-response';
+            responseDiv.innerHTML = `
+                <input type="text" id="quickAnswer" placeholder="Rispondi alla domanda sul tuo personaggio: ${question}" style="flex:1; padding: 8px; border-radius: 8px; border: 2px solid #667eea;">
+                <button class="btn btn-primary" onclick="sendQuickAnswer()" style="width: auto; padding: 8px 20px; margin: 0;">Invia</button>
+            `;
+            chatBox.appendChild(responseDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            document.getElementById('quickAnswer').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendQuickAnswer();
+            });
+            
+            document.getElementById('quickAnswer').focus();
+        }
+
+        function removeQuickResponse() {
+            const existing = document.getElementById('quickResponse');
+            if (existing) existing.remove();
+        }
+
+        function sendQuickAnswer() {
+            const input = document.getElementById('quickAnswer');
+            const answer = input.value.trim();
+            if (!answer) return;
+            
+            sendMessage({
+                type: 'answer',
+                playerId: GameState.myId,
+                answer: answer
+            });
+            
+            addChatMessage('me', null, `💬 ${answer}`);
+            input.value = '';
+            removeQuickResponse();
+            hideStatus();
+        }
+
+        // ============================================
+        // AZIONI UTENTE
+        // ============================================
+        async function createGame() {
+            const name = document.getElementById('playerName').value.trim() || 'Giocatore1';
+            GameState.myId = 'host_' + Date.now();
+            GameState.isHost = true;
+            GameState.myName = name;
+            GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
+            
+            try {
+                await initPeer();
+                document.getElementById('waitingSection').classList.remove('hidden');
+                document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+                document.getElementById('joinSection').classList.add('hidden');
+                addChatMessage('system', null, `🏠 Stanza creata! ID: ${GameState.peerId}`);
+                showStatus('📋 Copia l\'ID e condividilo con il tuo amico', 'info');
+                showToast('🏠 Stanza creata!', 'success', 2000);
+                addLog('✅ Stanza creata con successo', 'success');
+            } catch (error) {
+                addLog(`❌ Errore creazione stanza: ${error.message}`, 'error');
+                showStatus(`❌ Errore: ${error.message}`, 'error');
+                showToast(`❌ Errore: ${error.message}`, 'error', 4000);
+            }
+        }
+
+        function showJoin() {
+            const section = document.getElementById('joinSection');
+            section.classList.toggle('hidden');
+            if (!section.classList.contains('hidden')) {
+                document.getElementById('peerIdInput').focus();
+            }
+        }
+
+        async function joinGame() {
+            const name = document.getElementById('playerName').value.trim() || 'Giocatore2';
+            const remoteId = document.getElementById('peerIdInput').value.trim();
+            
+            if (!remoteId) {
+                showStatus('❌ Inserisci l\'ID del tuo amico!', 'error');
+                showToast('❌ Inserisci un ID valido', 'error', 3000);
+                addLog('❌ Tentativo di connessione senza ID', 'error');
+                return;
+            }
+            
+            addLog(`📞 Tentativo di connessione a: ${remoteId}`, 'info');
+            
+            GameState.myId = 'client_' + Date.now();
+            GameState.isHost = false;
+            GameState.myName = name;
+            GameState.players = [{ id: GameState.myId, name: name, score: 0 }];
+            
+            try {
+                await initPeer();
+                
+                updateConnectionStatus('connecting', 'Connessione in corso...');
+                showStatus('⏳ Connessione in corso...', 'info');
+                
+                const conn = GameState.peer.connect(remoteId);
+                GameState.connection = conn;
+                setupConnection(conn);
+                
+                conn.on('open', () => {
+                    addLog('✅ Connessione aperta!', 'success');
+                    updateConnectionStatus('connected', 'Connesso!');
+                    showToast('✅ Connesso!', 'success', 2000);
+                    startPing();
+                    
+                    // Invia le proprie info all'host (incluso ID)
+                    sendMessage({
+                        type: 'player_joined',
+                        playerId: GameState.myId,
+                        playerName: name
+                    });
+                    
+                    addChatMessage('system', null, '✅ Connesso alla partita!');
+                    showStatus('✅ Connesso! In attesa che inizi...', 'success');
+                    document.getElementById('joinSection').classList.add('hidden');
+                    document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+                    
+                    showScreen('gameScreen');
+                    updatePlayersList();
+                });
+                
+                setTimeout(() => {
+                    if (!conn.open) {
+                        addLog('⚠️ Timeout connessione', 'error');
+                        showStatus('❌ Timeout: impossibile connettersi', 'error');
+                        showToast('❌ Timeout connessione', 'error', 4000);
+                        updateConnectionStatus('disconnected', 'Timeout');
+                    }
+                }, 15000);
+                
+            } catch (error) {
+                addLog(`❌ Errore connessione: ${error.message}`, 'error');
+                showStatus(`❌ Errore: ${error.message}`, 'error');
+                showToast(`❌ Errore: ${error.message}`, 'error', 4000);
+                updateConnectionStatus('disconnected', 'Errore');
+            }
+        }
+
+        function startGame() {
+            if (!GameState.isHost) return;
+            
+            addLog('🎮 Avvio partita...', 'info');
+            
+            GameState.round = 1;
+            GameState.currentPlayerId = GameState.players[0].id;
+            GameState.gameStarted = true;
+            
+            // Genera personaggi: host e client
+            const hostChar = getRandomCharacter();
+            const clientChar = getDifferentCharacter(hostChar);
+            
+            GameState.myCharacter = hostChar;
+            GameState.opponentCharacter = clientChar;
+            
+            sendMessage({
+                type: 'start_game',
+                players: GameState.players,
+                currentPlayerId: GameState.currentPlayerId,
+                hostCharacter: GameState.myCharacter,
+                clientCharacter: GameState.opponentCharacter,
+                round: GameState.round
+            });
+            
+            showScreen('gameScreen');
+            updatePlayersList();
+            updateCharacters();
+            addChatMessage('system', null, '🎮 Partita iniziata!');
+            showStatus('🎯 Partita iniziata!', 'success');
+            showToast('🎮 Partita iniziata!', 'success', 3000);
+            updateConnectionStatus('connected', 'In partita');
+            
+            setTimeout(() => hideStatus(), 2000);
+        }
+
+        function askQuestion() {
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+            if (!question) {
+                showToast('❓ Scrivi una domanda!', 'warning', 2000);
+                return;
+            }
+            
+            if (!GameState.gameStarted) {
+                showToast('⏳ La partita non è iniziata!', 'warning', 2000);
+                return;
+            }
+            
+            if (!GameState.isMyTurn) {
+                showToast('⏳ Non è il tuo turno!', 'warning', 2000);
+                return;
+            }
+            
+            addChatMessage('me', null, `❓ ${question}`);
+            sendMessage({
+                type: 'question',
+                playerId: GameState.myId,
+                question: question
+            });
+            
+            input.value = '';
+        }
+
+        function makeGuess() {
+            const input = document.getElementById('guessInput');
+            const guess = input.value.trim();
+            if (!guess) {
+                showToast('🔍 Scrivi un nome!', 'warning', 2000);
+                return;
+            }
+            
+            if (!GameState.gameStarted) {
+                showToast('⏳ La partita non è iniziata!', 'warning', 2000);
+                return;
+            }
+            
+            if (!GameState.isMyTurn) {
+                showToast('⏳ Non è il tuo turno!', 'warning', 2000);
+                return;
+            }
+            
+            sendMessage({
+                type: 'guess',
+                playerId: GameState.myId,
+                guess: guess
+            });
+            
+            addChatMessage('me', null, `🔍 ${guess}`);
+            input.value = '';
+        }
+
+        function disconnectGame() {
+            addLog('🔌 Disconnessione...', 'info');
+            stopPing();
+            
+            if (GameState.connection) {
+                sendMessage({
+                    type: 'disconnect',
+                    playerName: GameState.players.find(p => p.id === GameState.myId)?.name || 'Qualcuno'
+                });
+                GameState.connection.close();
+            }
+            if (GameState.peer) {
+                GameState.peer.destroy();
+            }
+            
+            // Reset state
+            GameState.players = [];
+            GameState.gameStarted = false;
+            GameState.myCharacter = null;
+            GameState.opponentCharacter = null;
+            GameState.currentPlayerId = null;
+            GameState.isMyTurn = false;
+            GameState.connection = null;
+            GameState.peer = null;
+            GameState.round = 1;
+            GameState.reconnectAttempts = 0;
+            
+            document.getElementById('chatBox').innerHTML = `
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            `;
+            
+            showScreen('lobbyScreen');
+            document.getElementById('waitingSection').classList.add('hidden');
+            document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
+            document.getElementById('joinSection').classList.add('hidden');
+            updateConnectionStatus('disconnected', 'Disconnesso');
+            document.getElementById('statusMessage').classList.add('hidden');
+            showToast('👋 Disconnesso', 'info', 2000);
+            
+            addLog('✅ Disconnesso', 'success');
+        }
+
+        // ============================================
+        // AUTO-JOIN DA URL
+        // ============================================
+        function checkAutoJoin() {
+            const params = new URLSearchParams(window.location.search);
+            const joinId = params.get('join');
+            if (joinId) {
+                document.getElementById('peerIdInput').value = joinId;
+                document.getElementById('playerName').value = 'Giocatore2';
+                setTimeout(() => {
+                    joinGame();
+                }, 500);
+            }
+        }
+
+        // ============================================
+        // EVENTI TASTIERA
+        // ============================================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active.id === 'questionInput') askQuestion();
+                else if (active.id === 'guessInput') makeGuess();
+                else if (active.id === 'peerIdInput') joinGame();
+                else if (active.id === 'quickAnswer') sendQuickAnswer();
+            }
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        addLog('🎮 AniQuiz Indovina Chi caricato!', 'success');
+        addLog('💡 Crea una partita o unisciti a una esistente', 'info');
+        showScreen('lobbyScreen');
+        
+        checkAutoJoin();
+        
+        setTimeout(() => {
+            if (!debugVisible) {
+                toggleDebug();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
