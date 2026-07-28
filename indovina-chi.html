@@ -843,17 +843,15 @@
             myName: '',
             round: 1,
 
-            // Personaggi ottenuti da Anilist (tabellone)
             boardCharacters: [],
 
-            // Personaggio scelto dal giocatore (tenuto segreto)
             myCharacter: null,
             opponentCharacter: null,
 
             isMyTurn: false,
             gameStarted: false,
-            ready: false,          // il giocatore ha confermato la scelta
-            opponentReady: false,  // l'avversario ha confermato
+            ready: false,
+            opponentReady: false,
 
             peer: null,
             connection: null,
@@ -861,7 +859,10 @@
             peerId: null,
             reconnectAttempts: 0,
             maxReconnectAttempts: 5,
-            pingInterval: null
+            pingInterval: null,
+            pongTimeout: null,
+
+            intentionalDisconnect: false
         };
 
         // ============================================
@@ -997,9 +998,10 @@
         }
 
         // ============================================
-        // RECUPERO PERSONAGGI DA ANILIST
+        // RECUPERO PERSONAGGI DA ANILIST (MIGLIORATO)
         // ============================================
         async function fetchAnimeCharacters() {
+            // Query ottimizzata: richiede nome, immagine large e titolo dell'anime
             const query = `
                 query {
                     Page(page: 1, perPage: 24) {
@@ -1035,30 +1037,38 @@
                 });
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0].message);
-                const characters = data.data.Page.characters.map(c => ({
-                    id: c.id,
-                    name: c.name.first + (c.name.last ? ' ' + c.name.last : ''),
-                    anime: c.media.nodes[0]?.title?.romaji || 'Sconosciuto',
-                    image: c.image.large || 'https://via.placeholder.com/150',
-                    emoji: '🎭'
-                }));
+                
+                const characters = data.data.Page.characters
+                    .filter(c => c.image && c.image.large) // solo chi ha immagine
+                    .map(c => ({
+                        id: c.id,
+                        name: c.name.first + (c.name.last ? ' ' + c.name.last : ''),
+                        anime: c.media.nodes[0]?.title?.romaji || 'Sconosciuto',
+                        image: c.image.large,
+                        emoji: '🎭'
+                    }));
+                
+                if (characters.length === 0) {
+                    throw new Error('Nessun personaggio con immagine trovato');
+                }
                 return characters;
             } catch (error) {
                 addLog(`❌ Errore Anilist: ${error.message}`, 'error');
-                // Fallback: lista hardcoded
+                showToast('⚠️ Anilist non risponde, uso lista di fallback', 'warning', 4000);
+                // Fallback: lista hardcoded con placeholder
                 return [
-                    { id: 1, name: 'Goku', anime: 'Dragon Ball', image: 'https://via.placeholder.com/150', emoji: '🐉' },
-                    { id: 2, name: 'Naruto', anime: 'Naruto', image: 'https://via.placeholder.com/150', emoji: '🍥' },
-                    { id: 3, name: 'Luffy', anime: 'One Piece', image: 'https://via.placeholder.com/150', emoji: '🏴‍☠️' },
-                    { id: 4, name: 'Saitama', anime: 'One Punch Man', image: 'https://via.placeholder.com/150', emoji: '👊' },
-                    { id: 5, name: 'Eren', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150', emoji: '⚔️' },
-                    { id: 6, name: 'Ichigo', anime: 'Bleach', image: 'https://via.placeholder.com/150', emoji: '⚡' },
-                    { id: 7, name: 'Tanjiro', anime: 'Demon Slayer', image: 'https://via.placeholder.com/150', emoji: '🔥' },
-                    { id: 8, name: 'Deku', anime: 'My Hero Academia', image: 'https://via.placeholder.com/150', emoji: '💚' },
-                    { id: 9, name: 'Gojo', anime: 'Jujutsu Kaisen', image: 'https://via.placeholder.com/150', emoji: '👁️' },
-                    { id: 10, name: 'Mikasa', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150', emoji: '⚔️' },
-                    { id: 11, name: 'Levi', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150', emoji: '⚔️' },
-                    { id: 12, name: 'Kaneki', anime: 'Tokyo Ghoul', image: 'https://via.placeholder.com/150', emoji: '🐱' }
+                    { id: 1, name: 'Goku', anime: 'Dragon Ball', image: 'https://via.placeholder.com/150?text=Goku', emoji: '🐉' },
+                    { id: 2, name: 'Naruto', anime: 'Naruto', image: 'https://via.placeholder.com/150?text=Naruto', emoji: '🍥' },
+                    { id: 3, name: 'Luffy', anime: 'One Piece', image: 'https://via.placeholder.com/150?text=Luffy', emoji: '🏴‍☠️' },
+                    { id: 4, name: 'Saitama', anime: 'One Punch Man', image: 'https://via.placeholder.com/150?text=Saitama', emoji: '👊' },
+                    { id: 5, name: 'Eren', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150?text=Eren', emoji: '⚔️' },
+                    { id: 6, name: 'Ichigo', anime: 'Bleach', image: 'https://via.placeholder.com/150?text=Ichigo', emoji: '⚡' },
+                    { id: 7, name: 'Tanjiro', anime: 'Demon Slayer', image: 'https://via.placeholder.com/150?text=Tanjiro', emoji: '🔥' },
+                    { id: 8, name: 'Deku', anime: 'My Hero Academia', image: 'https://via.placeholder.com/150?text=Deku', emoji: '💚' },
+                    { id: 9, name: 'Gojo', anime: 'Jujutsu Kaisen', image: 'https://via.placeholder.com/150?text=Gojo', emoji: '👁️' },
+                    { id: 10, name: 'Mikasa', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150?text=Mikasa', emoji: '⚔️' },
+                    { id: 11, name: 'Levi', anime: 'Attack on Titan', image: 'https://via.placeholder.com/150?text=Levi', emoji: '⚔️' },
+                    { id: 12, name: 'Kaneki', anime: 'Tokyo Ghoul', image: 'https://via.placeholder.com/150?text=Kaneki', emoji: '🐱' }
                 ];
             }
         }
@@ -1076,14 +1086,13 @@
                 card.className = 'char-card';
                 card.dataset.id = c.id;
                 card.innerHTML = `
-                    <img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/150'">
+                    <img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/150?text=Errore'">
                     <div class="char-name">${c.name}</div>
                     <div class="char-anime">${c.anime}</div>
                 `;
                 card.addEventListener('click', () => selectCharacter(c.id));
                 board.appendChild(card);
             });
-            // Deseleziona eventuale selezione precedente
             selectedCharacterId = null;
             document.getElementById('readyBtn').disabled = true;
             document.getElementById('selectionStatus').textContent = 'Seleziona un personaggio cliccando sulla card';
@@ -1094,7 +1103,6 @@
                 showToast('Hai già confermato!', 'warning', 2000);
                 return;
             }
-            // Rimuovi selezione da tutte le card
             document.querySelectorAll('#charBoard .char-card').forEach(card => {
                 card.classList.remove('selected');
             });
@@ -1127,23 +1135,19 @@
                 showToast('Hai già confermato!', 'warning', 2000);
                 return;
             }
-            // Salva il personaggio scelto
             const char = GameState.boardCharacters.find(c => c.id === selectedCharacterId);
-            GameState.myCharacter = { ...char }; // copia
+            GameState.myCharacter = { ...char };
             GameState.ready = true;
             document.getElementById('readyBtn').disabled = true;
             document.getElementById('readyBtn').textContent = '✅ In attesa...';
             document.getElementById('selectionStatus').textContent = `✅ Hai scelto ${char.name}! Attendi l'avversario...`;
-            // Blocca la selezione
             document.querySelectorAll('#charBoard .char-card').forEach(card => {
                 card.style.pointerEvents = 'none';
             });
-            // Invia all'avversario che siamo pronti (senza rivelare il personaggio)
             sendMessage({
                 type: 'player_ready',
                 playerId: GameState.myId
             });
-            // Se siamo host e anche l'avversario è già pronto, avvia il gioco
             if (GameState.isHost && GameState.opponentReady) {
                 startGameAfterSelection();
             }
@@ -1157,19 +1161,16 @@
             addLog('🎮 Entrambi pronti, avvio partita...', 'info');
             GameState.gameStarted = true;
             GameState.round = 1;
-            // Il turno inizia con l'host (primo giocatore nella lista)
             GameState.currentPlayerId = GameState.players[0].id;
-            // Invia start_game (senza personaggi, perché ognuno ha già il proprio)
             sendMessage({
                 type: 'start_game',
                 players: GameState.players,
                 currentPlayerId: GameState.currentPlayerId,
                 round: GameState.round
             });
-            // Mostra schermata di gioco
             showScreen('gameScreen');
             updatePlayersList();
-            updateCharacters(); // mostra il personaggio del giocatore (myCharacter)
+            updateCharacters();
             addChatMessage('system', null, '🎮 Partita iniziata!');
             showStatus('🎯 Partita iniziata!', 'success');
             showToast('🎮 Partita iniziata!', 'success', 3000);
@@ -1202,9 +1203,7 @@
                     updateConnectionStatus('connected', 'Connesso!');
                     showToast('🔗 Amico connesso!', 'success', 2000);
                     startPing();
-                    // Se host, invia il tabellone al client
                     if (GameState.isHost) {
-                        // Carica personaggi da Anilist (se non già caricati)
                         loadBoardAndSendToClient();
                     }
                 });
@@ -1231,7 +1230,12 @@
                     return;
                 }
                 if (data.type === 'pong') {
-                    addLog('💓 Ping ricevuto', 'info');
+                    // reset del timeout di pong
+                    if (GameState.pongTimeout) {
+                        clearTimeout(GameState.pongTimeout);
+                        GameState.pongTimeout = null;
+                    }
+                    addLog('💓 Pong ricevuto', 'info');
                     return;
                 }
                 addLog(`📨 Ricevuto: ${data.type}`, 'info');
@@ -1245,6 +1249,10 @@
             });
             conn.on('close', () => {
                 addLog('🔌 Connessione chiusa', 'error');
+                if (GameState.intentionalDisconnect) {
+                    addLog('🔌 Disconnessione volontaria, nessun tentativo di riconnessione', 'info');
+                    return;
+                }
                 addChatMessage('system', null, '🔌 Connessione persa! Tentativo di riconnessione...');
                 showToast('🔌 Connessione persa! Riconnessione...', 'warning', 3000);
                 updateConnectionStatus('disconnected', 'Riconnessione...');
@@ -1259,6 +1267,7 @@
         }
 
         function attemptReconnect() {
+            if (GameState.intentionalDisconnect) return;
             if (GameState.reconnectAttempts >= GameState.maxReconnectAttempts) {
                 showToast('❌ Impossibile riconnettersi', 'error', 5000);
                 addLog('❌ Riconnessione fallita dopo 5 tentativi', 'error');
@@ -1288,8 +1297,10 @@
                 addLog(`📤 Inviato: ${data.type}`, 'info');
             } else {
                 addLog(`⚠️ Impossibile inviare: connessione non aperta`, 'error');
-                showToast('⚠️ Connessione persa, tentativo di riconnessione...', 'warning', 2000);
-                attemptReconnect();
+                if (!GameState.intentionalDisconnect) {
+                    showToast('⚠️ Connessione persa, tentativo di riconnessione...', 'warning', 2000);
+                    attemptReconnect();
+                }
             }
         }
 
@@ -1300,7 +1311,6 @@
             addLog(`📨 Elaborazione: ${data.type}`, 'info');
             switch(data.type) {
                 case 'player_joined': {
-                    // Client invia il proprio ID e nome all'host
                     const newPlayer = { id: data.playerId, name: data.playerName, score: 0 };
                     if (!GameState.players.find(p => p.id === data.playerId)) {
                         GameState.players.push(newPlayer);
@@ -1310,9 +1320,7 @@
                     showStatus(`✅ ${data.playerName} si è unito!`, 'success');
                     showToast(`👋 ${data.playerName} si è unito!`, 'success', 3000);
                     if (GameState.isHost) {
-                        // Invia lista aggiornata
                         sendMessage({ type: 'player_list', players: GameState.players });
-                        // Invia anche il tabellone se già caricato
                         if (GameState.boardCharacters.length > 0) {
                             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
                         }
@@ -1326,35 +1334,29 @@
                     break;
                 }
                 case 'characters_board': {
-                    // Client riceve il tabellone dall'host
                     GameState.boardCharacters = data.characters;
                     renderCharacterBoard(GameState.boardCharacters);
                     showScreen('selectionScreen');
                     break;
                 }
                 case 'player_ready': {
-                    // Ricevuto da un giocatore (l'host lo riceve dal client, o viceversa)
                     if (data.playerId === GameState.myId) {
-                        // noi siamo pronti, ma l'abbiamo già gestito
+                        // noi siamo pronti, già gestito
                     } else {
                         GameState.opponentReady = true;
                         document.getElementById('opponentStatus').textContent = '✅ L\'avversario è pronto!';
                         showToast('✅ L\'avversario è pronto!', 'success', 2000);
-                        // Se sono host e anche io sono pronto, avvia
                         if (GameState.isHost && GameState.ready) {
                             startGameAfterSelection();
                         }
-                        // Se sono client, attendo che l'host avvii
                     }
                     break;
                 }
                 case 'start_game': {
-                    // Client riceve l'avvio
                     GameState.gameStarted = true;
                     GameState.players = data.players;
                     GameState.currentPlayerId = data.currentPlayerId;
                     GameState.round = data.round || 1;
-                    // Il personaggio è già stato scelto e salvato localmente (myCharacter)
                     updatePlayersList();
                     updateCharacters();
                     addChatMessage('system', null, '🎮 La partita è iniziata!');
@@ -1372,12 +1374,9 @@
                     break;
                 }
                 case 'new_round': {
-                    // Host comunica nuovo round
                     GameState.round = data.round;
                     GameState.players = data.players;
                     GameState.currentPlayerId = data.currentPlayerId;
-                    // I personaggi restano gli stessi (non cambiano a ogni round?)
-                    // Per il momento non cambiamo personaggi, ma solo turno
                     updatePlayersList();
                     const currentP = GameState.players.find(p => p.id === GameState.currentPlayerId);
                     addChatMessage('system', null, `🔄 Round ${GameState.round}! Tocca a ${currentP ? currentP.name : '?'}`);
@@ -1415,19 +1414,15 @@
                     break;
                 }
                 case 'guess': {
-                    // Un giocatore ha fatto un indovinello
                     handleGuess(data.playerId, data.guess);
                     break;
                 }
                 case 'guess_result': {
                     if (data.correct) {
                         GameState.players = data.players;
-                        // Rivela il personaggio corretto in base a chi ha indovinato
                         if (data.guesserId === GameState.myId) {
-                            // Ho indovinato io: rivelo il mio opponentCharacter (quello dell'avversario)
                             GameState.opponentCharacter = data.character;
                         } else {
-                            // L'avversario ha indovinato: rivelo il mio myCharacter
                             GameState.myCharacter = data.character;
                         }
                         updateCharacters();
@@ -1436,10 +1431,8 @@
                         showStatus(`🎉 È stato indovinato!`, 'success');
                         showToast(`🎉 Indovinato!`, 'success', 3000);
                         updatePlayersList();
-                        // Solo l'host avvia il nuovo round
                         if (GameState.isHost) {
                             setTimeout(() => {
-                                // Nuovo round: cambio turno
                                 const nextIndex = (GameState.players.findIndex(p => p.id === GameState.currentPlayerId) + 1) % GameState.players.length;
                                 GameState.currentPlayerId = GameState.players[nextIndex].id;
                                 GameState.round++;
@@ -1476,7 +1469,11 @@
                     showStatus('❌ L\'altro giocatore ha lasciato', 'error');
                     showToast(`👋 ${data.playerName} ha lasciato`, 'error', 4000);
                     updateConnectionStatus('disconnected', 'Partita terminata');
-                    GameState.gameStarted = false;
+                    resetGameState();
+                    showScreen('lobbyScreen');
+                    document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
+                    document.getElementById('joinSection').classList.add('hidden');
+                    document.getElementById('waitingSection').classList.add('hidden');
                     stopPing();
                     break;
                 }
@@ -1487,9 +1484,6 @@
         // LOGICA DI GIOCO
         // ============================================
         function handleGuess(guesserId, guess) {
-            // L'avversario (quello che possiede il personaggio target) deve verificare
-            // Se chi ha fatto il guess è l'avversario, allora il target è il mio personaggio
-            // Se chi ha fatto il guess sono io, allora il target è il personaggio dell'avversario
             let targetCharacter;
             if (guesserId === GameState.myId) {
                 targetCharacter = GameState.opponentCharacter;
@@ -1497,7 +1491,6 @@
                 targetCharacter = GameState.myCharacter;
             }
             if (!targetCharacter) {
-                // Non dovrebbe succedere
                 sendMessage({ type: 'guess_result', guesserId, correct: false, guess });
                 return;
             }
@@ -1508,7 +1501,6 @@
                 addChatMessage('success', null, `🎉 ${player ? player.name : 'Qualcuno'} ha indovinato! Era ${targetCharacter.name}!`);
                 showStatus(`🎉 ${player ? player.name : 'Qualcuno'} ha indovinato!`, 'success');
                 showToast(`🎉 ${player ? player.name : 'Qualcuno'} ha indovinato!`, 'success', 3000);
-                // Invia risultato all'altro
                 sendMessage({
                     type: 'guess_result',
                     guesserId,
@@ -1517,7 +1509,6 @@
                     players: GameState.players
                 });
                 updatePlayersList();
-                // Solo se sono host, avvio nuovo round (l'host gestisce i round)
                 if (GameState.isHost) {
                     setTimeout(() => {
                         const nextIndex = (GameState.players.findIndex(p => p.id === GameState.currentPlayerId) + 1) % GameState.players.length;
@@ -1599,15 +1590,30 @@
         }
 
         // ============================================
-        // PING
+        // PING E GESTIONE BACKGROUND
         // ============================================
         function startPing() {
             if (GameState.pingInterval) clearInterval(GameState.pingInterval);
+            // Ping ogni 3 secondi
             GameState.pingInterval = setInterval(() => {
                 if (GameState.connection && GameState.connection.open) {
                     sendMessage({ type: 'ping' });
+                    // Imposta un timeout per il pong (10 secondi)
+                    if (GameState.pongTimeout) clearTimeout(GameState.pongTimeout);
+                    GameState.pongTimeout = setTimeout(() => {
+                        // Nessun pong ricevuto, consideriamo la connessione persa
+                        addLog('⚠️ Nessun pong ricevuto, connessione persa', 'error');
+                        if (GameState.connection) {
+                            GameState.connection.close();
+                        }
+                        updateConnectionStatus('disconnected', 'Timeout');
+                        showToast('🔌 Connessione persa (timeout)', 'error', 4000);
+                        if (!GameState.intentionalDisconnect) {
+                            attemptReconnect();
+                        }
+                    }, 10000);
                 }
-            }, 5000);
+            }, 3000);
         }
 
         function stopPing() {
@@ -1615,6 +1621,58 @@
                 clearInterval(GameState.pingInterval);
                 GameState.pingInterval = null;
             }
+            if (GameState.pongTimeout) {
+                clearTimeout(GameState.pongTimeout);
+                GameState.pongTimeout = null;
+            }
+        }
+
+        // Rilevamento quando il tab torna visibile
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Il tab è tornato visibile
+                addLog('👁️ Tab visibile, controllo connessione', 'info');
+                if (!GameState.connection || !GameState.connection.open) {
+                    if (!GameState.intentionalDisconnect) {
+                        showToast('🔄 Riconnessione in corso...', 'warning', 3000);
+                        attemptReconnect();
+                    }
+                } else {
+                    // Invia un ping per verificare
+                    sendMessage({ type: 'ping' });
+                }
+            }
+        });
+
+        // ============================================
+        // RESET STATO (dopo disconnessione)
+        // ============================================
+        function resetGameState() {
+            stopPing();
+            GameState.players = [];
+            GameState.gameStarted = false;
+            GameState.myCharacter = null;
+            GameState.opponentCharacter = null;
+            GameState.currentPlayerId = null;
+            GameState.isMyTurn = false;
+            GameState.connection = null;
+            GameState.peer = null;
+            GameState.round = 1;
+            GameState.reconnectAttempts = 0;
+            GameState.ready = false;
+            GameState.opponentReady = false;
+            GameState.boardCharacters = [];
+            GameState.intentionalDisconnect = false;
+            document.getElementById('chatBox').innerHTML = `
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            `;
+            document.getElementById('statusMessage').classList.add('hidden');
+            document.getElementById('waitingSection').classList.add('hidden');
+            document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
+            document.getElementById('joinSection').classList.add('hidden');
+            updateConnectionStatus('disconnected', 'Disconnesso');
         }
 
         // ============================================
@@ -1676,7 +1734,6 @@
                     updateConnectionStatus('connected', 'Connesso!');
                     showToast('✅ Connesso!', 'success', 2000);
                     startPing();
-                    // Invia le proprie info all'host
                     sendMessage({
                         type: 'player_joined',
                         playerId: GameState.myId,
@@ -1686,7 +1743,6 @@
                     showStatus('✅ Connesso! In attesa del tabellone...', 'success');
                     document.getElementById('joinSection').classList.add('hidden');
                     document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
-                    // Non mostriamo ancora gameScreen, aspetteremo il tabellone
                 });
                 setTimeout(() => {
                     if (!conn.open) {
@@ -1705,13 +1761,11 @@
         }
 
         async function loadBoardAndSendToClient() {
-            // Carica personaggi da Anilist (solo host)
             showScreen('selectionScreen');
             document.getElementById('charBoard').innerHTML = '<div class="loader"></div><p style="text-align:center;grid-column:1/-1;">Caricamento personaggi da Anilist...</p>';
             const chars = await fetchAnimeCharacters();
             GameState.boardCharacters = chars;
             renderCharacterBoard(chars);
-            // Invia il tabellone al client
             sendMessage({ type: 'characters_board', characters: chars });
             document.getElementById('opponentStatus').textContent = '⏳ In attesa che l\'avversario scelga...';
         }
@@ -1765,7 +1819,8 @@
         }
 
         function disconnectGame() {
-            addLog('🔌 Disconnessione...', 'info');
+            addLog('🔌 Disconnessione volontaria...', 'info');
+            GameState.intentionalDisconnect = true;
             stopPing();
             if (GameState.connection) {
                 sendMessage({
@@ -1777,34 +1832,33 @@
             if (GameState.peer) {
                 GameState.peer.destroy();
             }
-            // Reset state
-            GameState.players = [];
-            GameState.gameStarted = false;
-            GameState.myCharacter = null;
-            GameState.opponentCharacter = null;
-            GameState.currentPlayerId = null;
-            GameState.isMyTurn = false;
-            GameState.connection = null;
-            GameState.peer = null;
-            GameState.round = 1;
-            GameState.reconnectAttempts = 0;
-            GameState.ready = false;
-            GameState.opponentReady = false;
-            GameState.boardCharacters = [];
-            document.getElementById('chatBox').innerHTML = `
-                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
-                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
-                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
-            `;
+            resetGameState();
             showScreen('lobbyScreen');
-            document.getElementById('waitingSection').classList.add('hidden');
             document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
             document.getElementById('joinSection').classList.add('hidden');
-            updateConnectionStatus('disconnected', 'Disconnesso');
-            document.getElementById('statusMessage').classList.add('hidden');
+            document.getElementById('waitingSection').classList.add('hidden');
             showToast('👋 Disconnesso', 'info', 2000);
-            addLog('✅ Disconnesso', 'success');
+            addLog('✅ Disconnesso volontariamente', 'success');
         }
+
+        // ============================================
+        // GESTIONE USCITA DAL BROWSER
+        // ============================================
+        window.addEventListener('beforeunload', function (e) {
+            if (GameState.connection && GameState.connection.open) {
+                try {
+                    GameState.connection.send({
+                        type: 'disconnect',
+                        playerName: GameState.players.find(p => p.id === GameState.myId)?.name || 'Qualcuno'
+                    });
+                } catch (err) {}
+            }
+            GameState.intentionalDisconnect = true;
+            if (GameState.peer) {
+                try { GameState.peer.destroy(); } catch (e) {}
+            }
+            stopPing();
+        });
 
         // ============================================
         // AUTO-JOIN
