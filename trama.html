@@ -61,7 +61,7 @@
             font-size: 1rem;
             color: #d4caff;
         }
-        .setup-screen input {
+        .setup-screen input[type="text"] {
             padding: 16px 20px;
             border-radius: 60px;
             border: 2px solid #3c2d6e;
@@ -72,7 +72,7 @@
             transition: 0.3s;
             width: 100%;
         }
-        .setup-screen input:focus {
+        .setup-screen input[type="text"]:focus {
             border-color: #b47aff;
             box-shadow: 0 0 20px rgba(150, 80, 255, 0.3);
         }
@@ -268,11 +268,14 @@
             cursor: not-allowed;
             opacity: 0.7;
         }
+
+        /* --- Stili per l'area di input con datalist --- */
         .input-area {
             display: flex;
             gap: 12px;
             align-items: center;
             flex-wrap: wrap;
+            position: relative;
         }
         .input-area input {
             flex: 1;
@@ -294,6 +297,17 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* --- Stili per la datalist (tendina suggerimenti) --- */
+        /* I browser applicano stili diversi, questi sono per personalizzarla un po' */
+        input::-webkit-calendar-picker-indicator {
+            display: none; /* Nasconde la freccetta del datalist */
+        }
+        input[list]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+        /* La datalist di default ha uno stile che varia per browser, ma funziona */
+
         .game-actions {
             display: flex;
             gap: 12px;
@@ -383,9 +397,10 @@
             <!-- Opzioni per modalità NORMALE (4 bottoni) -->
             <div class="options-grid" id="optionsGrid"></div>
 
-            <!-- Campo input per modalità DIFFICILE (senza timer) -->
+            <!-- Campo input per modalità DIFFICILE con datalist -->
             <div class="input-area hidden" id="inputArea">
-                <input type="text" id="answerInput" placeholder="Scrivi il titolo dell'anime..." autocomplete="off" />
+                <input type="text" id="answerInput" list="animeSuggestions" placeholder="Scrivi il titolo dell'anime..." autocomplete="off" />
+                <datalist id="animeSuggestions"></datalist>
                 <button class="btn" id="submitBtn">✏️ Invia</button>
             </div>
 
@@ -399,7 +414,7 @@
     </div>
 
     <!-- Caricamento del database esterno -->
-    <script src="js/database-trama.js"></script>
+    <script src="../js/database-trama.js"></script>
 
     <script>
         (function() {
@@ -423,12 +438,33 @@
             const inputArea = document.getElementById('inputArea');
             const answerInput = document.getElementById('answerInput');
             const submitBtn = document.getElementById('submitBtn');
+            const datalist = document.getElementById('animeSuggestions');
             const feedback = document.getElementById('feedback');
             const skipBtn = document.getElementById('skipBtn');
             const nextRoundBtn = document.getElementById('nextRoundBtn');
             const difficultyRadios = document.querySelectorAll('input[name="difficulty"]');
             const easyLabel = document.getElementById('easyLabel');
             const hardLabel = document.getElementById('hardLabel');
+
+            // --- Popola la datalist con tutti i titoli e alias dal database ---
+            function populateDatalist() {
+                const suggestions = new Set();
+                ANIME_DB.forEach(anime => {
+                    suggestions.add(anime.title);
+                    if (anime.aliases) {
+                        anime.aliases.forEach(alias => suggestions.add(alias));
+                    }
+                });
+                // Ordina alfabeticamente e popola la datalist
+                const sorted = Array.from(suggestions).sort((a, b) => a.localeCompare(b));
+                datalist.innerHTML = '';
+                sorted.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    datalist.appendChild(option);
+                });
+                console.log(`📋 Datalist popolata con ${sorted.length} suggerimenti.`);
+            }
 
             // --- Stato ---
             let players = [];
@@ -528,7 +564,7 @@
                         inputArea.classList.add('hidden');
 
                     } else {
-                        // --- MODALITÀ DIFFICILE: input testuale (senza timer) ---
+                        // --- MODALITÀ DIFFICILE: input testuale con datalist ---
                         const anime = pickRandomAnime();
                         currentTarget = anime;
 
@@ -538,8 +574,8 @@
                         inputArea.classList.remove('hidden');
                         answerInput.disabled = false;
                         submitBtn.disabled = false;
+                        answerInput.value = '';
                         answerInput.focus();
-                        // NESSUN TIMER
                     }
 
                     round++;
@@ -600,7 +636,7 @@
                 if (isWaiting || answered) return;
                 const input = answerInput.value.trim();
                 if (!input) {
-                    feedback.textContent = '✏️ Scrivi un titolo prima di inviare!';
+                    feedback.textContent = '✏️ Scrivi o seleziona un titolo prima di inviare!';
                     return;
                 }
 
@@ -731,6 +767,9 @@
                 updateUI();
                 startNewRound();
             }
+
+            // --- Popola la datalist all'avvio ---
+            populateDatalist();
 
             // --- Event listeners ---
             startBtn.addEventListener('click', startGame);
