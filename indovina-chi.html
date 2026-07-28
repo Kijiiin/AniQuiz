@@ -335,7 +335,7 @@
             <button class="btn btn-secondary" onclick="toggleDebug()" style="margin-top: 10px; width: auto; padding: 5px 15px; font-size: 12px;">🔧 Mostra Log</button>
         </div>
 
-        <!-- LOADING SCREEN (per il client in attesa) -->
+        <!-- LOADING SCREEN -->
         <div id="loadingScreen" class="screen">
             <div class="loader"></div>
             <p>Connesso! Caricamento personaggi...</p>
@@ -591,7 +591,7 @@
         }
 
         // ============================================
-        // ANILIST API
+        // ANILIST API (corretta)
         // ============================================
         async function fetchAnimeCharacters() {
             try {
@@ -599,7 +599,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({
-                        query: `query { Page(page: 1, perPage: 24) { characters(sort: POPULARITY_DESC) { id name { first last } image { large } media(sort: POPULARITY_DESC, perPage: 1) { nodes { title { romaji } } } } } }`
+                        query: `query { Page(page: 1, perPage: 24) { characters(sort: FAVOURITES_DESC) { id name { first last } image { large } media(sort: POPULARITY_DESC, perPage: 1) { nodes { title { romaji } } } } } }`
                     })
                 });
                 const data = await response.json();
@@ -721,7 +721,7 @@
             return String(Math.floor(1000 + Math.random() * 9000));
         }
 
-        // HOST: crea stanza e carica subito i personaggi
+        // HOST
         async function initHostAndLoadCharacters() {
             const id = generateRoomCode();
             addLog(`HOST: Creazione stanza con ID: ${id}`, 'info');
@@ -736,11 +736,10 @@
                     updateConnectionStatus('connected', 'Caricamento personaggi...');
                     
                     try {
-                        // Carica subito i personaggi
                         const chars = await fetchAnimeCharacters();
                         GameState.boardCharacters = chars;
                         GameState.charactersLoaded = true;
-                        renderCharacterBoard(chars); // prerenderizza la board
+                        // prerenderizza la board in memoria (non mostrata)
                         addLog('HOST: Personaggi caricati con successo', 'success');
                     } catch (err) {
                         addLog(`Errore caricamento personaggi: ${err.message}`, 'error');
@@ -757,19 +756,12 @@
                     GameState.connection = conn;
                     setupConnection(conn);
                     
-                    conn.on('open', () => {
-                        addLog('HOST: Connessione stabilita con client', 'success');
-                        document.getElementById('waitingSection').classList.add('hidden');
-                        updateConnectionStatus('connected', 'Giocatore connesso!');
-                        showToast('🔗 Amico connesso!', 'success', 2000);
-                        startPing();
-                        
-                        // Invia immediatamente la board (già pronta)
-                        sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
-                        // Mostra la schermata di selezione per l'host
-                        showScreen('selectionScreen');
-                        updateReadyButton();
-                    });
+                    // Se la connessione è già aperta, esegui subito onConnectionOpen
+                    if (conn.open) {
+                        onConnectionOpen(conn);
+                    } else {
+                        conn.on('open', () => onConnectionOpen(conn));
+                    }
                 });
                 
                 GameState.peer.on('error', (err) => {
@@ -789,7 +781,22 @@
             });
         }
 
-        // CLIENT: si connette all'host
+        function onConnectionOpen(conn) {
+            addLog('HOST: Connessione stabilita con client', 'success');
+            document.getElementById('waitingSection').classList.add('hidden');
+            updateConnectionStatus('connected', 'Giocatore connesso!');
+            showToast('🔗 Amico connesso!', 'success', 2000);
+            startPing();
+            
+            // Invia subito la board (pronta)
+            sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
+            // Mostra la selezione per l'host
+            showScreen('selectionScreen');
+            renderCharacterBoard(GameState.boardCharacters);
+            updateReadyButton();
+        }
+
+        // CLIENT
         function connectToHost(hostId) {
             return new Promise((resolve, reject) => {
                 addLog(`CLIENT: Connessione all'host: ${hostId}`, 'info');
@@ -804,23 +811,11 @@
                     GameState.connection = conn;
                     setupConnection(conn);
                     
-                    conn.on('open', () => {
-                        addLog('CLIENT: Connessione stabilita con host!', 'success');
-                        updateConnectionStatus('connected', 'Connesso!');
-                        showToast('✅ Connesso! Ricezione personaggi...', 'success', 3000);
-                        startPing();
-                        
-                        // Invia info giocatore
-                        sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: GameState.myName });
-                        
-                        document.getElementById('joinSection').classList.add('hidden');
-                        document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
-                        
-                        // Mostra caricamento in attesa della board
-                        showScreen('loadingScreen');
-                        
-                        resolve(conn);
-                    });
+                    if (conn.open) {
+                        onClientConnectionOpen(conn);
+                    } else {
+                        conn.on('open', () => onClientConnectionOpen(conn));
+                    }
                     
                     setTimeout(() => {
                         if (!conn.open) {
@@ -835,6 +830,19 @@
                     reject(err);
                 });
             });
+        }
+
+        function onClientConnectionOpen(conn) {
+            addLog('CLIENT: Connessione stabilita con host!', 'success');
+            updateConnectionStatus('connected', 'Connesso!');
+            showToast('✅ Connesso! Ricezione personaggi...', 'success', 3000);
+            startPing();
+            
+            sendMessage({ type: 'player_joined', playerId: GameState.myId, playerName: GameState.myName });
+            
+            document.getElementById('joinSection').classList.add('hidden');
+            document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
+            showScreen('loadingScreen');
         }
 
         function setupConnection(conn) {
@@ -889,7 +897,6 @@
                     
                     if (GameState.isHost) {
                         sendMessage({ type: 'player_list', players: GameState.players });
-                        // Invia board (già pronta)
                         if (GameState.boardCharacters.length > 0) {
                             sendMessage({ type: 'characters_board', characters: GameState.boardCharacters });
                         }
@@ -1136,9 +1143,7 @@
             GameState.players = [{ id: GameState.myId, name, score: 0 }];
             
             try {
-                // Inizializza host e carica personaggi
                 await initHostAndLoadCharacters();
-                // Mostra la schermata di attesa (i personaggi sono già pronti)
                 document.getElementById('waitingSection').classList.remove('hidden');
                 document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'none';
                 document.getElementById('joinSection').classList.add('hidden');
