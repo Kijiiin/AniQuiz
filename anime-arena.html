@@ -674,6 +674,10 @@
         if (newX !== GAME.me.x || newY !== GAME.me.y) {
             GAME.me.x = newX;
             GAME.me.y = newY;
+        if (GAME.players[GAME.me.id]) {
+        GAME.players[GAME.me.id].x = GAME.me.x;
+        GAME.players[GAME.me.id].y = GAME.me.y;
+    }
             // Aggiorna direzione
             if (dx > 0) GAME.me.direction = 1;
             else if (dx < 0) GAME.me.direction = 3;
