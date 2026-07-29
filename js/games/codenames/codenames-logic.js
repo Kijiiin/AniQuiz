@@ -67,8 +67,8 @@ const CodenamesLogic = (function() {
         }));
 
         return {
-            phase: "SPIA_TURNO",      // SPIA_TURNO | AGENTI_TURNO | GAME_OVER
-            turn: firstTeam,          // "RED" o "BLUE"
+            phase: "SPIA_TURNO",
+            turn: firstTeam,
             board: board,
             redSpy: null,
             blueSpy: null,
@@ -89,7 +89,6 @@ const CodenamesLogic = (function() {
     function assignPlayer(state, playerId, team, role) {
         if (!state || state.started) return null;
 
-        // Rimuovi da ruoli precedenti
         if (state.redSpy === playerId) state.redSpy = null;
         if (state.blueSpy === playerId) state.blueSpy = null;
         state.redAgents = state.redAgents.filter(id => id !== playerId);
@@ -188,7 +187,6 @@ const CodenamesLogic = (function() {
             isGameOver: false
         };
 
-        // Carta nera → sconfitta istantanea
         if (card.color === "BLACK") {
             state.gameOver = true;
             state.phase = "GAME_OVER";
@@ -203,7 +201,6 @@ const CodenamesLogic = (function() {
             };
         }
 
-        // Controlla vittoria
         if (state.redCardsLeft === 0) {
             state.gameOver = true;
             state.phase = "GAME_OVER";
@@ -231,7 +228,6 @@ const CodenamesLogic = (function() {
             };
         }
 
-        // Se la carta è dell'avversario o neutra, il turno finisce
         if (card.color !== turnTeam) {
             state.phase = "SPIA_TURNO";
             state.turn = state.turn === "RED" ? "BLUE" : "RED";
@@ -245,7 +241,6 @@ const CodenamesLogic = (function() {
             };
         }
 
-        // Se ha finito i tentativi, finisce il turno
         if (state.guessesLeft === 0) {
             state.phase = "SPIA_TURNO";
             state.turn = state.turn === "RED" ? "BLUE" : "RED";
@@ -258,7 +253,6 @@ const CodenamesLogic = (function() {
             };
         }
 
-        // Altrimenti può continuare
         return {
             success: true,
             state: state,
@@ -286,7 +280,6 @@ const CodenamesLogic = (function() {
         return { success: true, state: state };
     }
 
-    // ---------- API PUBBLICA ----------
     return {
         initGame: initGame,
         assignPlayer: assignPlayer,
@@ -299,7 +292,6 @@ const CodenamesLogic = (function() {
 
 })();
 
-// Esporta nel globale
 if (typeof window !== 'undefined') {
     window.CodenamesLogic = CodenamesLogic;
 }
