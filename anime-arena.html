@@ -499,7 +499,7 @@
                     p.hp = state.hp !== undefined ? state.hp : p.hp;
                     p.maxHp = state.maxHp || p.maxHp;
                     p.direction = state.direction || 0;
-                    renderPlayersUI();
+                    renderPlayersUI(); // 👈 AGGIUNTA: aggiorna la UI quando cambiano gli HP
                 }
             }
         });
