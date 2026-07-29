@@ -17,7 +17,7 @@
             padding: 20px;
         }
         #app {
-            max-width: 800px;
+            max-width: 850px;
             width: 100%;
             background: #16213e;
             padding: 30px;
@@ -25,26 +25,108 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
         h1 { text-align: center; font-size: 2rem; margin-bottom: 20px; background: linear-gradient(135deg, #e94560, #0f3460); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
         .lobby-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
         .lobby-row input { flex: 1; min-width: 120px; padding: 10px 14px; border: none; border-radius: 8px; background: #0f3460; color: #eee; font-size: 1rem; }
         .lobby-row input::placeholder { color: #888; }
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; background: #e94560; color: white; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; color: white; }
         .btn:hover { transform: scale(1.02); opacity: 0.9; }
         .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: #e94560; }
         .btn-success { background: #2ecc71; }
+        .btn-danger { background: #e74c3c; }
         .btn-warning { background: #f39c12; }
         .btn-info { background: #3498db; }
-        .btn-red { background: #e74c3c; }
-        .btn-blue { background: #3498db; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .role-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-        .player-list { background: #0f3460; padding: 12px 16px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+        .btn-red { background: #c0392b; }
+        .btn-blue { background: #2980b9; }
+        
+        .player-list {
+            background: #0f3460;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 20px;
+            min-height: 50px;
+            align-items: center;
+        }
+        
+        .role-panel {
+            background: #0f3460;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .role-panel h3 { margin-bottom: 12px; color: #f1c40f; }
+        .role-panel .player-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid #1a2a4a;
+            flex-wrap: wrap;
+        }
+        .role-panel .player-row select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #2a4a6a;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 150px;
+        }
+        .role-panel .player-row select:disabled { opacity: 0.5; }
+        .role-panel .player-row .name { font-weight: bold; min-width: 80px; }
+        .role-panel .player-row .badge { font-size: 0.8rem; color: #888; }
+        
         #game-area { display: none; margin-top: 20px; }
         #game-area.visible { display: block; }
-        #info { display: flex; flex-wrap: wrap; justify-content: space-between; background: #0f3460; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem; gap: 8px; }
-        #board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
-        .card { aspect-ratio: 1 / 1; background: #2d4059; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; font-size: 0.85rem; padding: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; color: #eee; word-break: break-word; border: 3px solid transparent; user-select: none; }
+        
+        #info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            background: #0f3460;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+            gap: 8px;
+        }
+        #info .turn { font-weight: bold; }
+        #info .turn.red { color: #ff6b6b; }
+        #info .turn.blue { color: #6bcfff; }
+        #info .score { font-weight: bold; }
+        
+        #board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .card {
+            aspect-ratio: 1 / 1;
+            background: #2d4059;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 4px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            color: #eee;
+            word-break: break-word;
+            border: 3px solid transparent;
+            user-select: none;
+        }
         .card:hover:not(.revealed) { transform: scale(1.04); box-shadow: 0 0 16px rgba(255,255,255,0.15); }
         .card.revealed { cursor: default; transform: none !important; }
         .card-red { background: #c0392b; border-color: #e74c3c; }
@@ -52,23 +134,56 @@
         .card-neutral { background: #7f8c8d; border-color: #95a5a6; }
         .card-black { background: #1a1a2e; border-color: #2c3e50; color: #fff; }
         .card-hidden { background: #2d4059; border-color: #3d5166; }
-        #controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #0f3460; padding: 14px 16px; border-radius: 8px; margin-top: 12px; }
-        #controls input { padding: 8px 12px; border: none; border-radius: 6px; background: #1a1a2e; color: #eee; font-size: 1rem; flex: 1; min-width: 80px; }
+        
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            background: #0f3460;
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        #controls input {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 80px;
+        }
         #controls input::placeholder { color: #888; }
         #controls input[type="number"] { max-width: 70px; text-align: center; }
-        #status { margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: #0f3460; font-size: 0.9rem; min-height: 40px; }
+        
+        #status {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #0f3460;
+            font-size: 0.9rem;
+            min-height: 40px;
+        }
         #status .error { color: #ff6b6b; }
         #status .success { color: #2ecc71; }
         #status .info { color: #f1c40f; }
+        
         .hidden { display: none !important; }
-        @media (max-width: 600px) { #app { padding: 16px; } .card { font-size: 0.7rem; } }
+        
+        @media (max-width: 600px) {
+            #app { padding: 16px; }
+            .card { font-size: 0.7rem; }
+            .role-panel .player-row { flex-direction: column; align-items: stretch; }
+        }
     </style>
 </head>
 <body>
     <div id="app">
         <h1>🕵️ CODENAMES</h1>
 
-        <!-- CONNESSIONE -->
+        <!-- ====== CONNESSIONE ====== -->
         <div id="connect-section">
             <div class="lobby-row">
                 <input id="player-name" placeholder="Il tuo nome" value="Test">
@@ -79,24 +194,26 @@
             <div id="connection-status" class="player-list">🔴 Disconnesso</div>
         </div>
 
-        <!-- RUOLI E LOBBY (nascosto finché non connesso) -->
-        <div id="lobby">
-            <div style="margin-top: 16px;">
-                <h3>🎯 Assegna il tuo ruolo</h3>
-                <div class="role-buttons">
-                    <button class="btn btn-red" id="btn-assign-red-spy">🔴 Capo-spia</button>
-                    <button class="btn btn-red" id="btn-assign-red-agent">🔴 Agente</button>
-                    <button class="btn btn-blue" id="btn-assign-blue-spy">🔵 Capo-spia</button>
-                    <button class="btn btn-blue" id="btn-assign-blue-agent">🔵 Agente</button>
+        <!-- ====== ASSEGNAZIONE RUOLI (solo dopo connessione) ====== -->
+        <div id="role-assignment" class="hidden">
+            <div class="role-panel">
+                <h3>👥 Assegna i ruoli</h3>
+                <div id="player-role-list">
+                    <!-- Generato da JavaScript -->
                 </div>
-                <button class="btn btn-success" id="btn-start">▶️ Avvia partita</button>
+                <div id="role-status" style="margin-top: 12px; color: #f1c40f; font-size: 0.9rem;">
+                    ⏳ In attesa di tutti i giocatori...
+                </div>
+                <button class="btn btn-success" id="btn-start-game" disabled style="margin-top: 12px;">
+                    ▶️ Avvia partita
+                </button>
             </div>
             <div id="player-list-container" class="player-list">
                 <span style="opacity:0.6;">Nessun giocatore in stanza</span>
             </div>
         </div>
 
-        <!-- GAME AREA -->
+        <!-- ====== GAME AREA ====== -->
         <div id="game-area">
             <div id="info">
                 <span class="turn" id="turn-info">⏳ In attesa...</span>
@@ -114,10 +231,9 @@
         </div>
     </div>
 
-    <!-- ========== LIBRERIE ========== -->
-    <!-- Se multiplayer.js è nella stessa cartella di index.html -->
-        <script src="js/multiplayer.js"></script>
-        <script src="js/games/codenames/codenames-logic.js"></script>
-        <script src="js/games/codenames/codenames.js"></script>
+    <!-- ====== LIBRERIE ====== -->
+    <script src="js/multiplayer.js"></script>
+    <script src="js/games/codenames/codenames-logic.js"></script>
+    <script src="js/games/codenames/codenames.js"></script>
 </body>
 </html>
