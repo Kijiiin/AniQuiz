@@ -769,6 +769,7 @@
     // -------- Eventi tastiera --------
     document.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase();
+        if (e.target.tagName === 'INPUT') return;
         if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
             GAME.keys[key] = true;
             e.preventDefault();
@@ -781,6 +782,7 @@
 
     document.addEventListener('keyup', (e) => {
         const key = e.key.toLowerCase();
+        if (e.target.tagName === 'INPUT') return;
         if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
             GAME.keys[key] = false;
             e.preventDefault();
