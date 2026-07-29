@@ -3,71 +3,60 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multiplayer Demo – Anime Games</title>
+    <title>Anime Battle – Combattimento Multiplayer</title>
     <style>
-        /* Stile minimal per la demo */
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
             background: #0f0e1a;
-            color: #eee;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            color: #eee;
             padding: 20px;
         }
-        .demo-container {
-            max-width: 800px;
-            width: 100%;
+        .game-wrapper {
             background: #1a1a2e;
             border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            padding: 24px;
             border: 1px solid #2a2a4a;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            max-width: 900px;
+            width: 100%;
         }
-        h1 {
-            font-size: 28px;
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .top-bar .title {
+            font-size: 24px;
             font-weight: 700;
             background: linear-gradient(135deg, #f7971e, #ffd200);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
         }
-        .subtitle {
-            color: #8888aa;
-            margin-bottom: 24px;
+        .top-bar .status {
             font-size: 14px;
-        }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             background: #12121f;
-            padding: 12px 18px;
-            border-radius: 12px;
+            padding: 6px 16px;
+            border-radius: 20px;
             border: 1px solid #2a2a4a;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
         }
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-        .dot {
+        .top-bar .status .dot {
             display: inline-block;
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #555;
-            transition: background 0.3s;
+            margin-right: 6px;
         }
         .dot.online {
             background: #4ade80;
@@ -75,161 +64,98 @@
         }
         .dot.offline {
             background: #f87171;
-            box-shadow: 0 0 12px rgba(248, 113, 113, 0.3);
         }
         .dot.connecting {
             background: #fbbf24;
-            box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
-        .room-info {
-            font-size: 13px;
-            color: #8888aa;
-            font-family: monospace;
-        }
-        .players-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .player-card {
-            background: #12121f;
-            border: 1px solid #2a2a4a;
-            border-radius: 14px;
-            padding: 14px 16px;
-            text-align: center;
-            transition: border-color 0.3s, transform 0.2s;
-        }
-        .player-card.ready {
-            border-color: #4ade80;
-            background: #1a2a1a;
-        }
-        .player-card .name {
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
-        .player-card .status-text {
-            font-size: 12px;
-            color: #8888aa;
-        }
-        .player-card .ready-badge {
-            display: inline-block;
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 20px;
-            background: #2a2a4a;
-            color: #aaa;
-            margin-top: 4px;
-        }
-        .player-card .ready-badge.ready {
-            background: #4ade8033;
-            color: #4ade80;
-        }
-        .player-card.you {
-            border-color: #f7971e;
-            box-shadow: 0 0 20px rgba(247, 151, 30, 0.15);
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin: 18px 0 12px;
-        }
-        .controls input,
-        .controls select {
-            flex: 1;
-            min-width: 140px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid #2a2a4a;
-            background: #12121f;
-            color: #eee;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .controls input:focus,
-        .controls select:focus {
-            border-color: #f7971e;
-        }
-        .controls button {
-            padding: 10px 22px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.25s;
-            background: #2a2a4a;
-            color: #ccc;
-        }
-        .controls button:hover {
-            transform: scale(1.03);
-            filter: brightness(1.2);
-        }
-        .controls button.primary {
-            background: linear-gradient(135deg, #f7971e, #ffd200);
-            color: #1a1a2e;
-        }
-        .controls button.danger {
-            background: #e74c3c;
-            color: #fff;
-        }
-        .controls button.success {
-            background: #4ade80;
-            color: #1a1a2e;
-        }
-        .controls button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        .game-area {
+
+        .canvas-container {
             background: #12121f;
             border-radius: 16px;
             border: 1px solid #2a2a4a;
-            padding: 20px;
-            min-height: 140px;
-            margin-top: 16px;
+            overflow: hidden;
+            position: relative;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 800 / 500;
+            background: #1a1a2e;
+            cursor: crosshair;
+        }
+
+        .controls-info {
+            margin-top: 12px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .game-area .placeholder {
-            color: #555577;
-            font-size: 15px;
-            text-align: center;
-        }
-        .game-area .placeholder strong {
+            justify-content: space-between;
+            font-size: 13px;
             color: #8888aa;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .controls-info kbd {
+            background: #0a0a14;
+            padding: 2px 10px;
+            border-radius: 6px;
+            border: 1px solid #2a2a4a;
+            font-family: monospace;
+            color: #ddd;
+        }
+
+        .players-list {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .player-tag {
+            background: #12121f;
+            border: 1px solid #2a2a4a;
+            border-radius: 12px;
+            padding: 4px 14px 4px 10px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .player-tag .hp-bar {
+            width: 40px;
+            height: 6px;
+            background: #2a2a4a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .player-tag .hp-fill {
+            height: 100%;
+            background: #4ade80;
+            transition: width 0.2s;
+        }
+        .player-tag .hp-fill.low {
+            background: #f87171;
+        }
+        .player-tag .you {
+            color: #f7971e;
+            font-weight: bold;
         }
         .log-area {
-            margin-top: 16px;
+            margin-top: 12px;
             background: #0a0a14;
             border-radius: 12px;
-            padding: 12px 16px;
-            max-height: 140px;
+            padding: 8px 14px;
+            max-height: 80px;
             overflow-y: auto;
-            font-family: 'Fira Code', monospace;
             font-size: 12px;
             color: #7777aa;
             border: 1px solid #1a1a2e;
-            line-height: 1.7;
-        }
-        .log-area .log-entry {
-            border-bottom: 1px solid #111122;
-            padding: 2px 0;
-        }
-        .log-area .log-entry .time {
-            color: #444466;
-            margin-right: 10px;
+            font-family: 'Fira Code', monospace;
+            line-height: 1.6;
         }
         .log-area .log-entry .highlight {
             color: #f7971e;
@@ -240,466 +166,704 @@
         .log-area .log-entry .error {
             color: #f87171;
         }
-        ::-webkit-scrollbar {
-            width: 4px;
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a14; }
+        ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 10px; }
+
+        .hidden {
+            display: none !important;
         }
-        ::-webkit-scrollbar-track {
-            background: #0a0a14;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2a2a4a;
-            border-radius: 10px;
-        }
-        .flex-row {
+        .connection-panel {
             display: flex;
             gap: 10px;
-            align-items: center;
             flex-wrap: wrap;
-        }
-        .mt-8 {
-            margin-top: 8px;
-        }
-        .w-full {
-            width: 100%;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .text-sm {
-            font-size: 13px;
-            color: #666688;
-        }
-        .badge {
-            display: inline-block;
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 20px;
-            background: #2a2a4a;
-            color: #aaa;
-        }
-        .server-url-input {
-            width: 100%;
-            padding: 8px 12px;
+            align-items: center;
             margin-bottom: 12px;
-            border-radius: 8px;
-            border: 1px solid #2a2a4a;
-            background: #0a0a14;
-            color: #ccc;
-            font-size: 13px;
-            font-family: monospace;
         }
-        .server-url-input:focus {
+        .connection-panel input {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #2a2a4a;
+            background: #12121f;
+            color: #eee;
+            font-size: 14px;
+            flex: 1;
+            min-width: 120px;
+        }
+        .connection-panel input:focus {
             border-color: #f7971e;
             outline: none;
+        }
+        .connection-panel button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2a2a4a;
+            color: #ccc;
+            transition: all 0.2s;
+        }
+        .connection-panel button:hover {
+            transform: scale(1.03);
+            filter: brightness(1.2);
+        }
+        .connection-panel button.primary {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: #1a1a2e;
+        }
+        .connection-panel button.danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .connection-panel button.success {
+            background: #4ade80;
+            color: #1a1a2e;
+        }
+        .connection-panel button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
 
-    <div class="demo-container">
-        <h1>🎮 Multiplayer System</h1>
-        <p class="subtitle">Demo per i tuoi minigame e quiz a tema anime</p>
-
-        <!-- URL del server (modificabile) -->
-        <input type="text" class="server-url-input" id="serverUrlInput" 
-               placeholder="URL del server WebSocket (es. wss://tuo-server.onrender.com)" 
-               value="wss://anime-multiplayer-server.onrender.com" />
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-badge">
-                <span class="dot" id="statusDot"></span>
-                <span id="statusText">Disconnesso</span>
-            </div>
-            <div class="room-info">🏠 Stanza: <span id="roomName">—</span></div>
-            <div class="room-info">👥 <span id="playerCount">0</span> giocatori</div>
-        </div>
-
-        <!-- Players -->
-        <div class="players-grid" id="playersGrid">
-            <div class="text-sm" style="grid-column:1/-1; color:#555577; padding:10px; text-align:center;">
-                Nessun giocatore in stanza
-            </div>
-        </div>
-
-        <!-- Controlli -->
-        <div class="controls">
-            <input type="text" id="playerNameInput" placeholder="Il tuo nome" value="AnimeFan" />
-            <input type="text" id="roomInput" placeholder="ID stanza (es. sala1)" value="demo-room" />
-            <button class="primary" id="connectBtn">🔗 Connetti</button>
-            <button class="success" id="readyBtn" disabled>✅ Pronto</button>
-            <button class="danger" id="leaveBtn" disabled>✕ Esci</button>
-        </div>
-
-        <!-- Game Area (simula un gioco) -->
-        <div class="game-area" id="gameArea">
-            <div class="placeholder" id="gamePlaceholder">
-                <strong>🎯 Nessun gioco attivo</strong><br />
-                <span class="text-sm">Connettiti a una stanza per iniziare.</span>
-            </div>
-            <div id="gameContent" style="display:none; width:100%;">
-                <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; width:100%;">
-                    <button class="primary" id="actionBtn1" style="flex:1; min-width:100px;">⚡ Azione 1</button>
-                    <button class="primary" id="actionBtn2" style="flex:1; min-width:100px;">🔥 Azione 2</button>
-                    <button class="success" id="scoreBtn" style="flex:1; min-width:100px;">⭐ +10 punti</button>
-                </div>
-                <div class="text-center mt-8 text-sm" id="gameStateDisplay">Stato gioco: in attesa...</div>
-            </div>
-        </div>
-
-        <!-- Log -->
-        <div class="log-area" id="logArea">
-            <div class="log-entry"><span class="time">[system]</span> Benvenuto! Connettiti a una stanza per giocare in multiplayer.</div>
-        </div>
+<div class="game-wrapper">
+    <!-- Barra superiore -->
+    <div class="top-bar">
+        <span class="title">⚔️ Anime Battle</span>
+        <span class="status">
+            <span class="dot offline" id="statusDot"></span>
+            <span id="statusText">Disconnesso</span>
+            &nbsp;|&nbsp; Stanza: <span id="roomName">—</span>
+            &nbsp;|&nbsp; 👥 <span id="playerCount">0</span>
+        </span>
     </div>
 
-    <!-- ============================================= -->
-    <!-- 1. Inclusione della libreria multiplayer       -->
-    <!-- ============================================= -->
-    <!-- 
-        ⚠️ ASSICURATI CHE multiplayer.js SIA NELLA STESSA CARTELLA 
-        O MODIFICA IL PERCORSO QUI SOTTO 
-    -->
-    <script src="js/multiplayer.js"></script>
+    <!-- Pannello di connessione -->
+    <div class="connection-panel" id="connectionPanel">
+        <input type="text" id="playerNameInput" placeholder="Nome" value="Naruto" />
+        <input type="text" id="roomInput" placeholder="Stanza" value="anime-arena" />
+        <input type="text" id="serverUrlInput" placeholder="Server URL" 
+               value="wss://anime-multiplayer-server.onrender.com" />
+        <button class="primary" id="connectBtn">🔗 Connetti</button>
+        <button class="success" id="readyBtn" disabled>✅ Pronto</button>
+        <button class="danger" id="leaveBtn" disabled>✕ Esci</button>
+    </div>
 
-    <!-- ============================================= -->
-    <!-- 2. Script di esempio per la demo              -->
-    <!-- ============================================= -->
-    <script>
-        // --------------------------------------------------------------
-        // Riferimenti DOM
-        // --------------------------------------------------------------
-        const $ = (id) => document.getElementById(id);
-        const statusDot = $('statusDot');
-        const statusText = $('statusText');
-        const roomName = $('roomName');
-        const playerCount = $('playerCount');
-        const playersGrid = $('playersGrid');
-        const playerNameInput = $('playerNameInput');
-        const roomInput = $('roomInput');
-        const connectBtn = $('connectBtn');
-        const readyBtn = $('readyBtn');
-        const leaveBtn = $('leaveBtn');
-        const gamePlaceholder = $('gamePlaceholder');
-        const gameContent = $('gameContent');
-        const gameStateDisplay = $('gameStateDisplay');
-        const logArea = $('logArea');
-        const actionBtn1 = $('actionBtn1');
-        const actionBtn2 = $('actionBtn2');
-        const scoreBtn = $('scoreBtn');
-        const serverUrlInput = $('serverUrlInput');
+    <!-- Canvas del gioco -->
+    <div class="canvas-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
 
-        // --------------------------------------------------------------
-        // Stato locale
-        // --------------------------------------------------------------
-        let isConnected = false;
-        let isReady = false;
-        let currentRoom = '';
-        let players = {};
-        let myPlayerId = null;
-        let gameState = {};
+    <!-- Controlli -->
+    <div class="controls-info">
+        <span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> muovi</span>
+        <span><kbd>␣</kbd> (Spazio) attacco</span>
+        <span id="myHealthDisplay">❤️ 100</span>
+    </div>
 
-        // --------------------------------------------------------------
-        // Helper: Log
-        // --------------------------------------------------------------
-        function addLog(message, type = '') {
-            const time = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.innerHTML = `<span class="time">[${time}]</span> <span class="${type}">${message}</span>`;
-            logArea.appendChild(entry);
-            logArea.scrollTop = logArea.scrollHeight;
+    <!-- Lista giocatori -->
+    <div class="players-list" id="playersList"></div>
+
+    <!-- Log -->
+    <div class="log-area" id="logArea">
+        <div class="log-entry"><span class="highlight">⚔️ Benvenuto!</span> Connettiti per combattere.</div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- 1. Libreria multiplayer                       -->
+<!-- ============================================= -->
+<script src="js/multiplayer.js"></script>
+
+<!-- ============================================= -->
+<!-- 2. Gioco WASD – Combattimento anime          -->
+<!-- ============================================= -->
+<script>
+    // -------- Riferimenti DOM --------
+    const $ = id => document.getElementById(id);
+    const canvas = $('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusDot = $('statusDot');
+    const statusText = $('statusText');
+    const roomName = $('roomName');
+    const playerCount = $('playerCount');
+    const playersList = $('playersList');
+    const logArea = $('logArea');
+    const myHealthDisplay = $('myHealthDisplay');
+
+    const playerNameInput = $('playerNameInput');
+    const roomInput = $('roomInput');
+    const serverUrlInput = $('serverUrlInput');
+    const connectBtn = $('connectBtn');
+    const readyBtn = $('readyBtn');
+    const leaveBtn = $('leaveBtn');
+
+    // -------- Stato gioco --------
+    const GAME = {
+        // Il mio giocatore (locale)
+        me: {
+            id: null,
+            name: '',
+            x: 400,
+            y: 250,
+            hp: 100,
+            maxHp: 100,
+            attacking: false,
+            attackTimer: 0,
+            attackCooldown: 0,
+            direction: 0, // 0=giù, 1=destra, 2=su, 3=sinistra
+        },
+        // Mappa di tutti i giocatori (id -> dati)
+        players: {},
+        // Stato della connessione
+        connected: false,
+        ready: false,
+        room: '',
+        // Input tastiera
+        keys: { w: false, a: false, s: false, d: false, space: false },
+        // Velocità
+        speed: 3,
+        attackRange: 40,
+        attackCooldownTime: 30, // frame
+    };
+
+    // Variabili di gioco
+    let frameCount = 0;
+    let lastTime = 0;
+    let gameRunning = false;
+
+    // -------- Helper: Log --------
+    function addLog(message, type = '') {
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="time">[${time}]</span> <span class="${type}">${message}</span>`;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
+        if (logArea.children.length > 100) logArea.removeChild(logArea.firstChild);
+    }
+
+    // -------- Helper: Stato connessione --------
+    function updateConnectionStatus(status, roomId = null) {
+        const states = {
+            'connected': { dot: 'online', text: 'Connesso' },
+            'connecting': { dot: 'connecting', text: 'Connessione...' },
+            'disconnected': { dot: 'offline', text: 'Disconnesso' },
+            'error': { dot: 'offline', text: 'Errore' },
+        };
+        const s = states[status] || states.disconnected;
+        statusDot.className = `dot ${s.dot}`;
+        statusText.textContent = s.text;
+        roomName.textContent = roomId || '—';
+
+        GAME.connected = status === 'connected';
+        connectBtn.textContent = GAME.connected ? '🔗 Riconnetti' : '🔗 Connetti';
+        readyBtn.disabled = !GAME.connected;
+        leaveBtn.disabled = !GAME.connected;
+
+        if (status === 'connected') {
+            addLog(`Connesso alla stanza <span class="highlight">${roomId}</span>`, 'success');
+            gameRunning = true;
+        } else if (status === 'error') {
+            addLog(`Errore di connessione`, 'error');
+            gameRunning = false;
+        } else {
+            gameRunning = false;
         }
+    }
 
-        // --------------------------------------------------------------
-        // Helper: Render giocatori
-        // --------------------------------------------------------------
-        function renderPlayers() {
-            const ids = Object.keys(players);
-            playerCount.textContent = ids.length;
-
-            if (ids.length === 0) {
-                playersGrid.innerHTML =
-                    `<div class="text-sm" style="grid-column:1/-1; color:#555577; padding:10px; text-align:center;">Nessun giocatore in stanza</div>`;
-                return;
-            }
-
-            let html = '';
-            for (const id of ids) {
-                const p = players[id];
-                const isYou = id === myPlayerId;
-                const readyClass = p.ready ? 'ready' : '';
-                const youClass = isYou ? 'you' : '';
-                const readyBadgeClass = p.ready ? 'ready' : '';
-                const readyText = p.ready ? '✅ Pronto' : '⏳ In attesa';
-
-                html += `
-                    <div class="player-card ${readyClass} ${youClass}">
-                        <div class="name">${p.name} ${isYou ? '👤' : ''}</div>
-                        <div class="status-text">${p.status || 'in gioco'}</div>
-                        <div class="ready-badge ${readyBadgeClass}">${readyText}</div>
-                    </div>
-                `;
-            }
-            playersGrid.innerHTML = html;
+    // -------- Render lista giocatori (UI) --------
+    function renderPlayersUI() {
+        const ids = Object.keys(GAME.players);
+        playerCount.textContent = ids.length;
+        playersList.innerHTML = '';
+        for (const id of ids) {
+            const p = GAME.players[id];
+            const isMe = id === GAME.me.id;
+            const hpPercent = Math.max(0, (p.hp / p.maxHp) * 100);
+            const hpClass = hpPercent < 30 ? 'low' : '';
+            const tag = document.createElement('div');
+            tag.className = 'player-tag';
+            tag.innerHTML = `
+                <span>${isMe ? '👤 ' : ''}${p.name}</span>
+                <div class="hp-bar"><div class="hp-fill ${hpClass}" style="width:${hpPercent}%"></div></div>
+                ${isMe ? '<span class="you">(tu)</span>' : ''}
+            `;
+            playersList.appendChild(tag);
         }
+    }
 
-        // --------------------------------------------------------------
-        // Helper: Aggiorna stato UI connessione
-        // --------------------------------------------------------------
-        function updateConnectionStatus(status, roomId = null) {
-            const states = {
-                'connected': { dot: 'online', text: 'Connesso', room: roomId || currentRoom },
-                'connecting': { dot: 'connecting', text: 'Connessione...', room: roomId || currentRoom },
-                'disconnected': { dot: 'offline', text: 'Disconnesso', room: '—' },
-                'error': { dot: 'offline', text: 'Errore', room: '—' },
+    // -------- Inizializza giocatore locale --------
+    function initLocalPlayer(name) {
+        GAME.me.name = name || 'Anonimo';
+        GAME.me.x = 100 + Math.random() * 600;
+        GAME.me.y = 100 + Math.random() * 300;
+        GAME.me.hp = GAME.me.maxHp = 100;
+        GAME.me.attacking = false;
+        GAME.me.attackTimer = 0;
+        GAME.me.attackCooldown = 0;
+        GAME.me.direction = 0;
+    }
+
+    // -------- Gestione attacco --------
+    function performAttack() {
+        if (!GAME.connected) return;
+        if (GAME.me.attackCooldown > 0) return;
+        if (GAME.me.attacking) return;
+
+        GAME.me.attacking = true;
+        GAME.me.attackTimer = 15; // durata attacco in frame
+        GAME.me.attackCooldown = GAME.attackCooldownTime;
+
+        // Invia azione di attacco a tutti
+        Multiplayer.sendAction('attack', {
+            x: GAME.me.x,
+            y: GAME.me.y,
+            dir: GAME.me.direction
+        });
+
+        // Controlla se colpisce qualcuno (già nel server, ma facciamo anche lato client)
+        // Il server non gestisce il combattimento, lo facciamo qui per demo.
+        // In realtà il combattimento dovrebbe essere gestito dal server, ma per semplicità
+        // lo facciamo lato client con broadcast.
+        // Ogni giocatore controlla se è stato colpito da un attacco.
+        // Per evitare duplicati, usiamo un flag temporaneo.
+    }
+
+    // -------- Gestione danno --------
+    function takeDamage(attackerId, damage) {
+        if (attackerId === GAME.me.id) return; // non fare danno a se stesso
+        const target = GAME.players[GAME.me.id];
+        if (!target) return;
+        // Controlla se l'attaccante è vicino
+        const attacker = GAME.players[attackerId];
+        if (!attacker) return;
+        const dx = attacker.x - GAME.me.x;
+        const dy = attacker.y - GAME.me.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > GAME.attackRange * 1.5) return; // troppo lontano
+
+        // Applica danno
+        const newHp = Math.max(0, GAME.me.hp - damage);
+        GAME.me.hp = newHp;
+        myHealthDisplay.textContent = `❤️ ${newHp}`;
+        addLog(`💥 ${attacker.name} ti ha colpito! (-${damage} HP)`, 'error');
+        if (newHp <= 0) {
+            addLog(`💀 Sei stato sconfitto!`, 'error');
+            // Respawn dopo un po'
+            setTimeout(() => {
+                GAME.me.hp = GAME.me.maxHp;
+                GAME.me.x = 100 + Math.random() * 600;
+                GAME.me.y = 100 + Math.random() * 300;
+                myHealthDisplay.textContent = `❤️ ${GAME.me.hp}`;
+                addLog(`🔄 Sei resuscitato!`, 'success');
+                // Invia posizione aggiornata
+                sendMyState();
+            }, 2000);
+        }
+        // Invia il nuovo stato
+        sendMyState();
+    }
+
+    // -------- Invia stato del giocatore --------
+    function sendMyState() {
+        if (!GAME.connected) return;
+        Multiplayer.sendState({
+            playerId: GAME.me.id,
+            name: GAME.me.name,
+            x: GAME.me.x,
+            y: GAME.me.y,
+            hp: GAME.me.hp,
+            maxHp: GAME.me.maxHp,
+            direction: GAME.me.direction,
+            attacking: GAME.me.attacking,
+        });
+    }
+
+    // -------- Gestione eventi multiplayer --------
+    function setupMultiplayerEvents() {
+        Multiplayer.on('connected', (data) => {
+            GAME.me.id = data.playerId;
+            GAME.room = data.room;
+            GAME.players = data.players || {};
+
+            // Inizializza il giocatore locale
+            initLocalPlayer(data.playerName);
+
+            // Aggiungi il giocatore locale alla lista
+            GAME.players[GAME.me.id] = {
+                id: GAME.me.id,
+                name: GAME.me.name,
+                x: GAME.me.x,
+                y: GAME.me.y,
+                hp: GAME.me.hp,
+                maxHp: GAME.me.maxHp,
+                direction: 0,
+                attacking: false,
             };
-            const s = states[status] || states.disconnected;
-            statusDot.className = `dot ${s.dot}`;
-            statusText.textContent = s.text;
-            roomName.textContent = s.room || '—';
 
-            isConnected = status === 'connected';
-            connectBtn.textContent = isConnected ? '🔗 Riconnetti' : '🔗 Connetti';
-            readyBtn.disabled = !isConnected;
-            leaveBtn.disabled = !isConnected;
+            renderPlayersUI();
+            updateConnectionStatus('connected', data.room);
+            addLog(`👋 Benvenuto <span class="highlight">${data.playerName}</span>!`, 'success');
+            gameRunning = true;
 
-            if (status === 'connected') {
-                addLog(`Connesso alla stanza <span class="highlight">${s.room}</span>`, 'success');
-            } else if (status === 'error') {
-                addLog(`Errore di connessione`, 'error');
-            }
-        }
+            // Invia il nostro stato iniziale
+            setTimeout(() => sendMyState(), 100);
+        });
 
-        // --------------------------------------------------------------
-        // Gestione eventi da Multiplayer
-        // --------------------------------------------------------------
-        function setupMultiplayerEvents() {
-            Multiplayer.on('connected', (data) => {
-                myPlayerId = data.playerId;
-                currentRoom = data.room;
-                players = data.players || {};
-                renderPlayers();
-                updateConnectionStatus('connected', data.room);
-                gamePlaceholder.style.display = 'none';
-                gameContent.style.display = 'block';
-                addLog(`Benvenuto <span class="highlight">${data.playerName}</span> nella stanza!`, 'success');
-            });
-
-            Multiplayer.on('disconnected', () => {
-                updateConnectionStatus('disconnected');
-                gamePlaceholder.style.display = 'block';
-                gameContent.style.display = 'none';
-                players = {};
-                renderPlayers();
-                addLog('Connessione persa', 'error');
-            });
-
-            Multiplayer.on('players', (newPlayers) => {
-                players = newPlayers;
-                renderPlayers();
-            });
-
-            Multiplayer.on('playerJoined', (player) => {
-                players[player.id] = player;
-                renderPlayers();
-                addLog(`👋 <span class="highlight">${player.name}</span> si è unito alla stanza`);
-            });
-
-            Multiplayer.on('playerLeft', (playerId) => {
-                const name = players[playerId]?.name || 'Qualcuno';
-                delete players[playerId];
-                renderPlayers();
-                addLog(`👋 <span class="highlight">${name}</span> ha lasciato la stanza`);
-            });
-
-            Multiplayer.on('state', (state) => {
-                gameState = state;
-                gameStateDisplay.textContent = `Stato gioco: ${state.message || 'in corso...'}`;
-                if (state.score !== undefined) {
-                    addLog(`📊 Punteggio aggiornato: <span class="highlight">${state.score}</span>`, 'success');
-                }
-                if (state.action) {
-                    addLog(`🎯 Azione ricevuta: <span class="highlight">${state.action}</span> da ${state.playerName || 'qualcuno'}`);
-                }
-            });
-
-            Multiplayer.on('action', (playerId, action, data) => {
-                const name = players[playerId]?.name || 'Sconosciuto';
-                addLog(`⚡ <span class="highlight">${name}</span> ha eseguito: ${action} ${data ? '→ ' + JSON.stringify(data) : ''}`);
-                if (action === 'score') {
-                    gameStateDisplay.textContent = `🎯 ${name} ha segnato +${data?.points || 0} punti!`;
-                }
-            });
-
-            Multiplayer.on('ready', (playerId, ready) => {
-                if (players[playerId]) {
-                    players[playerId].ready = ready;
-                    renderPlayers();
-                    const name = players[playerId].name;
-                    addLog(`${name} ${ready ? '✅ è pronto' : '⏳ non è più pronto'}`);
-                }
-            });
-
-            Multiplayer.on('error', (err) => {
-                addLog(`❌ ${err}`, 'error');
-                updateConnectionStatus('error');
-            });
-        }
-
-        // --------------------------------------------------------------
-        // Inizializzazione Multiplayer
-        // --------------------------------------------------------------
-        function initMultiplayer() {
-            const serverUrl = serverUrlInput.value.trim() || 'wss://anime-multiplayer-server.onrender.com';
-            
-            // Imposta l'URL globale per Multiplayer
-            window.MP_SERVER = serverUrl;
-
-            Multiplayer.init({
-                server: serverUrl,
-                autoConnect: false,
-                debug: true,
-            });
-            setupMultiplayerEvents();
-            addLog('🔄 Libreria multiplayer inizializzata. Connettiti per iniziare.');
+        Multiplayer.on('disconnected', () => {
             updateConnectionStatus('disconnected');
-        }
-
-        // --------------------------------------------------------------
-        // Azioni UI
-        // --------------------------------------------------------------
-
-        // Connetti / Riconnetti
-        connectBtn.addEventListener('click', () => {
-            const name = playerNameInput.value.trim() || 'AnimeFan';
-            const room = roomInput.value.trim() || 'demo-room';
-            if (!name) {
-                addLog('⚠️ Inserisci un nome giocatore', 'error');
-                return;
-            }
-            if (!room) {
-                addLog('⚠️ Inserisci un ID stanza', 'error');
-                return;
-            }
-
-            // Leggi l'URL del server dal campo input
-            const serverUrl = serverUrlInput.value.trim() || 'wss://anime-multiplayer-server.onrender.com';
-            window.MP_SERVER = serverUrl;
-
-            playerNameInput.value = name;
-            roomInput.value = room;
-
-            // Se già connesso, esci prima di riconnetterti
-            if (isConnected) {
-                Multiplayer.leave();
-                setTimeout(() => {
-                    // Riconfigura l'URL se cambiato
-                    Multiplayer.init({ server: serverUrl, autoConnect: false, debug: true });
-                    Multiplayer.connect({
-                        playerName: name,
-                        room: room,
-                    });
-                }, 300);
-                addLog(`🔄 Riconnessione come <span class="highlight">${name}</span> nella stanza ${room}...`);
-                updateConnectionStatus('connecting', room);
-                return;
-            }
-
-            // Nuova connessione
-            Multiplayer.init({ server: serverUrl, autoConnect: false, debug: true });
-            Multiplayer.connect({
-                playerName: name,
-                room: room,
-            });
-            addLog(`🔗 Connessione a ${room} come <span class="highlight">${name}</span>...`);
-            updateConnectionStatus('connecting', room);
+            GAME.players = {};
+            renderPlayersUI();
+            gameRunning = false;
+            addLog('Connessione persa', 'error');
         });
 
-        // Pronto / Non pronto
-        readyBtn.addEventListener('click', () => {
-            if (!isConnected) return;
-            isReady = !isReady;
-            Multiplayer.setReady(isReady);
-            readyBtn.textContent = isReady ? '⏳ Non pronto' : '✅ Pronto';
-            readyBtn.className = isReady ? 'danger' : 'success';
-            addLog(`📌 Ti sei ${isReady ? 'dichiarato PRONTO' : 'rimesso in attesa'}`);
+        Multiplayer.on('players', (newPlayers) => {
+            // Aggiorna la lista dei giocatori
+            const currentIds = Object.keys(GAME.players);
+            for (const id of Object.keys(newPlayers)) {
+                if (id !== GAME.me.id) {
+                    // Se è un nuovo giocatore, aggiungilo
+                    if (!GAME.players[id]) {
+                        GAME.players[id] = newPlayers[id];
+                        addLog(`👤 <span class="highlight">${newPlayers[id].name}</span> è entrato in arena`, 'success');
+                    } else {
+                        // Aggiorna i dati (es. posizione, hp)
+                        Object.assign(GAME.players[id], newPlayers[id]);
+                    }
+                }
+            }
+            // Rimuovi giocatori usciti
+            for (const id of currentIds) {
+                if (id !== GAME.me.id && !newPlayers[id]) {
+                    const name = GAME.players[id]?.name || 'Qualcuno';
+                    delete GAME.players[id];
+                    addLog(`👋 ${name} ha lasciato l'arena`);
+                }
+            }
+            renderPlayersUI();
         });
 
-        // Esci dalla stanza
-        leaveBtn.addEventListener('click', () => {
-            if (!isConnected) return;
+        Multiplayer.on('playerJoined', (player) => {
+            if (player.id !== GAME.me.id) {
+                GAME.players[player.id] = player;
+                renderPlayersUI();
+                addLog(`👤 <span class="highlight">${player.name}</span> si è unito`, 'success');
+            }
+        });
+
+        Multiplayer.on('playerLeft', (playerId) => {
+            const name = GAME.players[playerId]?.name || 'Qualcuno';
+            delete GAME.players[playerId];
+            renderPlayersUI();
+            addLog(`👋 ${name} ha lasciato l'arena`);
+        });
+
+        Multiplayer.on('state', (state) => {
+            // Riceviamo lo stato di un giocatore
+            if (state.playerId && state.playerId !== GAME.me.id) {
+                const p = GAME.players[state.playerId];
+                if (p) {
+                    p.x = state.x || p.x;
+                    p.y = state.y || p.y;
+                    p.hp = state.hp !== undefined ? state.hp : p.hp;
+                    p.maxHp = state.maxHp || p.maxHp;
+                    p.direction = state.direction || 0;
+                    p.attacking = state.attacking || false;
+                    renderPlayersUI();
+                }
+            }
+        });
+
+        Multiplayer.on('action', (playerId, action, data) => {
+            if (playerId === GAME.me.id) return;
+            if (action === 'attack') {
+                // Un giocatore ha attaccato
+                const attacker = GAME.players[playerId];
+                if (!attacker) return;
+                // Mostra l'attacco visivamente
+                attacker.attacking = true;
+                setTimeout(() => { attacker.attacking = false; }, 200);
+                // Controlla se ha colpito noi
+                const dx = data.x - GAME.me.x;
+                const dy = data.y - GAME.me.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < GAME.attackRange * 1.5) {
+                    // Subisci danno
+                    const damage = 15 + Math.floor(Math.random() * 10);
+                    takeDamage(playerId, damage);
+                }
+                addLog(`⚔️ <span class="highlight">${attacker.name}</span> ha attaccato!`);
+            }
+        });
+
+        Multiplayer.on('error', (err) => {
+            addLog(`❌ ${err}`, 'error');
+            updateConnectionStatus('error');
+        });
+    }
+
+    // -------- Inizializzazione multiplayer --------
+    function initMultiplayer() {
+        const serverUrl = serverUrlInput.value.trim() || 'wss://anime-multiplayer-server.onrender.com';
+        window.MP_SERVER = serverUrl;
+        Multiplayer.init({ server: serverUrl, autoConnect: false, debug: true });
+        setupMultiplayerEvents();
+        updateConnectionStatus('disconnected');
+    }
+
+    // -------- Connessione / Disconnessione --------
+    function connectToServer() {
+        const name = playerNameInput.value.trim() || 'Anonimo';
+        const room = roomInput.value.trim() || 'anime-arena';
+        const serverUrl = serverUrlInput.value.trim() || 'wss://anime-multiplayer-server.onrender.com';
+
+        if (!name) { addLog('⚠️ Inserisci un nome', 'error'); return; }
+        if (!room) { addLog('⚠️ Inserisci una stanza', 'error'); return; }
+
+        window.MP_SERVER = serverUrl;
+        if (GAME.connected) {
             Multiplayer.leave();
-            players = {};
-            myPlayerId = null;
-            isReady = false;
-            renderPlayers();
-            gamePlaceholder.style.display = 'block';
-            gameContent.style.display = 'none';
-            readyBtn.textContent = '✅ Pronto';
-            readyBtn.className = 'success';
-            updateConnectionStatus('disconnected');
-            addLog('👋 Hai lasciato la stanza');
-        });
-
-        // --- Azioni di gioco simulate ---
-
-        function sendGameAction(action, data = {}) {
-            if (!isConnected) {
-                addLog('⚠️ Non sei connesso!', 'error');
-                return;
-            }
-            Multiplayer.sendAction(action, data);
-            addLog(`📤 Hai inviato azione: ${action}`);
+            setTimeout(() => {
+                Multiplayer.init({ server: serverUrl, autoConnect: false, debug: true });
+                Multiplayer.connect({ playerName: name, room: room });
+            }, 300);
+            addLog(`🔄 Riconnessione come <span class="highlight">${name}</span>...`);
+            updateConnectionStatus('connecting', room);
+            return;
         }
 
-        actionBtn1.addEventListener('click', () => {
-            sendGameAction('attacco', { tipo: 'spada', potenza: 15 });
-        });
+        Multiplayer.init({ server: serverUrl, autoConnect: false, debug: true });
+        Multiplayer.connect({ playerName: name, room: room });
+        addLog(`🔗 Connessione a ${room} come <span class="highlight">${name}</span>...`);
+        updateConnectionStatus('connecting', room);
+    }
 
-        actionBtn2.addEventListener('click', () => {
-            sendGameAction('magia', { tipo: 'fuoco', potenza: 25 });
-        });
+    function leaveServer() {
+        if (!GAME.connected) return;
+        Multiplayer.leave();
+        GAME.players = {};
+        renderPlayersUI();
+        updateConnectionStatus('disconnected');
+        addLog('👋 Hai lasciato la stanza');
+        gameRunning = false;
+    }
 
-        scoreBtn.addEventListener('click', () => {
-            const points = Math.floor(Math.random() * 20) + 5;
-            sendGameAction('score', { points: points, player: playerNameInput.value });
-            // Aggiorna anche lo stato locale
-            Multiplayer.sendState({
-                ...gameState,
-                score: (gameState.score || 0) + points,
-                message: `+${points} punti!`,
-                playerName: playerNameInput.value,
-            });
-        });
+    // -------- Game Loop --------
+    function update() {
+        if (!gameRunning || !GAME.connected) return;
 
-        // --------------------------------------------------------------
-        // Avvio
-        // --------------------------------------------------------------
-        initMultiplayer();
+        // Movimento
+        let dx = 0, dy = 0;
+        if (GAME.keys.w) dy = -GAME.speed;
+        if (GAME.keys.s) dy = GAME.speed;
+        if (GAME.keys.a) dx = -GAME.speed;
+        if (GAME.keys.d) dx = GAME.speed;
+        if (dx !== 0 && dy !== 0) {
+            dx *= 0.707;
+            dy *= 0.707;
+        }
 
-        // Suggerimenti
-        setTimeout(() => {
-            addLog('💡 Suggerimento: apri questa pagina in più schede o dispositivi per vedere il multiplayer in azione.');
-            addLog('🏷️ Cambia il nome giocatore per distinguerti.');
-            addLog('🔧 Modifica l\'URL del server se hai deployato su Render con un nome diverso.');
-        }, 500);
+        // Limita al canvas
+        const newX = Math.max(20, Math.min(780, GAME.me.x + dx));
+        const newY = Math.max(20, Math.min(480, GAME.me.y + dy));
+        if (newX !== GAME.me.x || newY !== GAME.me.y) {
+            GAME.me.x = newX;
+            GAME.me.y = newY;
+            // Aggiorna direzione
+            if (dx > 0) GAME.me.direction = 1;
+            else if (dx < 0) GAME.me.direction = 3;
+            else if (dy < 0) GAME.me.direction = 2;
+            else if (dy > 0) GAME.me.direction = 0;
+            // Invia posizione
+            sendMyState();
+        }
 
-        // --------------------------------------------------------------
-        // Gestione Enter sui campi
-        // --------------------------------------------------------------
-        [playerNameInput, roomInput, serverUrlInput].forEach((el) => {
-            el.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') connectBtn.click();
-            });
-        });
+        // Cooldown attacco
+        if (GAME.me.attackCooldown > 0) GAME.me.attackCooldown--;
+        if (GAME.me.attacking) {
+            GAME.me.attackTimer--;
+            if (GAME.me.attackTimer <= 0) {
+                GAME.me.attacking = false;
+            }
+        }
 
-        console.log('🎮 Demo Multiplayer pronta!');
-        console.log('📖 Usa Multiplayer.xxx() per integrare nei tuoi giochi.');
-        console.log('Esempi: Multiplayer.sendAction("risposta", { q: 1, a: "A" })');
-        console.log('         Multiplayer.sendState({ punteggio: 100 })');
-        console.log('         Multiplayer.on("state", (s) => console.log(s))');
-    </script>
+        // Attacco con spazio
+        if (GAME.keys.space) {
+            performAttack();
+            GAME.keys.space = false; // one-shot
+        }
+
+        // Aggiorna health display
+        myHealthDisplay.textContent = `❤️ ${GAME.me.hp}`;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, 800, 500);
+
+        // Sfondo
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, 800, 500);
+
+        // Griglia (effetto arena)
+        ctx.strokeStyle = '#2a2a4a';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 800; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 500);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 500; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(800, i);
+            ctx.stroke();
+        }
+
+        // Disegna tutti i giocatori
+        const ids = Object.keys(GAME.players);
+        for (const id of ids) {
+            const p = GAME.players[id];
+            if (!p) continue;
+            const isMe = id === GAME.me.id;
+            const x = p.x || 0;
+            const y = p.y || 0;
+            const hpPercent = Math.max(0, (p.hp / p.maxHp) * 100);
+
+            // Cerchio del personaggio
+            ctx.shadowColor = isMe ? '#f7971e' : '#4ade80';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.fillStyle = isMe ? '#f7971e' : '#4ade80';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Bordo (se attacca)
+            if (p.attacking) {
+                ctx.strokeStyle = '#ff4444';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(x, y, 28, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Nome
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.name, x, y - 34);
+
+            // Barra HP
+            const barWidth = 40;
+            const barX = x - barWidth / 2;
+            const barY = y - 28;
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fillRect(barX, barY, barWidth, 6);
+            ctx.fillStyle = hpPercent < 30 ? '#f87171' : '#4ade80';
+            ctx.fillRect(barX, barY, barWidth * (hpPercent / 100), 6);
+
+            // Indicatore "tu"
+            if (isMe) {
+                ctx.fillStyle = '#f7971e';
+                ctx.font = '12px Segoe UI';
+                ctx.fillText('⬇️ tu', x, y + 42);
+            }
+
+            // Arma / direzione (freccia)
+            const dir = p.direction || 0;
+            const angles = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+            const angle = angles[dir] || 0;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22);
+            ctx.lineTo(x + Math.cos(angle + 0.5) * 28, y + Math.sin(angle + 0.5) * 28);
+            ctx.moveTo(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22);
+            ctx.lineTo(x + Math.cos(angle - 0.5) * 28, y + Math.sin(angle - 0.5) * 28);
+            ctx.stroke();
+        }
+
+        // Legenda
+        ctx.fillStyle = '#8888aa';
+        ctx.font = '12px Segoe UI';
+        ctx.textAlign = 'left';
+        ctx.fillText('WASD per muovere | Spazio per attaccare', 10, 490);
+    }
+
+    function gameLoop(timestamp) {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // -------- Eventi tastiera --------
+    document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+            GAME.keys[key] = true;
+            e.preventDefault();
+        }
+        if (key === ' ' || e.key === 'Space') {
+            GAME.keys.space = true;
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+            GAME.keys[key] = false;
+            e.preventDefault();
+        }
+        if (key === ' ' || e.key === 'Space') {
+            GAME.keys.space = false;
+            e.preventDefault();
+        }
+    });
+
+    // Clic sul canvas per attaccare (alternativa)
+    canvas.addEventListener('click', () => {
+        if (GAME.connected) {
+            GAME.keys.space = true;
+            setTimeout(() => { GAME.keys.space = false; }, 50);
+        }
+    });
+
+    // -------- Eventi UI --------
+    connectBtn.addEventListener('click', connectToServer);
+    leaveBtn.addEventListener('click', leaveServer);
+    readyBtn.addEventListener('click', () => {
+        if (!GAME.connected) return;
+        GAME.ready = !GAME.ready;
+        Multiplayer.setReady(GAME.ready);
+        readyBtn.textContent = GAME.ready ? '⏳ Non pronto' : '✅ Pronto';
+        readyBtn.className = GAME.ready ? 'danger' : 'success';
+        addLog(`📌 Ti sei ${GAME.ready ? 'dichiarato PRONTO' : 'rimesso in attesa'}`);
+    });
+
+    // Enter sui campi
+    [playerNameInput, roomInput, serverUrlInput].forEach(el => {
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') connectBtn.click(); });
+    });
+
+    // -------- Avvio --------
+    initMultiplayer();
+    initLocalPlayer('Naruto');
+    gameRunning = false;
+
+    // Avvia il loop
+    requestAnimationFrame(gameLoop);
+
+    addLog('🎮 Gioco di combattimento WASD caricato! Connettiti per iniziare.', 'highlight');
+    console.log('⚔️ Anime Battle – Gioco WASD con multiplayer');
+    console.log('📖 Usa WASD per muoverti, Spazio per attaccare.');
+</script>
 
 </body>
 </html>
