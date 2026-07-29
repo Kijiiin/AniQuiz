@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Codenames</title>
     <style>
-        /* ---------- RESET ---------- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -17,8 +16,6 @@
             align-items: center;
             padding: 20px;
         }
-
-        /* ---------- CONTAINER ---------- */
         #app {
             max-width: 800px;
             width: 100%;
@@ -27,232 +24,63 @@
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
-
-        h1 {
-            text-align: center;
-            font-size: 2rem;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #e94560, #0f3460);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* ---------- LOBBY ---------- */
-        #lobby {
-            display: block;
-        }
-        #lobby.hidden {
-            display: none;
-        }
-
-        .lobby-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-        .lobby-row input {
-            flex: 1;
-            min-width: 120px;
-            padding: 10px 14px;
-            border: none;
-            border-radius: 8px;
-            background: #0f3460;
-            color: #eee;
-            font-size: 1rem;
-        }
-        .lobby-row input::placeholder {
-            color: #888;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-            background: #e94560;
-            color: white;
-        }
-        .btn:hover {
-            transform: scale(1.02);
-            opacity: 0.9;
-        }
-        .btn:active {
-            transform: scale(0.98);
-        }
+        h1 { text-align: center; font-size: 2rem; margin-bottom: 20px; background: linear-gradient(135deg, #e94560, #0f3460); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .lobby-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .lobby-row input { flex: 1; min-width: 120px; padding: 10px 14px; border: none; border-radius: 8px; background: #0f3460; color: #eee; font-size: 1rem; }
+        .lobby-row input::placeholder { color: #888; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; background: #e94560; color: white; }
+        .btn:hover { transform: scale(1.02); opacity: 0.9; }
+        .btn:active { transform: scale(0.98); }
         .btn-primary { background: #e94560; }
         .btn-success { background: #2ecc71; }
-        .btn-danger { background: #e74c3c; }
         .btn-warning { background: #f39c12; }
         .btn-info { background: #3498db; }
-        .btn-purple { background: #9b59b6; }
         .btn-red { background: #e74c3c; }
         .btn-blue { background: #3498db; }
-
-        .role-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 10px 0;
-        }
-
-        .player-list {
-            background: #0f3460;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 0.9rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px 20px;
-        }
-        .player-list .red { color: #ff6b6b; }
-        .player-list .blue { color: #6bcfff; }
-        .player-list .spy { font-weight: bold; }
-
-        /* ---------- GAME AREA ---------- */
-        #game-area {
-            display: none;
-        }
-        #game-area.visible {
-            display: block;
-        }
-
-        /* Info bar */
-        #info {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            background: #0f3460;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 0.95rem;
-            gap: 8px;
-        }
-        #info .turn { font-weight: bold; }
-        #info .turn.red { color: #ff6b6b; }
-        #info .turn.blue { color: #6bcfff; }
-        #info .score { font-weight: bold; }
-
-        /* Board 5x5 */
-        #board {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .card {
-            aspect-ratio: 1 / 1;
-            background: #2d4059;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.85rem;
-            padding: 4px;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s;
-            color: #eee;
-            word-break: break-word;
-            border: 3px solid transparent;
-            user-select: none;
-        }
-        .card:hover:not(.revealed) {
-            transform: scale(1.04);
-            box-shadow: 0 0 16px rgba(255,255,255,0.15);
-        }
-        .card.revealed {
-            cursor: default;
-            transform: none !important;
-        }
-        .card.revealed:hover {
-            box-shadow: none !important;
-        }
-        .card .spy-hint {
-            font-size: 0.6rem;
-            opacity: 0.7;
-            position: absolute;
-            bottom: 2px;
-            right: 4px;
-        }
-
-        /* Colori carte */
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .role-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .player-list { background: #0f3460; padding: 12px 16px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+        #game-area { display: none; margin-top: 20px; }
+        #game-area.visible { display: block; }
+        #info { display: flex; flex-wrap: wrap; justify-content: space-between; background: #0f3460; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem; gap: 8px; }
+        #board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+        .card { aspect-ratio: 1 / 1; background: #2d4059; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; font-size: 0.85rem; padding: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; color: #eee; word-break: break-word; border: 3px solid transparent; user-select: none; }
+        .card:hover:not(.revealed) { transform: scale(1.04); box-shadow: 0 0 16px rgba(255,255,255,0.15); }
+        .card.revealed { cursor: default; transform: none !important; }
         .card-red { background: #c0392b; border-color: #e74c3c; }
         .card-blue { background: #2980b9; border-color: #3498db; }
         .card-neutral { background: #7f8c8d; border-color: #95a5a6; }
         .card-black { background: #1a1a2e; border-color: #2c3e50; color: #fff; }
         .card-hidden { background: #2d4059; border-color: #3d5166; }
-
-        /* Controlli */
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            background: #0f3460;
-            padding: 14px 16px;
-            border-radius: 8px;
-        }
-        #controls input {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            background: #1a1a2e;
-            color: #eee;
-            font-size: 1rem;
-            flex: 1;
-            min-width: 80px;
-        }
+        #controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #0f3460; padding: 14px 16px; border-radius: 8px; margin-top: 12px; }
+        #controls input { padding: 8px 12px; border: none; border-radius: 6px; background: #1a1a2e; color: #eee; font-size: 1rem; flex: 1; min-width: 80px; }
         #controls input::placeholder { color: #888; }
-        #controls input[type="number"] {
-            max-width: 70px;
-            text-align: center;
-        }
-
-        /* Status messages */
-        #status {
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            background: #0f3460;
-            font-size: 0.9rem;
-            min-height: 40px;
-        }
+        #controls input[type="number"] { max-width: 70px; text-align: center; }
+        #status { margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: #0f3460; font-size: 0.9rem; min-height: 40px; }
         #status .error { color: #ff6b6b; }
         #status .success { color: #2ecc71; }
         #status .info { color: #f1c40f; }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            #app { padding: 16px; }
-            .card { font-size: 0.7rem; }
-            #controls input { font-size: 0.85rem; }
-            .btn { font-size: 0.85rem; padding: 8px 14px; }
-        }
+        .hidden { display: none !important; }
+        @media (max-width: 600px) { #app { padding: 16px; } .card { font-size: 0.7rem; } }
     </style>
 </head>
 <body>
-
     <div id="app">
         <h1>🕵️ CODENAMES</h1>
 
-        <!-- ========== LOBBY ========== -->
-        <div id="lobby">
+        <!-- CONNESSIONE -->
+        <div id="connect-section">
             <div class="lobby-row">
-                <input id="player-name" placeholder="Il tuo nome" value="Giocatore">
+                <input id="player-name" placeholder="Il tuo nome" value="Test">
                 <input id="room-code" placeholder="Codice stanza" value="default">
                 <button class="btn btn-primary" id="btn-connect">🔗 Connetti</button>
+                <button class="btn btn-danger" id="btn-disconnect" style="display:none;">⛔ Disconnetti</button>
             </div>
+            <div id="connection-status" class="player-list">🔴 Disconnesso</div>
+        </div>
 
-            <div id="lobby-status" class="player-list">In attesa di connessione...</div>
-
+        <!-- RUOLI E LOBBY (nascosto finché non connesso) -->
+        <div id="lobby-section" class="hidden">
             <div style="margin-top: 16px;">
                 <h3>🎯 Assegna il tuo ruolo</h3>
                 <div class="role-buttons">
@@ -261,38 +89,36 @@
                     <button class="btn btn-blue" id="btn-assign-blue-spy">🔵 Capo-spia</button>
                     <button class="btn btn-blue" id="btn-assign-blue-agent">🔵 Agente</button>
                 </div>
-                <button class="btn btn-success" id="btn-start" style="margin-top: 8px;">▶️ Avvia partita</button>
+                <button class="btn btn-success" id="btn-start">▶️ Avvia partita</button>
             </div>
-
-            <div id="player-list-container" class="player-list" style="margin-top: 16px;">
+            <div id="player-list-container" class="player-list">
                 <span style="opacity:0.6;">Nessun giocatore in stanza</span>
             </div>
         </div>
 
-        <!-- ========== GAME AREA ========== -->
+        <!-- GAME AREA -->
         <div id="game-area">
             <div id="info">
                 <span class="turn" id="turn-info">⏳ In attesa...</span>
                 <span id="clue-info">📝 Nessun indizio</span>
                 <span class="score" id="score-info">🔴 0 | 🔵 0</span>
             </div>
-
             <div id="board"></div>
-
-            <div id="controls">
+            <div id="controls" class="hidden">
                 <input id="clue-input" placeholder="Indizio...">
                 <input id="number-input" type="number" value="3" min="1" max="9">
                 <button class="btn btn-info" id="btn-submit-clue">📨 Invia</button>
                 <button class="btn btn-warning" id="btn-end-turn">⏭️ Passa</button>
             </div>
-
             <div id="status">💡 In attesa di un indizio dal capo-spia...</div>
         </div>
     </div>
 
     <!-- ========== LIBRERIE ========== -->
-    <script src="js/multiplayer.js"></script>
-    <script src="js/games/codenames/codenames-logic.js"></script>
-    <script src="js/games/codenames/codenames.js"></script>
+    <!-- Se multiplayer.js è nella stessa cartella di index.html -->
+        <script src="js/multiplayer.js"></script>
+        <script src="js/games/codenames/codenames-logic.js"></script>
+        <script src="js/games/codenames/codenames.js"></script>
+    </script>
 </body>
 </html>
