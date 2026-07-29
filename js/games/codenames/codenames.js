@@ -12,7 +12,7 @@
     let isSpyView = false;
     let playersInRoom = {};
     let isHost = false;
-    let roleAssignments = {}; // { playerId: 'RED_SPY' | 'RED_AGENT' | 'BLUE_SPY' | 'BLUE_AGENT' | '' }
+    let roleAssignments = {};
 
     // ---------- DOM REFS ----------
     const $ = id => document.getElementById(id);
@@ -73,6 +73,7 @@
         updateInfo();
     }
 
+    // ---------- UPDATE INFO (CORRETTO) ----------
     function updateInfo() {
         if (!gameState) return;
 
@@ -80,12 +81,14 @@
         const clueEl = $('clue-info');
         const scoreEl = $('score-info');
 
+        // Turno
         if (turnEl) {
             const teamName = gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu';
             turnEl.textContent = `🎯 Turno: ${teamName}`;
             turnEl.className = 'turn ' + (gameState.turn === 'RED' ? 'red' : 'blue');
         }
 
+        // Indizio
         if (clueEl) {
             if (gameState.phase === 'AGENTI_TURNO' && gameState.currentClue) {
                 clueEl.textContent = `📝 "${gameState.currentClue}" (${gameState.guessesLeft} tentativi)`;
@@ -98,6 +101,7 @@
             }
         }
 
+        // Punteggio
         if (scoreEl) {
             scoreEl.textContent = `🔴 ${gameState.redCardsLeft} | 🔵 ${gameState.blueCardsLeft}`;
         }
@@ -123,32 +127,47 @@
             }
         }
 
-        // Controlli
+        // ---------- CONTROLLI (CORRETTO) ----------
         const controls = $('controls');
-        if (controls && gameState.started) {
-            const isMyTurn = gameState.phase === 'SPIA_TURNO' &&
-                             ((gameState.turn === 'RED' && myTeam === 'RED') ||
-                              (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
-                             myRole === 'SPY' &&
-                             !gameState.gameOver;
+        if (!controls) return;
 
-            const clueInput = $('clue-input');
-            const numberInput = $('number-input');
-            const submitBtn = $('btn-submit-clue');
-            const endTurnBtn = $('btn-end-turn');
+        if (!gameState.started || gameState.gameOver) {
+            controls.classList.add('hidden');
+            return;
+        }
 
-            if (clueInput) clueInput.style.display = isMyTurn ? 'inline-block' : 'none';
-            if (numberInput) numberInput.style.display = isMyTurn ? 'inline-block' : 'none';
-            if (submitBtn) submitBtn.style.display = isMyTurn ? 'inline-block' : 'none';
+        const isSpyTurn = gameState.phase === 'SPIA_TURNO' &&
+                          ((gameState.turn === 'RED' && myTeam === 'RED') ||
+                           (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
+                          myRole === 'SPY';
 
-            const isAgentTurn = gameState.phase === 'AGENTI_TURNO' &&
-                                ((gameState.turn === 'RED' && myTeam === 'RED') ||
-                                 (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
-                                myRole === 'AGENT' &&
-                                !gameState.gameOver;
-            if (endTurnBtn) {
-                endTurnBtn.style.display = isAgentTurn ? 'inline-block' : 'none';
-            }
+        const isAgentTurn = gameState.phase === 'AGENTI_TURNO' &&
+                            ((gameState.turn === 'RED' && myTeam === 'RED') ||
+                             (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
+                            myRole === 'AGENT';
+
+        if (!isSpyTurn && !isAgentTurn) {
+            controls.classList.add('hidden');
+            return;
+        }
+
+        controls.classList.remove('hidden');
+
+        const clueInput = $('clue-input');
+        const numberInput = $('number-input');
+        const submitBtn = $('btn-submit-clue');
+        const endTurnBtn = $('btn-end-turn');
+
+        if (isSpyTurn) {
+            if (clueInput) { clueInput.style.display = 'inline-block'; setTimeout(() => clueInput.focus(), 100); }
+            if (numberInput) numberInput.style.display = 'inline-block';
+            if (submitBtn) submitBtn.style.display = 'inline-block';
+            if (endTurnBtn) endTurnBtn.style.display = 'none';
+        } else {
+            if (clueInput) clueInput.style.display = 'none';
+            if (numberInput) numberInput.style.display = 'none';
+            if (submitBtn) submitBtn.style.display = 'none';
+            if (endTurnBtn) endTurnBtn.style.display = 'inline-block';
         }
     }
 
@@ -196,13 +215,11 @@
             const div = document.createElement('div');
             div.className = 'player-row';
 
-            // Nome
             const nameSpan = document.createElement('span');
             nameSpan.className = 'name';
             nameSpan.textContent = p.name || 'Anonimo';
             div.appendChild(nameSpan);
 
-            // Badge (tu / host)
             if (isMe) {
                 const badge = document.createElement('span');
                 badge.className = 'badge';
@@ -217,7 +234,6 @@
                 div.appendChild(badge);
             }
 
-            // Select ruolo (solo host può modificare)
             const select = document.createElement('select');
             select.id = `role-select-${id}`;
             const options = [
@@ -234,7 +250,6 @@
                 select.appendChild(option);
             });
 
-            // Seleziona il valore salvato
             if (roleAssignments[id]) {
                 select.value = roleAssignments[id];
             }
@@ -244,7 +259,6 @@
             } else {
                 select.addEventListener('change', () => {
                     roleAssignments[id] = select.value || null;
-                    // Invia a tutti
                     Multiplayer.sendAction('codenames:assignRole', {
                         playerId: id,
                         role: select.value
@@ -278,7 +292,6 @@
         });
 
         if (allAssigned && allValid) {
-            // Verifica che ci siano esattamente 1 spia per squadra
             const redSpyCount = ids.filter(id => roleAssignments[id] === 'RED_SPY').length;
             const blueSpyCount = ids.filter(id => roleAssignments[id] === 'BLUE_SPY').length;
             const redAgents = ids.filter(id => roleAssignments[id] === 'RED_AGENT').length;
@@ -393,7 +406,6 @@
             return;
         }
 
-        // Applica tutti i ruoli
         for (const id in roleAssignments) {
             const role = roleAssignments[id];
             if (!role) continue;
@@ -402,14 +414,12 @@
             CodenamesLogic.assignPlayer(gameState, id, team, roleType);
         }
 
-        // Avvia la partita
         const result = CodenamesLogic.startGame(gameState);
         if (result.success) {
             gameState = result.state;
             Multiplayer.sendState(gameState);
             Multiplayer.sendAction('codenames:start', {});
 
-            // Nascondi assegnazione, mostra gioco
             $('role-assignment').classList.add('hidden');
             $('game-area').classList.add('visible');
             renderBoard();
@@ -426,16 +436,12 @@
 
         playersInRoom = data.players || {};
         const playerIds = Object.keys(playersInRoom);
-
-        // Il primo giocatore è l'host
         isHost = (playerIds.length === 1);
 
-        // Nascondi connessione, mostra assegnazione ruoli
         $('role-assignment').classList.remove('hidden');
         $('game-area').classList.remove('visible');
         $('connect-section').style.display = 'none';
 
-        // Se sono l'host, inizializzo il gioco
         if (isHost) {
             gameState = CodenamesLogic.initGame('RED');
             gameState.started = false;
@@ -454,21 +460,28 @@
         if (!state) return;
         gameState = state;
 
-        // Se la partita è iniziata, mostra il gioco
         if (gameState.started) {
             $('role-assignment').classList.add('hidden');
             $('game-area').classList.add('visible');
         }
 
-        // Rileggi il mio ruolo
+        // --- CORREZIONE: entrambi i capi-spia vedono i colori ---
         if (gameState.redSpy === myPlayerId) {
-            myTeam = 'RED'; myRole = 'SPY'; isSpyView = true;
+            myTeam = 'RED';
+            myRole = 'SPY';
+            isSpyView = true;   // <-- SEMPRE TRUE per i capi-spia
         } else if (gameState.blueSpy === myPlayerId) {
-            myTeam = 'BLUE'; myRole = 'SPY'; isSpyView = true;
+            myTeam = 'BLUE';
+            myRole = 'SPY';
+            isSpyView = true;   // <-- SEMPRE TRUE per i capi-spia
         } else if (gameState.redAgents.includes(myPlayerId)) {
-            myTeam = 'RED'; myRole = 'AGENT'; isSpyView = false;
+            myTeam = 'RED';
+            myRole = 'AGENT';
+            isSpyView = false;
         } else if (gameState.blueAgents.includes(myPlayerId)) {
-            myTeam = 'BLUE'; myRole = 'AGENT'; isSpyView = false;
+            myTeam = 'BLUE';
+            myRole = 'AGENT';
+            isSpyView = false;
         }
 
         renderBoard();
@@ -585,28 +598,24 @@
 
     // ---------- INIZIALIZZAZIONE ----------
     function init() {
-        // Connessione
         $('btn-connect').addEventListener('click', () => {
             const name = $('player-name').value.trim() || 'Anonimo';
             const room = $('room-code').value.trim() || 'default';
+            const server = $('server-url').value.trim() || 'wss://anime-multiplayer-server.onrender.com';
             updateConnectionStatus('connecting');
             Multiplayer.connect({
                 playerName: name,
                 room: room,
-                server: 'wss://anime-multiplayer-server.onrender.com'
+                server: server
             });
         });
 
-        // Disconnessione
         $('btn-disconnect').addEventListener('click', () => {
             Multiplayer.leave();
             onDisconnected();
         });
 
-        // Avvia partita (host)
         $('btn-start-game').addEventListener('click', onStartGame);
-
-        // Controlli gioco
         $('btn-submit-clue').addEventListener('click', onSubmitClue);
         $('btn-end-turn').addEventListener('click', onEndTurn);
 
@@ -614,7 +623,6 @@
             if (e.key === 'Enter') onSubmitClue();
         });
 
-        // Eventi Multiplayer
         Multiplayer.on('connected', onConnected);
         Multiplayer.on('disconnected', onDisconnected);
         Multiplayer.on('state', onStateReceived);
@@ -630,7 +638,6 @@
         console.log('🎮 Codenames caricato!');
     }
 
-    // Avvia quando DOM è pronto
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
