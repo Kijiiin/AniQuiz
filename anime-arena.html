@@ -301,6 +301,22 @@
     const readyBtn = $('readyBtn');
     const leaveBtn = $('leaveBtn');
 
+
+    function loadSavedSettings() {
+    const savedName = localStorage.getItem('animeBattle_playerName');
+    const savedRoom = localStorage.getItem('animeBattle_room');
+    const savedServer = localStorage.getItem('animeBattle_server');
+    if (savedName) playerNameInput.value = savedName;
+    if (savedRoom) roomInput.value = savedRoom;
+    if (savedServer) serverUrlInput.value = savedServer;
+}
+
+function saveSettings() {
+    localStorage.setItem('animeBattle_playerName', playerNameInput.value.trim());
+    localStorage.setItem('animeBattle_room', roomInput.value.trim());
+    localStorage.setItem('animeBattle_server', serverUrlInput.value.trim());
+}
+
     // -------- Stato gioco --------
     const GAME = {
         // Il mio giocatore (locale)
@@ -618,6 +634,7 @@
 
     // -------- Connessione / Disconnessione --------
     function connectToServer() {
+        saveSettings();
         const name = playerNameInput.value.trim() || 'Anonimo';
         const room = roomInput.value.trim() || 'anime-arena';
         const serverUrl = serverUrlInput.value.trim() || 'wss://anime-multiplayer-server.onrender.com';
@@ -859,6 +876,7 @@
     // -------- Avvio --------
     initMultiplayer();
     initLocalPlayer('Naruto');
+    loadSavedSettings();
     gameRunning = false;
 
     // Avvia il loop
