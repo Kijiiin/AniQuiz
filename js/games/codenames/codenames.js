@@ -7,13 +7,30 @@
     // ---------- STATO LOCALE ----------
     let gameState = null;
     let myPlayerId = null;
-    let myTeam = null;        // 'RED' o 'BLUE'
-    let myRole = null;        // 'SPY' o 'AGENT'
-    let isSpyView = false;   // true = vede i colori
+    let myTeam = null;
+    let myRole = null;
+    let isSpyView = false;
     let playersInRoom = {};
+    let isHost = false;
+    let roleAssignments = {}; // { playerId: 'RED_SPY' | 'RED_AGENT' | 'BLUE_SPY' | 'BLUE_AGENT' | '' }
 
     // ---------- DOM REFS ----------
     const $ = id => document.getElementById(id);
+
+    // ---------- UTILITY ----------
+    function setStatus(msg, type) {
+        const el = $('status');
+        if (!el) return;
+        const cls = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+        el.innerHTML = `<span class="${cls}">${msg}</span>`;
+    }
+
+    function setRoleStatus(msg, type) {
+        const el = $('role-status');
+        if (!el) return;
+        const cls = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+        el.innerHTML = `<span class="${cls}">${msg}</span>`;
+    }
 
     // ---------- UI RENDER ----------
     function getCardColorClass(color) {
@@ -42,7 +59,6 @@
             } else {
                 div.classList.add('card-hidden');
                 div.textContent = card.word;
-                // Il capo-spia vede i colori in bordo
                 if (isSpyView) {
                     div.style.borderColor = getCardColorClass(card.color).replace('card-', '');
                     div.style.borderWidth = '4px';
@@ -63,16 +79,13 @@
         const turnEl = $('turn-info');
         const clueEl = $('clue-info');
         const scoreEl = $('score-info');
-        const statusEl = $('status');
 
-        // Turno
         if (turnEl) {
             const teamName = gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu';
             turnEl.textContent = `🎯 Turno: ${teamName}`;
             turnEl.className = 'turn ' + (gameState.turn === 'RED' ? 'red' : 'blue');
         }
 
-        // Indizio
         if (clueEl) {
             if (gameState.phase === 'AGENTI_TURNO' && gameState.currentClue) {
                 clueEl.textContent = `📝 "${gameState.currentClue}" (${gameState.guessesLeft} tentativi)`;
@@ -85,37 +98,34 @@
             }
         }
 
-        // Punteggio
         if (scoreEl) {
             scoreEl.textContent = `🔴 ${gameState.redCardsLeft} | 🔵 ${gameState.blueCardsLeft}`;
         }
 
         // Status
-        if (statusEl) {
-            if (gameState.gameOver) {
-                statusEl.innerHTML = `<span class="success">🏆 Partita terminata! Vince ${gameState.winner === 'RED' ? '🔴 Rossi' : '🔵 Blu'}!</span>`;
-            } else if (gameState.phase === 'SPIA_TURNO') {
-                const isMyTurn = (gameState.turn === 'RED' && myTeam === 'RED') ||
-                                 (gameState.turn === 'BLUE' && myTeam === 'BLUE');
-                if (isMyTurn && myRole === 'SPY') {
-                    statusEl.innerHTML = `<span class="info">🧠 Sei il capo-spia! Inserisci un indizio.</span>`;
-                } else {
-                    statusEl.innerHTML = `<span class="info">⏳ ${gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu'} stanno pensando a un indizio...</span>`;
-                }
-            } else if (gameState.phase === 'AGENTI_TURNO') {
-                const isMyTurn = (gameState.turn === 'RED' && myTeam === 'RED') ||
-                                 (gameState.turn === 'BLUE' && myTeam === 'BLUE');
-                if (isMyTurn && myRole === 'AGENT') {
-                    statusEl.innerHTML = `<span class="success">🎯 Tocca a te! Clicca una carta per indovinare.</span>`;
-                } else {
-                    statusEl.innerHTML = `<span class="info">⏳ ${gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu'} stanno indovinando...</span>`;
-                }
+        if (gameState.gameOver) {
+            setStatus(`🏆 Partita terminata! Vince ${gameState.winner === 'RED' ? '🔴 Rossi' : '🔵 Blu'}!`, 'success');
+        } else if (gameState.phase === 'SPIA_TURNO') {
+            const isMyTurn = (gameState.turn === 'RED' && myTeam === 'RED') ||
+                             (gameState.turn === 'BLUE' && myTeam === 'BLUE');
+            if (isMyTurn && myRole === 'SPY') {
+                setStatus('🧠 Sei il capo-spia! Inserisci un indizio.', 'info');
+            } else {
+                setStatus(`⏳ ${gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu'} stanno pensando a un indizio...`, 'info');
+            }
+        } else if (gameState.phase === 'AGENTI_TURNO') {
+            const isMyTurn = (gameState.turn === 'RED' && myTeam === 'RED') ||
+                             (gameState.turn === 'BLUE' && myTeam === 'BLUE');
+            if (isMyTurn && myRole === 'AGENT') {
+                setStatus('🎯 Tocca a te! Clicca una carta per indovinare.', 'success');
+            } else {
+                setStatus(`⏳ ${gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu'} stanno indovinando...`, 'info');
             }
         }
 
-        // Mostra/nasconde controlli
+        // Controlli
         const controls = $('controls');
-        if (controls) {
+        if (controls && gameState.started) {
             const isMyTurn = gameState.phase === 'SPIA_TURNO' &&
                              ((gameState.turn === 'RED' && myTeam === 'RED') ||
                               (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
@@ -131,7 +141,6 @@
             if (numberInput) numberInput.style.display = isMyTurn ? 'inline-block' : 'none';
             if (submitBtn) submitBtn.style.display = isMyTurn ? 'inline-block' : 'none';
 
-            // Pulsante "Passa turno" visibile solo agli agenti della squadra di turno
             const isAgentTurn = gameState.phase === 'AGENTI_TURNO' &&
                                 ((gameState.turn === 'RED' && myTeam === 'RED') ||
                                  (gameState.turn === 'BLUE' && myTeam === 'BLUE')) &&
@@ -156,7 +165,7 @@
             const p = playersInRoom[id];
             const isMe = (id === myPlayerId);
             let teamLabel = '';
-            if (gameState) {
+            if (gameState && gameState.started) {
                 if (gameState.redSpy === id) teamLabel = ' 🔴 Capo';
                 else if (gameState.blueSpy === id) teamLabel = ' 🔵 Capo';
                 else if (gameState.redAgents.includes(id)) teamLabel = ' 🔴 Agente';
@@ -169,9 +178,140 @@
         container.innerHTML = html;
     }
 
+    // ---------- GESTIONE RUOLI (host) ----------
+    function renderRoleAssignment() {
+        const container = $('player-role-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const ids = Object.keys(playersInRoom);
+        if (ids.length === 0) {
+            container.innerHTML = '<span style="opacity:0.6;">Nessun giocatore connesso</span>';
+            return;
+        }
+
+        ids.forEach(id => {
+            const p = playersInRoom[id];
+            const isMe = (id === myPlayerId);
+            const div = document.createElement('div');
+            div.className = 'player-row';
+
+            // Nome
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = p.name || 'Anonimo';
+            div.appendChild(nameSpan);
+
+            // Badge (tu / host)
+            if (isMe) {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.textContent = '(tu)';
+                div.appendChild(badge);
+            }
+            if (isHost) {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.textContent = '👑 host';
+                badge.style.color = '#f1c40f';
+                div.appendChild(badge);
+            }
+
+            // Select ruolo (solo host può modificare)
+            const select = document.createElement('select');
+            select.id = `role-select-${id}`;
+            const options = [
+                { value: '', text: '— Seleziona ruolo —' },
+                { value: 'RED_SPY', text: '🔴 Capo-spia' },
+                { value: 'RED_AGENT', text: '🔴 Agente' },
+                { value: 'BLUE_SPY', text: '🔵 Capo-spia' },
+                { value: 'BLUE_AGENT', text: '🔵 Agente' }
+            ];
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.text;
+                select.appendChild(option);
+            });
+
+            // Seleziona il valore salvato
+            if (roleAssignments[id]) {
+                select.value = roleAssignments[id];
+            }
+
+            if (!isHost) {
+                select.disabled = true;
+            } else {
+                select.addEventListener('change', () => {
+                    roleAssignments[id] = select.value || null;
+                    // Invia a tutti
+                    Multiplayer.sendAction('codenames:assignRole', {
+                        playerId: id,
+                        role: select.value
+                    });
+                    checkAllAssigned();
+                });
+            }
+
+            div.appendChild(select);
+            container.appendChild(div);
+        });
+
+        checkAllAssigned();
+    }
+
+    function checkAllAssigned() {
+        const ids = Object.keys(playersInRoom);
+        const startBtn = $('btn-start-game');
+        const statusEl = $('role-status');
+
+        if (ids.length < 2) {
+            setRoleStatus('⏳ In attesa di almeno 2 giocatori...', 'info');
+            startBtn.disabled = true;
+            return;
+        }
+
+        const allAssigned = ids.every(id => roleAssignments[id] && roleAssignments[id] !== '');
+        const allValid = ids.every(id => {
+            const role = roleAssignments[id];
+            return role && ['RED_SPY', 'RED_AGENT', 'BLUE_SPY', 'BLUE_AGENT'].includes(role);
+        });
+
+        if (allAssigned && allValid) {
+            // Verifica che ci siano esattamente 1 spia per squadra
+            const redSpyCount = ids.filter(id => roleAssignments[id] === 'RED_SPY').length;
+            const blueSpyCount = ids.filter(id => roleAssignments[id] === 'BLUE_SPY').length;
+            const redAgents = ids.filter(id => roleAssignments[id] === 'RED_AGENT').length;
+            const blueAgents = ids.filter(id => roleAssignments[id] === 'BLUE_AGENT').length;
+
+            if (redSpyCount !== 1 || blueSpyCount !== 1) {
+                setRoleStatus('⚠️ Ogni squadra deve avere esattamente 1 capo-spia!', 'error');
+                startBtn.disabled = true;
+                return;
+            }
+            if (redAgents < 1 || blueAgents < 1) {
+                setRoleStatus('⚠️ Ogni squadra deve avere almeno 1 agente!', 'error');
+                startBtn.disabled = true;
+                return;
+            }
+
+            setRoleStatus('✅ Tutti i ruoli sono assegnati! Avvia la partita.', 'success');
+            startBtn.disabled = false;
+        } else {
+            const missing = ids.filter(id => !roleAssignments[id] || roleAssignments[id] === '');
+            const names = missing.map(id => playersInRoom[id]?.name || id);
+            setRoleStatus(`⏳ In attesa di ruoli per: ${names.join(', ')}`, 'info');
+            startBtn.disabled = true;
+        }
+    }
+
     // ---------- AZIONI LOCALI ----------
     function onCardClick(index) {
         if (!gameState || gameState.gameOver) return;
+        if (!gameState.started) {
+            setStatus('⏳ La partita non è ancora iniziata!', 'info');
+            return;
+        }
         if (gameState.phase !== 'AGENTI_TURNO') {
             setStatus('⏳ Non è il momento di indovinare', 'info');
             return;
@@ -188,12 +328,10 @@
             return;
         }
 
-        // Applica logica locale
         const result = CodenamesLogic.guessCard(gameState, index, myPlayerId);
         if (result.success) {
             gameState = result.state;
             renderBoard();
-            // Invia a tutti gli altri
             Multiplayer.sendAction('codenames:guess', { cardIndex: index });
             if (result.gameOver) {
                 setStatus(`🏆 VINCE ${result.winner === 'RED' ? '🔴 Rossi' : '🔵 Blu'}!`, 'success');
@@ -245,51 +383,40 @@
         }
     }
 
-    function onAssignRole(team, role) {
-        if (!gameState) {
-            setStatus('❌ Partita non inizializzata. Connettiti prima.', 'error');
-            return;
-        }
-        if (gameState.started) {
-            setStatus('❌ Partita già iniziata, non puoi cambiare ruolo', 'error');
-            return;
-        }
-
-        const result = CodenamesLogic.assignPlayer(gameState, myPlayerId, team, role);
-        if (result) {
-            gameState = result;
-            myTeam = team;
-            myRole = role;
-            isSpyView = (role === 'SPY');
-            renderBoard();
-            updatePlayerList();
-            Multiplayer.sendAction('codenames:assign', {
-                playerId: myPlayerId,
-                team: team,
-                role: role
-            });
-            setStatus(`✅ Assegnato come ${role === 'SPY' ? 'Capo-spia' : 'Agente'} ${team === 'RED' ? '🔴 Rosso' : '🔵 Blu'}`, 'success');
-        }
-    }
-
     function onStartGame() {
-        if (!gameState) { setStatus('❌ Partita non inizializzata', 'error'); return; }
+        if (!isHost) {
+            setStatus('❌ Solo l\'host può avviare la partita!', 'error');
+            return;
+        }
+        if (!gameState) {
+            setStatus('❌ Partita non inizializzata', 'error');
+            return;
+        }
+
+        // Applica tutti i ruoli
+        for (const id in roleAssignments) {
+            const role = roleAssignments[id];
+            if (!role) continue;
+            const team = role.startsWith('RED') ? 'RED' : 'BLUE';
+            const roleType = role.endsWith('SPY') ? 'SPY' : 'AGENT';
+            CodenamesLogic.assignPlayer(gameState, id, team, roleType);
+        }
+
+        // Avvia la partita
         const result = CodenamesLogic.startGame(gameState);
         if (result.success) {
             gameState = result.state;
-            renderBoard();
+            Multiplayer.sendState(gameState);
             Multiplayer.sendAction('codenames:start', {});
+
+            // Nascondi assegnazione, mostra gioco
+            $('role-assignment').classList.add('hidden');
+            $('game-area').classList.add('visible');
+            renderBoard();
             setStatus('▶️ Partita iniziata!', 'success');
         } else {
             setStatus('❌ ' + result.error, 'error');
         }
-    }
-
-    function setStatus(msg, type) {
-        const el = $('status');
-        if (!el) return;
-        const cls = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
-        el.innerHTML = `<span class="${cls}">${msg}</span>`;
     }
 
     // ---------- EVENTI MULTIPLAYER ----------
@@ -297,48 +424,51 @@
         myPlayerId = data.playerId;
         console.log('✅ Connesso! ID:', myPlayerId);
 
-        // Aggiorna lista giocatori
         playersInRoom = data.players || {};
-        updatePlayerList();
+        const playerIds = Object.keys(playersInRoom);
 
-        // Se siamo il primo, inizializziamo il gioco
-        const playerCount = Object.keys(playersInRoom).length;
-        if (playerCount === 1) {
+        // Il primo giocatore è l'host
+        isHost = (playerIds.length === 1);
+
+        // Nascondi connessione, mostra assegnazione ruoli
+        $('role-assignment').classList.remove('hidden');
+        $('game-area').classList.remove('visible');
+        $('connect-section').style.display = 'none';
+
+        // Se sono l'host, inizializzo il gioco
+        if (isHost) {
             gameState = CodenamesLogic.initGame('RED');
+            gameState.started = false;
             Multiplayer.sendState(gameState);
-            renderBoard();
-            setStatus('🎮 Hai creato la stanza! Assegna i ruoli e avvia.', 'info');
+            setStatus('👑 Sei l\'host! Assegna i ruoli a tutti.', 'info');
+        } else {
+            setStatus('👋 Benvenuto! Aspetta che l\'host ti assegni un ruolo.', 'info');
         }
 
-        // Mostra game area, nascondi lobby
-        $('lobby').classList.add('hidden');
-        $('game-area').classList.add('visible');
-
-        // Aggiorna stato dei giocatori
+        renderRoleAssignment();
         updatePlayerList();
+        updateConnectionStatus('connected', data.room);
     }
 
     function onStateReceived(state) {
         if (!state) return;
         gameState = state;
 
-        // Rileggi il mio ruolo dallo stato
+        // Se la partita è iniziata, mostra il gioco
+        if (gameState.started) {
+            $('role-assignment').classList.add('hidden');
+            $('game-area').classList.add('visible');
+        }
+
+        // Rileggi il mio ruolo
         if (gameState.redSpy === myPlayerId) {
-            myTeam = 'RED';
-            myRole = 'SPY';
-            isSpyView = true;
+            myTeam = 'RED'; myRole = 'SPY'; isSpyView = true;
         } else if (gameState.blueSpy === myPlayerId) {
-            myTeam = 'BLUE';
-            myRole = 'SPY';
-            isSpyView = true;
+            myTeam = 'BLUE'; myRole = 'SPY'; isSpyView = true;
         } else if (gameState.redAgents.includes(myPlayerId)) {
-            myTeam = 'RED';
-            myRole = 'AGENT';
-            isSpyView = false;
+            myTeam = 'RED'; myRole = 'AGENT'; isSpyView = false;
         } else if (gameState.blueAgents.includes(myPlayerId)) {
-            myTeam = 'BLUE';
-            myRole = 'AGENT';
-            isSpyView = false;
+            myTeam = 'BLUE'; myRole = 'AGENT'; isSpyView = false;
         }
 
         renderBoard();
@@ -347,12 +477,14 @@
 
     function onPlayersUpdate(players) {
         playersInRoom = players || {};
+        renderRoleAssignment();
         updatePlayerList();
     }
 
     function onPlayerJoined(player) {
         if (player && player.id) {
             playersInRoom[player.id] = player;
+            renderRoleAssignment();
             updatePlayerList();
             setStatus(`👋 ${player.name || 'Anonimo'} è entrato in stanza`, 'info');
         }
@@ -360,6 +492,8 @@
 
     function onPlayerLeft(playerId) {
         delete playersInRoom[playerId];
+        delete roleAssignments[playerId];
+        renderRoleAssignment();
         updatePlayerList();
         setStatus(`👋 Un giocatore ha lasciato la stanza`, 'info');
     }
@@ -369,6 +503,24 @@
         const cmd = action.replace('codenames:', '');
 
         switch(cmd) {
+            case 'assignRole':
+                roleAssignments[data.playerId] = data.role || null;
+                renderRoleAssignment();
+                break;
+
+            case 'start':
+                if (gameState && !gameState.started) {
+                    const r = CodenamesLogic.startGame(gameState);
+                    if (r.success) {
+                        gameState = r.state;
+                        $('role-assignment').classList.add('hidden');
+                        $('game-area').classList.add('visible');
+                        renderBoard();
+                        setStatus('▶️ Partita iniziata!', 'success');
+                    }
+                }
+                break;
+
             case 'clue':
                 const r1 = CodenamesLogic.giveClue(gameState, data.clue, data.number, playerId);
                 if (r1.success) {
@@ -401,81 +553,79 @@
                     setStatus(`⏳ Turno passato a ${gameState.turn === 'RED' ? '🔴 Rossi' : '🔵 Blu'}`, 'info');
                 }
                 break;
+        }
+    }
 
-            case 'assign':
-                const r4 = CodenamesLogic.assignPlayer(gameState, data.playerId, data.team, data.role);
-                if (r4) {
-                    gameState = r4;
-                    // Rileggi il mio ruolo
-                    if (gameState.redSpy === myPlayerId) {
-                        myTeam = 'RED'; myRole = 'SPY'; isSpyView = true;
-                    } else if (gameState.blueSpy === myPlayerId) {
-                        myTeam = 'BLUE'; myRole = 'SPY'; isSpyView = true;
-                    } else if (gameState.redAgents.includes(myPlayerId)) {
-                        myTeam = 'RED'; myRole = 'AGENT'; isSpyView = false;
-                    } else if (gameState.blueAgents.includes(myPlayerId)) {
-                        myTeam = 'BLUE'; myRole = 'AGENT'; isSpyView = false;
-                    }
-                    renderBoard();
-                    updatePlayerList();
-                    const p = playersInRoom[data.playerId];
-                    setStatus(`🎯 ${p?.name || 'Qualcuno'} è ora ${data.role === 'SPY' ? 'Capo-spia' : 'Agente'} ${data.team === 'RED' ? '🔴 Rosso' : '🔵 Blu'}`, 'info');
-                }
-                break;
+    function onDisconnected() {
+        updateConnectionStatus('disconnected');
+        $('connect-section').style.display = 'block';
+        $('role-assignment').classList.add('hidden');
+        $('game-area').classList.remove('visible');
+        playersInRoom = {};
+        roleAssignments = {};
+        renderRoleAssignment();
+        updatePlayerList();
+        setStatus('🔴 Disconnesso dal server', 'error');
+    }
 
-            case 'start':
-                const r5 = CodenamesLogic.startGame(gameState);
-                if (r5.success) {
-                    gameState = r5.state;
-                    renderBoard();
-                    setStatus('▶️ Partita iniziata!', 'success');
-                }
-                break;
+    function updateConnectionStatus(status, roomId) {
+        const el = $('connection-status');
+        if (!el) return;
+        if (status === 'connected') {
+            el.innerHTML = `🟢 Connesso alla stanza <strong>${roomId || 'default'}</strong>`;
+            el.style.color = '#2ecc71';
+        } else if (status === 'connecting') {
+            el.innerHTML = '🟡 Connessione in corso...';
+            el.style.color = '#f1c40f';
+        } else {
+            el.innerHTML = '🔴 Disconnesso';
+            el.style.color = '#ff6b6b';
         }
     }
 
     // ---------- INIZIALIZZAZIONE ----------
     function init() {
-        // Pulsanti lobby
+        // Connessione
         $('btn-connect').addEventListener('click', () => {
             const name = $('player-name').value.trim() || 'Anonimo';
             const room = $('room-code').value.trim() || 'default';
+            updateConnectionStatus('connecting');
             Multiplayer.connect({
                 playerName: name,
                 room: room,
-                server: 'wss://anime-multiplayer-server.onrender.com' // <-- CAMBIA CON IL TUO URL
+                server: 'wss://anime-multiplayer-server.onrender.com'
             });
         });
 
-        // Pulsanti ruolo
-        $('btn-assign-red-spy').addEventListener('click', () => onAssignRole('RED', 'SPY'));
-        $('btn-assign-red-agent').addEventListener('click', () => onAssignRole('RED', 'AGENT'));
-        $('btn-assign-blue-spy').addEventListener('click', () => onAssignRole('BLUE', 'SPY'));
-        $('btn-assign-blue-agent').addEventListener('click', () => onAssignRole('BLUE', 'AGENT'));
+        // Disconnessione
+        $('btn-disconnect').addEventListener('click', () => {
+            Multiplayer.leave();
+            onDisconnected();
+        });
 
-        // Pulsante avvia
-        $('btn-start').addEventListener('click', onStartGame);
+        // Avvia partita (host)
+        $('btn-start-game').addEventListener('click', onStartGame);
 
-        // Pulsanti gioco
+        // Controlli gioco
         $('btn-submit-clue').addEventListener('click', onSubmitClue);
         $('btn-end-turn').addEventListener('click', onEndTurn);
 
-        // Enter key per indizio
         $('clue-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') onSubmitClue();
         });
 
-        // Registra eventi Multiplayer
+        // Eventi Multiplayer
         Multiplayer.on('connected', onConnected);
+        Multiplayer.on('disconnected', onDisconnected);
         Multiplayer.on('state', onStateReceived);
         Multiplayer.on('players', onPlayersUpdate);
         Multiplayer.on('playerJoined', onPlayerJoined);
         Multiplayer.on('playerLeft', onPlayerLeft);
         Multiplayer.on('action', onActionReceived);
-
-        // Nasconde game area all'inizio
-        $('game-area').classList.remove('visible');
-        $('lobby').classList.remove('hidden');
+        Multiplayer.on('error', (err) => {
+            setStatus('❌ Errore: ' + err, 'error');
+            updateConnectionStatus('error');
+        });
 
         console.log('🎮 Codenames caricato!');
     }
