@@ -343,6 +343,125 @@
         GAME.me.direction = 0;
     }
 
+    // -------- Funzioni per disegno anime --------
+    function darkenColor(hex, amount) {
+        let c = hex.replace('#', '');
+        if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+        let r = parseInt(c.substring(0, 2), 16);
+        let g = parseInt(c.substring(2, 4), 16);
+        let b = parseInt(c.substring(4, 6), 16);
+        r = Math.max(0, r - amount);
+        g = Math.max(0, g - amount);
+        b = Math.max(0, b - amount);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    function drawAnimeCharacter(ctx, x, y, color, name, direction, isMe, hpPercent) {
+        const dirAngle = [0, Math.PI / 2, Math.PI, -Math.PI / 2][direction] || 0;
+        const skinColor = '#ffd5b3';
+
+        // ---- CORPO (tunica/cape) ----
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(x, y + 10, 18, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ---- TESTA (ovale) ----
+        ctx.fillStyle = skinColor;
+        ctx.beginPath();
+        ctx.ellipse(x, y - 8, 14, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ---- OCCHI (grandi, stile anime) ----
+        // Bianco
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.ellipse(x - 6 + (direction === 1 ? 2 : 0), y - 10, 5, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + 6 + (direction === 1 ? 2 : 0), y - 10, 5, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupilla (nera)
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(x - 6 + (direction === 1 ? 3 : 0), y - 8, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 6 + (direction === 1 ? 3 : 0), y - 8, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Riflesso (punto bianco)
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x - 4 + (direction === 1 ? 2 : 0), y - 12, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 8 + (direction === 1 ? 2 : 0), y - 12, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ---- CAPELLI (in base al colore del personaggio) ----
+        const hairColor = darkenColor(color, 40);
+        ctx.fillStyle = hairColor;
+        // Parte superiore
+        ctx.beginPath();
+        ctx.ellipse(x, y - 18, 16, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Ciuffo
+        const ciuffoDir = [0, 0.3, 0, -0.3][direction] || 0;
+        ctx.beginPath();
+        ctx.moveTo(x - 4 + ciuffoDir * 10, y - 22);
+        ctx.quadraticCurveTo(x + ciuffoDir * 8, y - 34, x + 4 + ciuffoDir * 10, y - 22);
+        ctx.fill();
+
+        // ---- BOCCA (semplice linea) ----
+        ctx.strokeStyle = '#b3746b';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x + (direction === 1 ? 2 : 0), y - 2, 4, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+
+        // ---- NOME (sopra la testa) ----
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(name, x, y - 36);
+        ctx.shadowBlur = 0;
+
+        // ---- BARRA HP (sotto il nome) ----
+        const barWidth = 50;
+        const barX = x - barWidth / 2;
+        const barY = y - 26;
+        ctx.fillStyle = '#2a2a4a';
+        ctx.fillRect(barX, barY, barWidth, 6);
+        const hpFill = Math.max(0, hpPercent / 100) * barWidth;
+        ctx.fillStyle = hpPercent < 30 ? '#f87171' : '#4ade80';
+        ctx.fillRect(barX, barY, hpFill, 6);
+
+        // ---- INDICATORE "TU" (se sei tu) ----
+        if (isMe) {
+            ctx.fillStyle = '#f7971e';
+            ctx.font = 'bold 12px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬇️ tu', x, y + 44);
+        }
+
+        // ---- FRECCIA DIREZIONE (sul corpo) ----
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        const ax = x + Math.cos(dirAngle) * 18;
+        const ay = y + 10 + Math.sin(dirAngle) * 18;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + Math.cos(dirAngle - 0.4) * 8, ay + Math.sin(dirAngle - 0.4) * 8);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + Math.cos(dirAngle + 0.4) * 8, ay + Math.sin(dirAngle + 0.4) * 8);
+        ctx.stroke();
+    }
+
     // -------- Spara un proiettile --------
     function fireProjectile() {
         if (!GAME.connected) return;
@@ -394,14 +513,14 @@
         });
     }
 
-    // -------- Gestione danno (CORRETTA) --------
+    // -------- Gestione danno --------
     function takeDamage(attackerId, damage) {
         if (attackerId === GAME.me.id) return;
         const target = GAME.players[GAME.me.id];
         if (!target) return;
         const newHp = Math.max(0, GAME.me.hp - damage);
         GAME.me.hp = newHp;
-        GAME.players[GAME.me.id].hp = newHp; // 👈 AGGIUNTA
+        GAME.players[GAME.me.id].hp = newHp;
         myHealthDisplay.textContent = `❤️ ${newHp}`;
         renderPlayersUI();
         const attackerName = GAME.players[attackerId]?.name || 'Qualcuno';
@@ -410,7 +529,7 @@
             addLog(`💀 Sei stato sconfitto!`, 'error');
             setTimeout(() => {
                 GAME.me.hp = GAME.me.maxHp;
-                GAME.players[GAME.me.id].hp = GAME.me.maxHp; // 👈 AGGIUNTA
+                GAME.players[GAME.me.id].hp = GAME.me.maxHp;
                 GAME.me.x = 100 + Math.random() * 600;
                 GAME.me.y = 100 + Math.random() * 300;
                 GAME.players[GAME.me.id].x = GAME.me.x;
@@ -667,6 +786,7 @@
         ctx.fillStyle = '#1a1a2e';
         ctx.fillRect(0, 0, 800, 500);
 
+        // Griglia
         ctx.strokeStyle = '#2a2a4a';
         ctx.lineWidth = 1;
         for (let i = 0; i < 800; i += 40) {
@@ -682,6 +802,7 @@
             ctx.stroke();
         }
 
+        // Proiettili (come prima)
         for (const p of GAME.projectiles) {
             const grad = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 28);
             grad.addColorStop(0, 'rgba(255, 200, 50, 1)');
@@ -706,6 +827,7 @@
             ctx.fill();
         }
 
+        // ---- GIOCATORI (disegnati con stile anime) ----
         for (const id of Object.keys(GAME.players)) {
             const p = GAME.players[id];
             if (!p) continue;
@@ -714,46 +836,21 @@
             const y = p.y || 0;
             const hpPercent = Math.max(0, (p.hp / p.maxHp) * 100);
 
-            ctx.shadowColor = isMe ? '#f7971e' : '#4ade80';
-            ctx.shadowBlur = 15;
-            ctx.beginPath();
-            ctx.arc(x, y, 20, 0, Math.PI * 2);
-            ctx.fillStyle = isMe ? '#f7971e' : '#4ade80';
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            // Colore del personaggio: arancione per te, verde per gli altri
+            const color = isMe ? '#f7971e' : '#4ade80';
 
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 14px Segoe UI';
-            ctx.textAlign = 'center';
-            ctx.fillText(p.name, x, y - 34);
-
-            const barWidth = 40;
-            const barX = x - barWidth / 2;
-            const barY = y - 28;
-            ctx.fillStyle = '#2a2a4a';
-            ctx.fillRect(barX, barY, barWidth, 6);
-            ctx.fillStyle = hpPercent < 30 ? '#f87171' : '#4ade80';
-            ctx.fillRect(barX, barY, barWidth * (hpPercent / 100), 6);
-
-            if (isMe) {
-                ctx.fillStyle = '#f7971e';
-                ctx.font = '12px Segoe UI';
-                ctx.fillText('⬇️ tu', x, y + 42);
-            }
-
-            const dir = p.direction || 0;
-            const angles = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
-            const angle = angles[dir] || 0;
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22);
-            ctx.lineTo(x + Math.cos(angle + 0.5) * 28, y + Math.sin(angle + 0.5) * 28);
-            ctx.moveTo(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22);
-            ctx.lineTo(x + Math.cos(angle - 0.5) * 28, y + Math.sin(angle - 0.5) * 28);
-            ctx.stroke();
+            drawAnimeCharacter(
+                ctx,
+                x, y,
+                color,
+                p.name,
+                p.direction || 0,
+                isMe,
+                hpPercent
+            );
         }
 
+        // Legenda
         ctx.fillStyle = '#8888aa';
         ctx.font = '12px Segoe UI';
         ctx.textAlign = 'left';
@@ -822,8 +919,8 @@
     initLocalPlayer('Naruto');
     gameRunning = false;
     requestAnimationFrame(gameLoop);
-    addLog('🎮 Gioco con proiettili! Premere Spazio per sparare.', 'highlight');
-    console.log('⚔️ Anime Battle – Proiettili Multiplayer');
+    addLog('🎮 Gioco con personaggi anime! Premere Spazio per sparare.', 'highlight');
+    console.log('⚔️ Anime Battle – Proiettili Multiplayer (personaggi)');
 </script>
 </body>
 </html>
