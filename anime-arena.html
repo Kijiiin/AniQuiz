@@ -261,16 +261,16 @@
     const GAME = {
         me: { id: null, name: '', x: 400, y: 250, hp: 100, maxHp: 100, direction: 0 },
         players: {},
-        projectiles: [], // { x, y, vx, vy, ownerId, life, damage }
+        projectiles: [],
         connected: false,
         ready: false,
         room: '',
         keys: { w: false, a: false, s: false, d: false, space: false },
         speed: 3,
         attackCooldown: 0,
-        attackCooldownTime: 20, // frame tra un proiettile e l'altro
+        attackCooldownTime: 20,
         projSpeed: 6,
-        projLife: 80, // frame di vita
+        projLife: 80,
         projDamage: 20,
     };
 
@@ -340,7 +340,7 @@
         GAME.me.x = 150 + Math.random() * 500;
         GAME.me.y = 100 + Math.random() * 300;
         GAME.me.hp = GAME.me.maxHp = 100;
-        GAME.me.direction = 0; // giù
+        GAME.me.direction = 0;
     }
 
     // -------- Spara un proiettile --------
@@ -349,7 +349,6 @@
         if (GAME.attackCooldown > 0) return;
         if (GAME.me.hp <= 0) return;
 
-        // direction: 0=giù, 1=destra, 2=su, 3=sinistra
         const angle = [Math.PI / 2, 0, -Math.PI / 2, Math.PI][GAME.me.direction] || 0;
         const vx = Math.cos(angle) * GAME.projSpeed;
         const vy = Math.sin(angle) * GAME.projSpeed;
@@ -368,7 +367,6 @@
         GAME.projectiles.push(proj);
         GAME.attackCooldown = GAME.attackCooldownTime;
 
-        // Invia azione a tutti
         Multiplayer.sendAction('fire', {
             x: proj.x,
             y: proj.y,
@@ -396,25 +394,29 @@
         });
     }
 
-    // -------- Gestione danno (CORRETTA CON renderPlayersUI) --------
+    // -------- Gestione danno (CORRETTA) --------
     function takeDamage(attackerId, damage) {
         if (attackerId === GAME.me.id) return;
         const target = GAME.players[GAME.me.id];
         if (!target) return;
         const newHp = Math.max(0, GAME.me.hp - damage);
         GAME.me.hp = newHp;
+        GAME.players[GAME.me.id].hp = newHp; // 👈 AGGIUNTA
         myHealthDisplay.textContent = `❤️ ${newHp}`;
-        renderPlayersUI(); // 👈 AGGIUNTA PER AGGIORNARE LA LISTA LOCALE
+        renderPlayersUI();
         const attackerName = GAME.players[attackerId]?.name || 'Qualcuno';
         addLog(`💥 ${attackerName} ti ha colpito! (-${damage} HP)`, 'error');
         if (newHp <= 0) {
             addLog(`💀 Sei stato sconfitto!`, 'error');
             setTimeout(() => {
                 GAME.me.hp = GAME.me.maxHp;
+                GAME.players[GAME.me.id].hp = GAME.me.maxHp; // 👈 AGGIUNTA
                 GAME.me.x = 100 + Math.random() * 600;
                 GAME.me.y = 100 + Math.random() * 300;
+                GAME.players[GAME.me.id].x = GAME.me.x;
+                GAME.players[GAME.me.id].y = GAME.me.y;
                 myHealthDisplay.textContent = `❤️ ${GAME.me.hp}`;
-                renderPlayersUI(); // 👈 AGGIUNTA ANCHE QUI
+                renderPlayersUI();
                 addLog(`🔄 Sei resuscitato!`, 'success');
                 sendMyState();
             }, 2000);
