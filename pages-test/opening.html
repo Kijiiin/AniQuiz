@@ -253,7 +253,6 @@
             border-radius: 30px;
             border: 1px solid rgba(245,87,108,0.2);
         }
-        /* Pulsante start */
         .start-btn {
             display: block;
             width: 100%;
@@ -334,6 +333,8 @@
     const YOUTUBE_API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
     const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
     const MAX_QUESTIONS = 10;
+    const CACHE_KEY = 'animeOpeningCache';
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 giorno
 
     // ---------- STATO ----------
     let animeList = [];
@@ -384,6 +385,26 @@
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+    // ---------- CACHE LOCALE ----------
+    function getCache() {
+        try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (!raw) return {};
+            const data = JSON.parse(raw);
+            if (Date.now() - data.timestamp > CACHE_DURATION) {
+                localStorage.removeItem(CACHE_KEY);
+                return {};
+            }
+            return data.map || {};
+        } catch { return {}; }
+    }
+
+    function setCache(map) {
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), map }));
+        } catch {}
+    }
+
     // ---------- API ANILIST ----------
     async function fetchAnimeList() {
         const query = `
@@ -401,7 +422,7 @@
                 }
             }
         `;
-        const variables = { page: 1, perPage: 60 };
+        const variables = { page: 1, perPage: 30 }; // Ridotto per meno richieste
         try {
             const response = await fetch(ANILIST_ENDPOINT, {
                 method: 'POST',
@@ -417,23 +438,44 @@
         }
     }
 
-    // ---------- API YOUTUBE ----------
-    async function searchYouTubeOpening(anime) {
+    // ---------- API YOUTUBE CON CACHE E RITARDO ----------
+    async function searchYouTubeOpening(anime, cache) {
         const title = getAnimeTitle(anime);
-        const queries = [`${title} opening`, `${title} OP`, `${title} opening full`];
-        for (const query of queries) {
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.items && data.items.length > 0) {
-                    const item = data.items[0];
-                    if (item.id && item.id.videoId) return item.id.videoId;
-                }
-            } catch (e) { console.warn(`Ricerca fallita per "${query}"`, e); }
-            await sleep(200);
+        // Controlla cache
+        if (cache[title]) {
+            return cache[title];
         }
-        return null;
+
+        const query = `${title} opening`;
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=1&key=${YOUTUBE_API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (response.status === 429) {
+                // Troppe richieste: attendiamo e riproviamo una volta
+                await sleep(2000);
+                const retryResponse = await fetch(url);
+                if (!retryResponse.ok) return null;
+                const data = await retryResponse.json();
+                if (data.items && data.items.length > 0) {
+                    const videoId = data.items[0].id.videoId;
+                    cache[title] = videoId;
+                    return videoId;
+                }
+                return null;
+            }
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                const videoId = data.items[0].id.videoId;
+                cache[title] = videoId;
+                return videoId;
+            }
+            return null;
+        } catch (e) {
+            console.warn(`Errore ricerca per "${title}":`, e);
+            return null;
+        }
     }
 
     // ---------- PREPARAZIONE DOMANDE ----------
@@ -444,9 +486,10 @@
             shuffleArray(animeList);
         }
 
+        const cache = getCache();
         questionsQueue = [];
         let attempts = 0;
-        const maxAttempts = animeList.length * 3;
+        const maxAttempts = animeList.length * 2;
         let usedAnimeIds = new Set();
 
         while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
@@ -455,7 +498,10 @@
             if (usedAnimeIds.has(candidate.id)) continue;
             usedAnimeIds.add(candidate.id);
 
-            const videoId = await searchYouTubeOpening(candidate);
+            const videoId = await searchYouTubeOpening(candidate, cache);
+            // Aspetta un po' per evitare rate limiting
+            await sleep(400);
+
             if (!videoId) {
                 usedAnimeIds.delete(candidate.id);
                 continue;
@@ -476,6 +522,9 @@
             shuffleArray(options);
             questionsQueue.push({ anime: candidate, videoId, options });
         }
+
+        // Salva cache
+        setCache(cache);
 
         if (questionsQueue.length === 0) {
             throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
@@ -557,7 +606,7 @@
                 showinfo: 0,
                 loop: 1,
                 playlist: '',
-                autoplay: 0,   // non parte automaticamente
+                autoplay: 0,
                 mute: 0,
             },
             events: {
@@ -636,7 +685,7 @@
         audioVisual.className = 'audio-visual';
         audioVisual.textContent = '⚠️';
         nowPlaying.textContent = '❌ Errore di riproduzione';
-        feedbackDiv.innerHTML = '❌ Impossibile riprodurre l\'audio. Riprova.';
+        feedbackDiv.innerHTML = '❌ Impossibile riprodurre l\'audio. Verifica che gli ad blocker siano disattivati per questo sito.';
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
@@ -749,7 +798,7 @@
         errorMsg.classList.add('hidden');
     }
 
-    // ---------- AVVIA IL GIOCO (dopo click su Start) ----------
+    // ---------- AVVIA IL GIOCO ----------
     async function startGame() {
         hideError();
         startBtn.disabled = true;
@@ -797,6 +846,8 @@
                 onYouTubeIframeAPIReady();
             } else {
                 console.warn('YouTube API non caricata, il gioco funzionerà senza audio.');
+                // Mostra un messaggio all'utente
+                nowPlaying.textContent = '⚠️ Player non disponibile, verifica ad blocker';
             }
         }
     }, 5000);
