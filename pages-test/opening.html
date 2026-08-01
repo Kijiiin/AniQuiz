@@ -335,8 +335,28 @@
     const MAX_QUESTIONS = 10;
     const CACHE_KEY = 'animeOpeningCache';
     const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
-    const REQUEST_DELAY = 1000; // ms tra una richiesta e l'altra
-    const MAX_RETRIES = 1; // solo un tentativo dopo il primo fallimento
+    const REQUEST_DELAY = 2500; // ms tra una richiesta e l'altra (aumentato)
+    const MAX_RETRIES = 2;
+    const CONSECUTIVE_429_LIMIT = 3; // se otteniamo 3 429 di fila, passiamo al fallback
+
+    // ---------- LISTA DI BACKUP (emergenza) ----------
+    const FALLBACK_ANIME = [
+        { id: 1, title: { romaji: "Kimetsu no Yaiba" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-F6Tu5L6s8P4A.jpg" }, videoId: "pmanD_7S6GM" },
+        { id: 2, title: { romaji: "Jujutsu Kaisen" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx117075-SbN7Fk5HwZ6F.jpg" }, videoId: "1tk1Gv3M9lE" },
+        { id: 3, title: { romaji: "Shingeki no Kyojin" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-VHiyzLf1rR7A.jpg" }, videoId: "8OkpRK2_gVs" },
+        { id: 4, title: { romaji: "Tokyo Ghoul" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20605-w34T6GwCifg3.jpg" }, videoId: "ZP0U2HPTyZc" },
+        { id: 5, title: { romaji: "One Punch Man" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21087-KMsY1pAf23jJ.jpg" }, videoId: "atxYe-nOa9w" },
+        { id: 6, title: { romaji: "My Hero Academia" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21459-EqM7cYNDQQ4L.jpg" }, videoId: "P6vsc1HbamI" },
+        { id: 7, title: { romaji: "Naruto" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20-YTf3wzQcl66S.jpg" }, videoId: "2jTPMxZ9Z7E" },
+        { id: 8, title: { romaji: "Death Note" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-92SYGZ9QhlWL.jpg" }, videoId: "NlJZvZ4Z9YQ" },
+        { id: 9, title: { romaji: "Fullmetal Alchemist: Brotherhood" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5114-xIq6sBcZ0p15.jpg" }, videoId: "UcR6UYrqYlM" },
+        { id: 10, title: { romaji: "Steins;Gate" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx9253-Jlq5jrxV5DcL.jpg" }, videoId: "3pRvCIKgA28" },
+        { id: 11, title: { romaji: "Kaguya-sama wa Kokurasetai" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101921-ynQC6aEFG8p0.jpg" }, videoId: "w9-4i_RL7Vw" },
+        { id: 12, title: { romaji: "Mob Psycho 100" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx97941-mGJ6QQ3jIdOH.jpg" }, videoId: "2PZ4gSsiwN0" },
+        { id: 13, title: { romaji: "Violet Evergarden" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx97679-P6wRoT8Mf9VX.jpg" }, videoId: "o2f5tD1KyrM" },
+        { id: 14, title: { romaji: "Re:Zero" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21385-c2snYbfT3MUB.jpg" }, videoId: "2M6D4I7i5GI" },
+        { id: 15, title: { romaji: "Haikyuu!!" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20583-1M5h9nCJzBwR.jpg" }, videoId: "m1s6u-5quL0" }
+    ];
 
     // ---------- STATO ----------
     let animeList = [];
@@ -348,6 +368,8 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
+    let consecutive429 = 0; // conta i 429 consecutivi
+    let usingFallback = false;
 
     // YouTube player
     let ytPlayer = null;
@@ -433,42 +455,44 @@
             return json.data.Page.media;
         } catch (e) {
             console.error('Errore Anilist:', e);
-            throw new Error('Impossibile caricare gli anime da Anilist.');
+            // In caso di errore di AniList, usiamo direttamente il fallback
+            return null;
         }
     }
 
-    // ---------- API YOUTUBE CON BACKOFF ESPONENZIALE ----------
+    // ---------- API YOUTUBE CON BACKOFF E FALLBACK ----------
     async function searchYouTubeOpening(anime, cache) {
         const title = getAnimeTitle(anime);
         if (cache[title]) {
             return cache[title];
         }
 
-        // Una sola query: "titolo opening" (più efficace e riduce il carico)
         const query = `${title} opening`;
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`;
 
         let retries = 0;
-        let backoff = 2000; // ms iniziali
+        let backoff = 3000; // ms iniziali
 
         while (retries <= MAX_RETRIES) {
             try {
                 const response = await fetch(url);
                 if (response.status === 429) {
-                    // Troppe richieste: attendiamo con backoff esponenziale
+                    consecutive429++;
                     console.warn(`Rate limit per "${title}", attesa ${backoff}ms...`);
                     await sleep(backoff);
-                    backoff *= 2; // raddoppia per il prossimo tentativo
+                    backoff *= 2; // raddoppia
                     retries++;
                     continue;
                 }
+                // Se abbiamo avuto 429, resettiamo il contatore solo se riceviamo un 200
+                consecutive429 = 0;
                 if (!response.ok) {
                     console.warn(`HTTP ${response.status} per "${title}"`);
                     return null;
                 }
                 const data = await response.json();
                 if (data.items && data.items.length > 0) {
-                    // Cerca un video che sembri l'opening (filtra trailer/amv)
+                    // Filtra trailer/amv
                     const video = data.items.find(item => {
                         const snippet = item.snippet || {};
                         const desc = snippet.description ? snippet.description.toLowerCase() : '';
@@ -494,55 +518,89 @@
         return null;
     }
 
-    // ---------- PREPARAZIONE DOMANDE ----------
+    // ---------- PREPARAZIONE DOMANDE (ibrida) ----------
     async function prepareQuestions() {
-        if (animeList.length === 0) {
-            animeList = await fetchAnimeList();
-            if (!animeList || animeList.length < 10) throw new Error('Non ci sono abbastanza anime (servono almeno 10).');
+        // Prova a prendere la lista da AniList
+        let fetched = await fetchAnimeList();
+        if (fetched && fetched.length >= 10) {
+            animeList = fetched;
             shuffleArray(animeList);
+        } else {
+            // Se AniList fallisce, usiamo il fallback
+            console.warn('AniList non disponibile, uso fallback.');
+            animeList = [];
+            usingFallback = true;
         }
 
         const cache = getCache();
         questionsQueue = [];
         const usedIndices = new Set();
         let attempts = 0;
-        const maxAttempts = animeList.length * 2;
+        const maxAttempts = animeList.length > 0 ? animeList.length * 2 : FALLBACK_ANIME.length * 2;
 
-        while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
-            attempts++;
-            const idx = Math.floor(Math.random() * animeList.length);
-            if (usedIndices.has(idx)) continue;
-            usedIndices.add(idx);
+        // Se abbiamo animeList da AniList, proviamo a cercare su YouTube
+        if (animeList.length > 0) {
+            while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts && consecutive429 < CONSECUTIVE_429_LIMIT) {
+                attempts++;
+                const idx = Math.floor(Math.random() * animeList.length);
+                if (usedIndices.has(idx)) continue;
+                usedIndices.add(idx);
 
-            const candidate = animeList[idx];
-            const videoId = await searchYouTubeOpening(candidate, cache);
-            // Attesa obbligatoria tra una richiesta e l'altra (evita 429)
-            await sleep(REQUEST_DELAY);
+                const candidate = animeList[idx];
+                const videoId = await searchYouTubeOpening(candidate, cache);
+                await sleep(REQUEST_DELAY);
 
-            if (!videoId) {
-                usedIndices.delete(idx);
-                continue;
+                if (!videoId) {
+                    usedIndices.delete(idx);
+                    continue;
+                }
+
+                // Distrattori
+                const distractors = [];
+                const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
+                shuffleArray(available);
+                for (let i = 0; i < 3 && i < available.length; i++) {
+                    distractors.push(available[i]);
+                }
+                if (distractors.length < 3) {
+                    usedIndices.delete(idx);
+                    continue;
+                }
+
+                const options = [candidate, ...distractors];
+                shuffleArray(options);
+                questionsQueue.push({
+                    anime: candidate,
+                    videoId: videoId,
+                    options: options
+                });
             }
+        }
 
-            // Distrattori (3)
-            const distractors = [];
-            const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
-            shuffleArray(available);
-            for (let i = 0; i < 3 && i < available.length; i++) {
-                distractors.push(available[i]);
+        // Se non abbiamo abbastanza domande o abbiamo avuto troppi 429, usiamo il fallback
+        if (questionsQueue.length < MAX_QUESTIONS || consecutive429 >= CONSECUTIVE_429_LIMIT) {
+            console.warn('Passaggio al fallback per completare il quiz.');
+            usingFallback = true;
+            // Usa la lista FALLBACK_ANIME
+            const fallbackShuffled = shuffleArray([...FALLBACK_ANIME]);
+            const fallbackUsed = new Set();
+            for (const candidate of fallbackShuffled) {
+                if (fallbackUsed.has(candidate.id)) continue;
+                fallbackUsed.add(candidate.id);
+                // Prendi 3 distrattori dal fallback stesso
+                const others = FALLBACK_ANIME.filter(a => a.id !== candidate.id && !fallbackUsed.has(a.id));
+                shuffleArray(others);
+                const distractors = others.slice(0, 3);
+                if (distractors.length < 3) continue;
+                const options = [candidate, ...distractors];
+                shuffleArray(options);
+                questionsQueue.push({
+                    anime: candidate,
+                    videoId: candidate.videoId,
+                    options: options
+                });
+                if (questionsQueue.length >= MAX_QUESTIONS) break;
             }
-            if (distractors.length < 3) {
-                usedIndices.delete(idx);
-                continue;
-            }
-
-            const options = [candidate, ...distractors];
-            shuffleArray(options);
-            questionsQueue.push({
-                anime: candidate,
-                videoId: videoId,
-                options: options
-            });
         }
 
         setCache(cache);
@@ -559,6 +617,11 @@
         score = 0;
         updateScoreAndCounter();
         loadQuestion();
+
+        if (usingFallback) {
+            feedbackDiv.innerHTML = 'ℹ️ Utilizzo una lista di backup per garantire il quiz (limite API YouTube raggiunto).';
+            feedbackDiv.style.color = '#f39c12';
+        }
     }
 
     // ---------- CARICARE UNA DOMANDA ----------
@@ -825,6 +888,8 @@
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
+        consecutive429 = 0;
+        usingFallback = false;
 
         try {
             await prepareQuestions();
