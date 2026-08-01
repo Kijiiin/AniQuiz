@@ -71,7 +71,6 @@
             flex-direction: column;
             align-items: center;
         }
-        /* Nascondiamo il video, ma lo teniamo per l'audio */
         #audioPlayer {
             display: none;
         }
@@ -292,7 +291,6 @@
             .container { padding: 20px 16px; }
             .options-grid { grid-template-columns: 1fr; gap: 10px; }
             .option-btn { min-height: 50px; padding: 14px; }
-            .cover-image { width: 140px; height: 195px; }
             h1 { font-size: 1.8rem; }
             .controls { gap: 8px; }
             .controls button { font-size: 0.9rem; padding: 5px 12px; }
@@ -314,7 +312,6 @@
     </div>
 
     <div class="player-wrapper">
-        <!-- Player audio (video nascosto) -->
         <video id="audioPlayer" preload="metadata"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
@@ -433,7 +430,7 @@
 
         const randomPage = Math.floor(Math.random() * lastPage) + 1;
 
-        // 2. Recupera i temi da quella pagina (con animethemeentries e videos)
+        // 2. Recupera i temi da quella pagina con animethemeentries e videos (nodes)
         const fetchQuery = `
             query ($page: Int, $first: Int) {
                 animethemePagination(page: $page, first: $first, type: OP) {
@@ -449,9 +446,11 @@
                             id
                             version
                             videos {
-                                id
-                                link
-                                resolution
+                                nodes {
+                                    id
+                                    link
+                                    resolution
+                                }
                             }
                         }
                     }
@@ -466,17 +465,19 @@
         for (const theme of themes) {
             if (!theme.anime) continue;
             if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
-            // Prendi la prima entry che ha video
+
             let videoLink = null;
+            // Cerca una entry con video
             for (const entry of theme.animethemeentries) {
-                if (entry.videos && entry.videos.length > 0) {
+                if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
                     // Prendi il video con la risoluzione più alta
-                    const sorted = entry.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
+                    const sorted = entry.videos.nodes.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
                     videoLink = sorted[0].link;
                     break;
                 }
             }
             if (!videoLink) continue;
+
             const name = theme.anime.title.romaji || 'Anime sconosciuto';
             pool.push({
                 name: name,
@@ -494,8 +495,8 @@
                 if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
                 let videoLink = null;
                 for (const entry of theme.animethemeentries) {
-                    if (entry.videos && entry.videos.length > 0) {
-                        const sorted = entry.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
+                    if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
+                        const sorted = entry.videos.nodes.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
                         videoLink = sorted[0].link;
                         break;
                     }
@@ -588,7 +589,6 @@
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
-        // Carica l'audio (video nascosto)
         audio.src = currentAudioUrl;
         audio.load();
         audio.currentTime = 0;
@@ -604,7 +604,6 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        // Eventi audio
         audio.onloadedmetadata = () => {
             nowPlaying.textContent = '🎵 Pronto per la riproduzione';
             audioVisual.textContent = '▶️';
