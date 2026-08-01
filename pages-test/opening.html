@@ -334,7 +334,9 @@
     const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
     const MAX_QUESTIONS = 10;
     const CACHE_KEY = 'animeOpeningCache';
-    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 giorno
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
+    const REQUEST_DELAY = 600; // ms tra una richiesta YouTube e l'altra
+    const MAX_RETRIES = 2;
 
     // ---------- STATO ----------
     let animeList = [];
@@ -353,6 +355,7 @@
     let playerReady = false;
     let isPaused = false;
     let pendingVideoId = null;
+    let playerErrorCount = 0;
 
     // DOM refs
     const audioVisual = document.getElementById('audioVisual');
@@ -385,7 +388,7 @@
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    // ---------- CACHE LOCALE ----------
+    // ---------- CACHE ----------
     function getCache() {
         try {
             const raw = localStorage.getItem(CACHE_KEY);
@@ -414,15 +417,11 @@
                         id
                         title { romaji english native }
                         coverImage { large }
-                        format
-                        episodes
-                        status
-                        genres
                     }
                 }
             }
         `;
-        const variables = { page: 1, perPage: 30 }; // Ridotto per meno richieste
+        const variables = { page: 1, perPage: 50 };
         try {
             const response = await fetch(ANILIST_ENDPOINT, {
                 method: 'POST',
@@ -438,7 +437,7 @@
         }
     }
 
-    // ---------- API YOUTUBE CON CACHE E RITARDO ----------
+    // ---------- API YOUTUBE CON CACHE E RATE LIMITING ----------
     async function searchYouTubeOpening(anime, cache) {
         const title = getAnimeTitle(anime);
         // Controlla cache
@@ -446,81 +445,103 @@
             return cache[title];
         }
 
-        const query = `${title} opening`;
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=1&key=${YOUTUBE_API_KEY}`;
-
-        try {
-            const response = await fetch(url);
-            if (response.status === 429) {
-                // Troppe richieste: attendiamo e riproviamo una volta
-                await sleep(2000);
-                const retryResponse = await fetch(url);
-                if (!retryResponse.ok) return null;
-                const data = await retryResponse.json();
-                if (data.items && data.items.length > 0) {
-                    const videoId = data.items[0].id.videoId;
-                    cache[title] = videoId;
-                    return videoId;
+        const queries = [`${title} opening`, `${title} OP`, `${title} opening full`];
+        for (const query of queries) {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`;
+            let retries = MAX_RETRIES;
+            while (retries >= 0) {
+                try {
+                    const response = await fetch(url);
+                    if (response.status === 429) {
+                        // Troppe richieste: attendiamo e riproviamo
+                        const wait = (MAX_RETRIES - retries + 1) * 2000;
+                        console.warn(`Rate limit per "${title}", attendiamo ${wait}ms...`);
+                        await sleep(wait);
+                        retries--;
+                        continue;
+                    }
+                    if (!response.ok) {
+                        console.warn(`HTTP ${response.status} per "${query}"`);
+                        break;
+                    }
+                    const data = await response.json();
+                    if (data.items && data.items.length > 0) {
+                        // Cerca un video che sembri l'opening (evita trailer o AMV)
+                        const video = data.items.find(item => {
+                            const snippet = item.snippet || {};
+                            const desc = snippet.description || '';
+                            const titleLower = snippet.title ? snippet.title.toLowerCase() : '';
+                            // Filtra video troppo corti (meno di 60 secondi) o con parole chiave sospette
+                            return !desc.includes('trailer') && !desc.includes('amv') &&
+                                   !titleLower.includes('trailer') && !titleLower.includes('amv') &&
+                                   !titleLower.includes('preview') && !titleLower.includes('clip');
+                        }) || data.items[0];
+                        if (video.id && video.id.videoId) {
+                            const videoId = video.id.videoId;
+                            cache[title] = videoId;
+                            return videoId;
+                        }
+                    }
+                    break;
+                } catch (e) {
+                    console.warn(`Errore ricerca per "${query}":`, e);
+                    retries--;
+                    await sleep(1000);
                 }
-                return null;
             }
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (data.items && data.items.length > 0) {
-                const videoId = data.items[0].id.videoId;
-                cache[title] = videoId;
-                return videoId;
-            }
-            return null;
-        } catch (e) {
-            console.warn(`Errore ricerca per "${title}":`, e);
-            return null;
+            await sleep(REQUEST_DELAY);
         }
+        return null;
     }
 
     // ---------- PREPARAZIONE DOMANDE ----------
     async function prepareQuestions() {
         if (animeList.length === 0) {
             animeList = await fetchAnimeList();
-            if (!animeList || animeList.length === 0) throw new Error('Nessun anime trovato.');
+            if (!animeList || animeList.length < 10) throw new Error('Non ci sono abbastanza anime (servono almeno 10).');
             shuffleArray(animeList);
         }
 
         const cache = getCache();
         questionsQueue = [];
+        let usedIndices = new Set();
         let attempts = 0;
-        const maxAttempts = animeList.length * 2;
-        let usedAnimeIds = new Set();
+        const maxAttempts = animeList.length * 3;
 
         while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
             attempts++;
-            const candidate = animeList[Math.floor(Math.random() * animeList.length)];
-            if (usedAnimeIds.has(candidate.id)) continue;
-            usedAnimeIds.add(candidate.id);
+            const idx = Math.floor(Math.random() * animeList.length);
+            if (usedIndices.has(idx)) continue;
+            usedIndices.add(idx);
 
+            const candidate = animeList[idx];
             const videoId = await searchYouTubeOpening(candidate, cache);
-            // Aspetta un po' per evitare rate limiting
-            await sleep(400);
+            await sleep(REQUEST_DELAY);
 
             if (!videoId) {
-                usedAnimeIds.delete(candidate.id);
+                usedIndices.delete(idx);
                 continue;
             }
 
+            // Prendiamo 3 distrattori
             const distractors = [];
-            const available = animeList.filter(a => a.id !== candidate.id && !usedAnimeIds.has(a.id));
+            const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
             shuffleArray(available);
             for (let i = 0; i < 3 && i < available.length; i++) {
                 distractors.push(available[i]);
             }
             if (distractors.length < 3) {
-                usedAnimeIds.delete(candidate.id);
+                usedIndices.delete(idx);
                 continue;
             }
 
             const options = [candidate, ...distractors];
             shuffleArray(options);
-            questionsQueue.push({ anime: candidate, videoId, options });
+            questionsQueue.push({
+                anime: candidate,
+                videoId: videoId,
+                options: options
+            });
         }
 
         // Salva cache
@@ -528,6 +549,11 @@
 
         if (questionsQueue.length === 0) {
             throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
+        }
+
+        // Se abbiamo più di MAX_QUESTIONS, tagliamo
+        if (questionsQueue.length > MAX_QUESTIONS) {
+            questionsQueue = questionsQueue.slice(0, MAX_QUESTIONS);
         }
 
         currentQuestion = 0;
@@ -539,7 +565,7 @@
     // ---------- CARICARE UNA DOMANDA ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
-            feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${MAX_QUESTIONS}`;
+            feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
             optionsContainer.innerHTML = '';
             nextBtn.disabled = true;
             audioVisual.className = 'audio-visual';
@@ -559,6 +585,7 @@
         currentVideoId = q.videoId;
         isAnswered = false;
         isPaused = false;
+        playerErrorCount = 0;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
@@ -572,22 +599,13 @@
 
         if (ytPlayer && playerReady) {
             ytPlayer.loadVideoById(q.videoId);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
+            // La riproduzione partirà automaticamente da onStateChange
+            audioVisual.className = 'audio-visual';
+            audioVisual.textContent = '⏳';
+            nowPlaying.textContent = '🎵 Caricamento video...';
         } else {
             pendingVideoId = q.videoId;
-            nowPlaying.textContent = '🎶 Caricamento player...';
+            nowPlaying.textContent = '🎶 Attivazione player...';
         }
 
         renderOptions(q.options);
@@ -604,10 +622,10 @@
                 modestbranding: 1,
                 rel: 0,
                 showinfo: 0,
-                loop: 1,
-                playlist: '',
+                loop: 0,
                 autoplay: 0,
                 mute: 0,
+                origin: window.location.origin,
             },
             events: {
                 onReady: onPlayerReady,
@@ -623,34 +641,8 @@
             const vid = pendingVideoId;
             pendingVideoId = null;
             ytPlayer.loadVideoById(vid);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
         } else if (currentVideoId) {
             ytPlayer.loadVideoById(currentVideoId);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
         }
     }
 
@@ -661,6 +653,7 @@
             isPaused = false;
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
+            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
             playPauseBtn.textContent = '⏸️ Pausa';
             playPauseBtn.disabled = false;
             seekBackBtn.disabled = false;
@@ -677,23 +670,50 @@
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '⏹️';
             playPauseBtn.textContent = '▶️ Riproduci';
+        } else if (state === YT.PlayerState.UNSTARTED) {
+            // Video caricato ma non ancora avviato: abilitiamo play
+            playPauseBtn.disabled = false;
+            playPauseBtn.textContent = '▶️ Riproduci';
+            nowPlaying.textContent = '🎵 Pronto per la riproduzione';
         }
     }
 
     function onPlayerError(event) {
         console.error('Errore YouTube:', event.data);
-        audioVisual.className = 'audio-visual';
-        audioVisual.textContent = '⚠️';
-        nowPlaying.textContent = '❌ Errore di riproduzione';
-        feedbackDiv.innerHTML = '❌ Impossibile riprodurre l\'audio. Verifica che gli ad blocker siano disattivati per questo sito.';
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
-        setTimeout(() => {
+        playerErrorCount++;
+        if (event.data === 150 || event.data === 101) {
+            // Video non embeddable o non disponibile
+            feedbackDiv.innerHTML = '⚠️ Questo video non è riproducibile. Passa alla prossima domanda.';
+            feedbackDiv.style.color = '#f39c12';
             if (!isAnswered) {
                 nextBtn.disabled = false;
+                nextBtn.textContent = '⏭️ Salta domanda';
             }
-        }, 2000);
+            audioVisual.className = 'audio-visual';
+            audioVisual.textContent = '🚫';
+            nowPlaying.textContent = '⛔ Video non disponibile';
+            playPauseBtn.disabled = true;
+            seekBackBtn.disabled = true;
+            seekForwardBtn.disabled = true;
+        } else {
+            // Altri errori (es. 2 - richiesta non valida)
+            if (playerErrorCount < 3) {
+                // Riprova a caricare il video dopo un secondo
+                setTimeout(() => {
+                    if (ytPlayer && playerReady && currentVideoId) {
+                        ytPlayer.loadVideoById(currentVideoId);
+                    }
+                }, 2000);
+                feedbackDiv.innerHTML = '⏳ Errore temporaneo, riprovo...';
+            } else {
+                feedbackDiv.innerHTML = '❌ Errore persistente. Salta la domanda.';
+                feedbackDiv.style.color = '#e74c3c';
+                if (!isAnswered) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = '⏭️ Salta domanda';
+                }
+            }
+        }
     }
 
     // ---------- CONTROLLI ----------
@@ -762,6 +782,7 @@
         }
 
         nextBtn.disabled = false;
+        nextBtn.textContent = '➡ Prossima domanda';
     }
 
     // ---------- PROSSIMA DOMANDA ----------
@@ -771,7 +792,7 @@
         if (currentQuestion < questionsQueue.length) {
             loadQuestion();
         } else {
-            loadQuestion(); // gestisce fine
+            loadQuestion(); // fine
         }
     }
 
@@ -839,15 +860,13 @@
         onYouTubeIframeAPIReady();
     }
 
-    // Fallback se l'API non si carica
     setTimeout(() => {
         if (!ytPlayer) {
             if (typeof YT !== 'undefined' && YT.Player) {
                 onYouTubeIframeAPIReady();
             } else {
-                console.warn('YouTube API non caricata, il gioco funzionerà senza audio.');
-                // Mostra un messaggio all'utente
-                nowPlaying.textContent = '⚠️ Player non disponibile, verifica ad blocker';
+                console.warn('YouTube API non caricata. Verifica ad blocker o connessione.');
+                nowPlaying.textContent = '⚠️ Player YouTube non caricato. Disabilita ad blocker per questo sito.';
             }
         }
     }, 5000);
