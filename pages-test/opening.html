@@ -354,7 +354,7 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
-    let isSeeking = false; // flag per evitare che il buffering forzato interferisca
+    let isSeeking = false;
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
@@ -469,7 +469,6 @@
                 let videoLink = null;
                 for (const entry of theme.animethemeentries) {
                     if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
-                        // 🔽 FORZO la risoluzione più bassa in assoluto
                         const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
                         videoLink = sorted[0].link;
                         break;
@@ -538,7 +537,7 @@
         loadQuestion();
     }
 
-    // ---------- CARICA DOMANDA (con gestione seek) ----------
+    // ---------- CARICA DOMANDA ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
@@ -567,7 +566,6 @@
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
-        // Imposta il player con preload metadata (carica solo metadati)
         audio.preload = 'metadata';
         audio.src = currentAudioUrl;
         audio.load();
@@ -584,26 +582,33 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        // --- GESTIONE BUFFERING E SEEK ---
+        // --- GESTIONE BUFFERING MIGLIORATA ---
         let bufferingTimeout = null;
+        let lastTimeBeforeBuffering = 0;
 
         audio.onwaiting = () => {
-            // Se stiamo cercando di spostarci, non attiviamo il buffering forzato
             if (isSeeking) return;
+            // Salva il tempo corrente prima del buffering
+            if (!audio.paused) {
+                lastTimeBeforeBuffering = audio.currentTime;
+            }
             audioVisual.className = 'audio-visual buffering';
             audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '⏳ Buffering in corso...';
+            nowPlaying.textContent = '⏳ Buffering...';
             clearTimeout(bufferingTimeout);
             bufferingTimeout = setTimeout(() => {
+                // Se il buffering dura troppo, ricarica ma mantieni la posizione
                 if (!audio.paused && !isSeeking) {
+                    const savedTime = audio.currentTime || lastTimeBeforeBuffering;
                     audio.pause();
                     audio.load();
+                    audio.currentTime = savedTime;
                     audio.play().catch(() => {});
                 }
-            }, 5000);
+            }, 8000);
         };
 
-        audio.oncanplaythrough = () => {
+        audio.oncanplay = () => {
             clearTimeout(bufferingTimeout);
             if (!audio.paused && !isSeeking) {
                 audioVisual.className = 'audio-visual playing';
@@ -637,7 +642,6 @@
             }
         };
 
-        // Eventi per gestire il seek
         audio.onseeking = () => {
             isSeeking = true;
             audioVisual.className = 'audio-visual buffering';
@@ -656,7 +660,6 @@
                 audioVisual.textContent = '▶️';
                 nowPlaying.textContent = '🎵 Pronto per la riproduzione';
             }
-            // Aggiorna la barra di progresso
             if (audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
@@ -721,14 +724,11 @@
         if (!audio.duration) return;
         let newTime = audio.currentTime + seconds;
         newTime = Math.max(0, Math.min(audio.duration, newTime));
-        // Usa fastSeek se disponibile per evitare buffering pesante
         if (audio.fastSeek) {
             audio.fastSeek(newTime);
         } else {
             audio.currentTime = newTime;
         }
-        // Se il player era in pausa, rimane in pausa; se era in play, continua
-        // L'evento onseeked gestirà l'aggiornamento dell'UI
     }
 
     // ---------- RENDER OPZIONI ----------
