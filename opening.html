@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Anime Opening Quiz</title>
+    <link rel="stylesheet" href="opening.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎵 Anime Quiz</h1>
+            <div class="score-box">🏆 <span id="scoreDisplay">0</span> / <span id="totalDisplay">0</span></div>
+        </div>
+
+        <!-- Player YouTube (titolo nascosto) -->
+        <div class="video-wrapper">
+            <iframe id="youtubePlayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+
+        <!-- Area domanda -->
+        <div id="questionArea">
+            <div class="question-area">
+                <div class="counter" id="questionCounter">Domanda 1 / 10</div>
+                <div class="hint">🎧 Ascolta l'opening e indovina l'anime!</div>
+                <div class="opening-title" id="openingTitle"></div> <!-- nascosto -->
+            </div>
+            <div class="options-grid" id="optionsContainer"></div>
+            <button class="next-btn" id="nextBtn" disabled>▶ Prossima domanda</button>
+        </div>
+
+        <!-- Schermata finale -->
+        <div id="finalScreen" class="final-screen" style="display:none;">
+            <h2>🎉 Quiz completato!</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="message" id="finalMessage">Ottimo lavoro!</div>
+            <button class="restart-btn" id="restartBtn">🔄 Ricomincia</button>
+        </div>
+    </div>
+
+    <script src="opening.js"></script>
+</body>
+</html>
