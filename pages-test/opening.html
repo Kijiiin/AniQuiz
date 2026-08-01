@@ -91,9 +91,6 @@
             box-shadow: 0 0 80px rgba(245,87,108,0.5);
             animation: pulse 1.5s infinite alternate;
         }
-        .audio-visual.buffering {
-            box-shadow: 0 0 60px rgba(241,196,15,0.6);
-        }
         @keyframes pulse {
             0% { transform: scale(1); }
             100% { transform: scale(1.05); }
@@ -315,7 +312,7 @@
     </div>
 
     <div class="player-wrapper">
-        <video id="audioPlayer" preload="auto"></video>
+        <video id="audioPlayer" preload="metadata"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
@@ -342,7 +339,8 @@
     // ---------- CONFIG ----------
     const MAX_QUESTIONS = 10;
     const POOL_SIZE = 50;
-    const API_URL = 'https://api.animethemes.moe/animethemes?filter[type]=OP&sort=random&limit=' + POOL_SIZE + '&include=videos';
+    const GRAPHQL_URL = 'https://graphql.animethemes.moe/';
+    const MAX_PAGE_ATTEMPTS = 20;
 
     // ---------- STATO ----------
     let currentQuestion = 0;
@@ -356,7 +354,6 @@
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
-    let isBuffering = false;
 
     // DOM refs
     const audioVisual = document.getElementById('audioVisual');
@@ -391,45 +388,110 @@
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
-    // ---------- OTTIENI POOL CON API REST ----------
-    async function getRandomOpeningPool() {
-        try {
-            const response = await fetch(API_URL);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            const themes = data.animethemes || [];
-            const pool = [];
+    // ---------- API GRAPHQL ----------
+    async function graphqlFetch(query, variables = {}) {
+        const response = await fetch(GRAPHQL_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query, variables })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        if (json.errors) {
+            console.error('GraphQL errors:', json.errors);
+            throw new Error(json.errors[0].message);
+        }
+        return json.data;
+    }
+
+    // ---------- OTTIENI PAGINA CASUALE CON RETRY ----------
+    async function getRandomOpeningPool(count) {
+        const countQuery = `
+            query {
+                animethemePagination(first: 1, type: OP) {
+                    paginatorInfo {
+                        total
+                        lastPage
+                        perPage
+                    }
+                }
+            }
+        `;
+        const countData = await graphqlFetch(countQuery);
+        const lastPage = countData.animethemePagination.paginatorInfo.lastPage;
+
+        if (!lastPage || lastPage === 0) {
+            throw new Error('Nessun tema OP trovato.');
+        }
+
+        let pool = [];
+        let attempts = 0;
+
+        while (pool.length < MAX_QUESTIONS + 3 && attempts < MAX_PAGE_ATTEMPTS) {
+            attempts++;
+            const randomPage = Math.floor(Math.random() * lastPage) + 1;
+
+            const fetchQuery = `
+                query ($page: Int, $first: Int) {
+                    animethemePagination(page: $page, first: $first, type: OP) {
+                        data {
+                            id
+                            anime {
+                                id
+                                title { romaji }
+                            }
+                            animethemeentries {
+                                videos {
+                                    nodes {
+                                        link
+                                        resolution
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `;
+            const fetchData = await graphqlFetch(fetchQuery, { page: randomPage, first: count });
+            const themes = fetchData.animethemePagination.data;
 
             for (const theme of themes) {
                 if (!theme.anime) continue;
-                if (!theme.videos || theme.videos.length === 0) continue;
+                if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
 
-                // Scegli il video con risoluzione più bassa (priorità: 480p > 720p > 1080p)
-                const sorted = theme.videos.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
-                // Prendi il primo con risoluzione >= 480, altrimenti il più basso
-                const chosen = sorted.find(v => v.resolution >= 480) || sorted[0];
-                if (!chosen) continue;
+                let videoLink = null;
+                for (const entry of theme.animethemeentries) {
+                    if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
+                        // 🔽 MODIFICA: ordinamento ascendente per prendere la risoluzione più bassa
+                        const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
+                        videoLink = sorted[0].link;
+                        break;
+                    }
+                }
+                if (!videoLink) continue;
 
                 const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
                     pool.push({
                         name: name,
-                        videoUrl: chosen.link
+                        videoUrl: videoLink
                     });
                 }
             }
 
-            shuffleArray(pool);
-            return pool;
-        } catch (e) {
-            console.error('Errore nel caricamento della pool:', e);
-            return [];
+            if (pool.length >= MAX_QUESTIONS + 3) break;
         }
+
+        shuffleArray(pool);
+        return pool;
     }
 
     // ---------- PREPARAZIONE DOMANDE ----------
     async function prepareQuestions() {
-        let pool = await getRandomOpeningPool();
+        let pool = await getRandomOpeningPool(POOL_SIZE);
 
         if (pool.length < MAX_QUESTIONS + 3) {
             throw new Error(`Pool troppo piccola (${pool.length}). Servono almeno ${MAX_QUESTIONS + 3} anime.`);
@@ -495,7 +557,6 @@
         currentOptions = q.options;
         currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
-        isBuffering = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
@@ -516,35 +577,13 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        audio.onwaiting = () => {
-            isBuffering = true;
-            audioVisual.className = 'audio-visual buffering';
-            audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '⏳ Buffering in corso...';
-        };
-
-        audio.oncanplaythrough = () => {
-            isBuffering = false;
-            if (!audio.paused) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            } else {
-                audioVisual.className = 'audio-visual';
-                audioVisual.textContent = '▶️';
-                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
-            }
-        };
-
         audio.onloadedmetadata = () => {
-            if (!isBuffering) {
-                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
-                audioVisual.textContent = '▶️';
-            }
+            nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            audioVisual.textContent = '▶️';
         };
 
         audio.ontimeupdate = () => {
-            if (audio.duration && !isBuffering) {
+            if (audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
                 timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
@@ -553,11 +592,9 @@
 
         audio.onplay = () => {
             isPlaying = true;
-            if (!isBuffering) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            }
+            audioVisual.className = 'audio-visual playing';
+            audioVisual.textContent = '🔊';
+            nowPlaying.textContent = `🎵 Ascolta l'opening...`;
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
