@@ -298,7 +298,6 @@
             border: 1px solid rgba(245, 87, 108, 0.2);
         }
 
-        /* Pulsante start */
         .start-btn {
             display: block;
             width: 100%;
@@ -317,7 +316,7 @@
             letter-spacing: 1px;
         }
 
-        .start-btn:hover {
+        .start-btn:hover:not(:disabled) {
             transform: scale(1.05);
             box-shadow: 0 15px 40px -5px rgba(245, 87, 108, 0.5);
         }
@@ -326,6 +325,14 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #a0a6c7;
+            font-size: 0.95rem;
+            margin: 10px 0;
+            min-height: 24px;
         }
 
         @media (max-width: 550px) {
@@ -393,12 +400,12 @@
     <div id="optionsContainer" class="options-grid"></div>
     <div id="feedback" class="feedback"></div>
 
-    <!-- Pulsante start -->
     <button id="startBtn" class="start-btn">🎧 Inizia Quiz</button>
-
-    <button id="nextBtn" class="next-btn" disabled>➡ Prossima domanda</button>
+    <div id="progressText" class="progress-text hidden"></div>
     <div id="loader" class="loader hidden"></div>
     <div id="errorMsg" class="error-msg hidden"></div>
+
+    <button id="nextBtn" class="next-btn" disabled>➡ Prossima domanda</button>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -408,6 +415,7 @@
     const YOUTUBE_API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
     const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
     const MAX_QUESTIONS = 10;
+    const TIMEOUT_SECONDS = 30; // timeout globale per la preparazione
 
     // ---------- STATO ----------
     let animeList = [];
@@ -443,6 +451,7 @@
     const playPauseBtn = document.getElementById('playPauseBtn');
     const seekBackBtn = document.getElementById('seekBackBtn');
     const seekForwardBtn = document.getElementById('seekForwardBtn');
+    const progressText = document.getElementById('progressText');
 
     // ---------- FUNZIONI DI UTILITÀ ----------
     function shuffleArray(arr) {
@@ -506,94 +515,138 @@
         }
     }
 
-    // ---------- API YOUTUBE ----------
-    async function searchYouTubeOpening(anime) {
+    // ---------- API YOUTUBE (con timeout) ----------
+    async function searchYouTubeOpening(anime, signal) {
         const title = getAnimeTitle(anime);
-        const queries = [
-            `${title} opening`,
-            `${title} OP`,
-            `${title} opening full`,
-        ];
-        for (const query of queries) {
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.items && data.items.length > 0) {
-                    const item = data.items[0];
-                    if (item.id && item.id.videoId) {
-                        return item.id.videoId;
-                    }
+        // Solo una query per velocizzare
+        const query = `${title} opening`;
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
+        try {
+            const response = await fetch(url, { signal });
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                const item = data.items[0];
+                if (item.id && item.id.videoId) {
+                    return item.id.videoId;
                 }
-            } catch (e) {
-                console.warn(`Ricerca fallita per "${query}"`, e);
             }
-            await sleep(200);
+            return null;
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.warn('Richiesta YouTube annullata per timeout:', title);
+            } else {
+                console.warn(`Errore ricerca per "${query}"`, e);
+            }
+            return null;
         }
-        return null;
     }
 
-    // ---------- CARICAMENTO DOMANDE ----------
+    // ---------- PREPARAZIONE DOMANDE (in parallelo) ----------
     async function prepareQuestions() {
         if (animeList.length === 0) {
-            try {
-                animeList = await fetchAnimeList();
-                if (!animeList || animeList.length === 0) {
-                    throw new Error('Nessun anime trovato.');
+            animeList = await fetchAnimeList();
+            if (!animeList || animeList.length === 0) {
+                throw new Error('Nessun anime trovato.');
+            }
+            shuffleArray(animeList);
+        }
+
+        // Prendiamo un pool di anime (i primi 30 per velocità)
+        const pool = animeList.slice(0, 30);
+        // Mescoliamo e prendiamo i primi 20 per tentativi
+        shuffleArray(pool);
+        const candidates = pool.slice(0, 20);
+
+        const results = [];
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_SECONDS * 1000);
+
+        try {
+            // Ricerca in parallelo con Promise.allSettled
+            const searchPromises = candidates.map(async (anime, index) => {
+                const videoId = await searchYouTubeOpening(anime, controller.signal);
+                // Aggiorniamo il progresso
+                const progress = Math.min(100, Math.round(((index + 1) / candidates.length) * 100));
+                progressText.textContent = `🔍 Ricerca opening: ${progress}%`;
+                if (videoId) {
+                    return { anime, videoId };
                 }
-                shuffleArray(animeList);
-            } catch (e) {
-                showError(e.message);
-                return;
-            }
-        }
-
-        questionsQueue = [];
-        let attempts = 0;
-        const maxAttempts = animeList.length * 3;
-        let usedAnimeIds = new Set();
-
-        while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
-            attempts++;
-            const candidate = animeList[Math.floor(Math.random() * animeList.length)];
-            if (usedAnimeIds.has(candidate.id)) continue;
-            usedAnimeIds.add(candidate.id);
-
-            const videoId = await searchYouTubeOpening(candidate);
-            if (!videoId) {
-                usedAnimeIds.delete(candidate.id);
-                continue;
-            }
-
-            const distractors = [];
-            const available = animeList.filter(a => a.id !== candidate.id && !usedAnimeIds.has(a.id));
-            shuffleArray(available);
-            for (let i = 0; i < 3 && i < available.length; i++) {
-                distractors.push(available[i]);
-            }
-            if (distractors.length < 3) {
-                usedAnimeIds.delete(candidate.id);
-                continue;
-            }
-
-            const options = [candidate, ...distractors];
-            shuffleArray(options);
-
-            questionsQueue.push({
-                anime: candidate,
-                videoId: videoId,
-                options: options,
+                return null;
             });
-        }
 
-        if (questionsQueue.length === 0) {
-            throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
-        }
+            const settled = await Promise.allSettled(searchPromises);
+            clearTimeout(timeoutId);
 
-        currentQuestion = 0;
-        score = 0;
-        updateScoreAndCounter();
-        loadQuestion();
+            const found = [];
+            for (const result of settled) {
+                if (result.status === 'fulfilled' && result.value) {
+                    found.push(result.value);
+                }
+            }
+
+            if (found.length === 0) {
+                throw new Error('Nessuna opening trovata su YouTube.');
+            }
+
+            // Selezioniamo MAX_QUESTIONS tra quelle trovate
+            shuffleArray(found);
+            const selected = found.slice(0, MAX_QUESTIONS);
+
+            // Per ogni anime selezionato, dobbiamo trovare 3 distrattori
+            const usedIds = new Set(selected.map(s => s.anime.id));
+            const availableDistractors = animeList.filter(a => !usedIds.has(a.id));
+            shuffleArray(availableDistractors);
+
+            questionsQueue = [];
+            for (const item of selected) {
+                const distractors = [];
+                for (const dist of availableDistractors) {
+                    if (distractors.length >= 3) break;
+                    if (!usedIds.has(dist.id)) {
+                        distractors.push(dist);
+                        usedIds.add(dist.id);
+                    }
+                }
+                // Se non abbiamo abbastanza distrattori, cerchiamo tra tutti (anche già usati?)
+                if (distractors.length < 3) {
+                    // Rimescoliamo e prendiamo da tutto l'elenco
+                    const allOthers = animeList.filter(a => a.id !== item.anime.id);
+                    shuffleArray(allOthers);
+                    for (const dist of allOthers) {
+                        if (distractors.length >= 3) break;
+                        if (!distractors.some(d => d.id === dist.id)) {
+                            distractors.push(dist);
+                        }
+                    }
+                }
+                // Se ancora meno di 3, saltiamo
+                if (distractors.length < 3) continue;
+
+                const options = [item.anime, ...distractors];
+                shuffleArray(options);
+                questionsQueue.push({
+                    anime: item.anime,
+                    videoId: item.videoId,
+                    options: options,
+                });
+            }
+
+            if (questionsQueue.length === 0) {
+                throw new Error('Impossibile costruire domande con distrattori sufficienti.');
+            }
+
+            // Tagliamo a MAX_QUESTIONS
+            questionsQueue = questionsQueue.slice(0, MAX_QUESTIONS);
+            currentQuestion = 0;
+            score = 0;
+            updateScoreAndCounter();
+
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
+        } finally {
+            progressText.textContent = '';
+        }
     }
 
     // ---------- CARICARE UNA DOMANDA ----------
@@ -611,7 +664,6 @@
             if (ytPlayer) {
                 ytPlayer.stopVideo();
             }
-            startBtn.classList.remove('hidden');
             return;
         }
 
@@ -627,16 +679,13 @@
         nextBtn.disabled = true;
         coverImage.style.display = 'none';
 
-        // Disabilita controlli finché il player non è pronto
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
         playPauseBtn.textContent = '⏳ Caricamento...';
 
-        // Carica il video
         if (ytPlayer && playerReady) {
             ytPlayer.loadVideoById(q.videoId);
-            // Dopo un breve ritardo per dare tempo al caricamento
             setTimeout(() => {
                 if (ytPlayer && playerReady) {
                     ytPlayer.playVideo();
@@ -651,7 +700,6 @@
             seekBackBtn.disabled = false;
             seekForwardBtn.disabled = false;
         } else {
-            // Player non pronto, metti in coda
             pendingVideoId = q.videoId;
             nowPlaying.textContent = '🎶 Caricamento player...';
         }
@@ -672,7 +720,7 @@
                 showinfo: 0,
                 loop: 1,
                 playlist: '',
-                autoplay: 0,   // Non autoplay, lo gestiamo noi
+                autoplay: 0,
                 mute: 0,
             },
             events: {
@@ -685,7 +733,6 @@
 
     function onPlayerReady(event) {
         playerReady = true;
-        // Se c'è un video in attesa, caricalo
         if (pendingVideoId) {
             const vid = pendingVideoId;
             pendingVideoId = null;
@@ -704,7 +751,6 @@
             seekBackBtn.disabled = false;
             seekForwardBtn.disabled = false;
         } else if (currentVideoId) {
-            // Se c'è un video corrente ma il player si è appena reso disponibile
             ytPlayer.loadVideoById(currentVideoId);
             setTimeout(() => {
                 if (ytPlayer && playerReady) {
@@ -757,7 +803,6 @@
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
-        // Permetti di andare avanti dopo un po'
         setTimeout(() => {
             if (!isAnswered) {
                 nextBtn.disabled = false;
@@ -855,23 +900,27 @@
         errorMsg.textContent = msg;
         errorMsg.classList.remove('hidden');
         loader.classList.add('hidden');
+        progressText.textContent = '';
         nextBtn.disabled = true;
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
         startBtn.disabled = false;
+        startBtn.textContent = '🎧 Inizia Quiz';
     }
 
     function hideError() {
         errorMsg.classList.add('hidden');
     }
 
-    // ---------- AVVIA IL GIOCO (chiamato dal pulsante Start) ----------
+    // ---------- AVVIA IL GIOCO ----------
     async function startGame() {
         hideError();
         startBtn.disabled = true;
         startBtn.textContent = '⏳ Caricamento...';
         loader.classList.remove('hidden');
+        progressText.classList.remove('hidden');
+        progressText.textContent = '📡 Caricamento anime...';
         nextBtn.disabled = true;
         optionsContainer.innerHTML = '';
         feedbackDiv.innerHTML = '';
@@ -882,24 +931,17 @@
         try {
             await prepareQuestions();
             loader.classList.add('hidden');
+            progressText.classList.add('hidden');
             startBtn.classList.add('hidden');
             if (questionsQueue.length > 0) {
-                // loadQuestion è già stata chiamata da prepareQuestions
-                // Se il player non era pronto, pendingVideoId è stato impostato
-                // e onPlayerReady lo gestirà
-                // Se il player è già pronto, loadQuestion ha già avviato la riproduzione
+                loadQuestion();
             } else {
                 showError('Nessuna domanda disponibile. Riprova più tardi.');
-                startBtn.disabled = false;
-                startBtn.textContent = '🎧 Inizia Quiz';
-                startBtn.classList.remove('hidden');
             }
         } catch (e) {
             loader.classList.add('hidden');
+            progressText.classList.add('hidden');
             showError(e.message || 'Errore durante il caricamento.');
-            startBtn.disabled = false;
-            startBtn.textContent = '🎧 Inizia Quiz';
-            startBtn.classList.remove('hidden');
         }
     }
 
@@ -912,20 +954,18 @@
 
     // ---------- AVVIO PLAYER ----------
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-    // Se l'API è già caricata (caso raro)
     if (typeof YT !== 'undefined' && YT.loaded) {
         onYouTubeIframeAPIReady();
     }
 
-    // Fallback: se l'API non si carica entro 5 secondi, mostriamo errore ma abilitiamo start
+    // Fallback: se l'API non si carica, mostriamo errore ma abilitiamo start
     setTimeout(() => {
         if (!ytPlayer) {
             if (typeof YT !== 'undefined' && YT.Player) {
                 onYouTubeIframeAPIReady();
             } else {
-                console.warn('YouTube API non caricata, ma il pulsante start funzionerà lo stesso (senza audio).');
-                // Non blocchiamo il gioco, ma mostriamo un avviso
-                // Lo mostriamo solo se l'utente preme start
+                console.warn('YouTube API non caricata, il gioco funzionerà senza audio.');
+                // Non blocchiamo il gioco
             }
         }
     }, 5000);
