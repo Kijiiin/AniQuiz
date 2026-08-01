@@ -71,83 +71,9 @@
             flex-direction: column;
             align-items: center;
         }
-        .custom-video {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 20px;
-            background: #0a0d1a;
-            box-shadow: 0 10px 30px -8px rgba(0,0,0,0.7);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .custom-video video {
-            width: 100%;
-            border-radius: 20px 20px 0 0;
-            display: block;
-            background: #000;
-        }
-        .video-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 12px 16px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 0 0 20px 20px;
-            backdrop-filter: blur(8px);
-            flex-wrap: wrap;
-        }
-        .video-controls button {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 60px;
-            color: #f0f0f0;
-            font-size: 1.1rem;
-            padding: 6px 16px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .video-controls button:hover:not(:disabled) {
-            background: rgba(79,172,254,0.2);
-            border-color: #4facfe;
-            transform: scale(1.05);
-        }
-        .video-controls button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .video-controls .play-btn {
-            min-width: 80px;
-            justify-content: center;
-        }
-        .video-controls input[type="range"] {
-            flex: 1;
-            min-width: 60px;
-            accent-color: #4facfe;
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        .video-controls input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #4facfe;
-            cursor: pointer;
-        }
-        .time-display {
-            font-size: 0.8rem;
-            color: #a0a6c7;
-            min-width: 70px;
-            text-align: center;
-            font-variant-numeric: tabular-nums;
+        /* Nascondiamo il video, ma lo teniamo per l'audio */
+        #audioPlayer {
+            display: none;
         }
         .audio-visual {
             width: 100px;
@@ -177,16 +103,66 @@
             margin-top: 5px;
             min-height: 28px;
         }
-        .cover-image {
-            display: block;
-            margin: 10px auto 20px;
-            width: 160px;
-            height: 220px;
-            object-fit: cover;
-            border-radius: 20px;
-            box-shadow: 0 15px 30px -8px rgba(0,0,0,0.7);
-            border: 2px solid rgba(255,255,255,0.06);
-            background: rgba(255,255,255,0.05);
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .controls button {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 60px;
+            color: #f0f0f0;
+            font-size: 1.1rem;
+            padding: 6px 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .controls button:hover:not(:disabled) {
+            background: rgba(79,172,254,0.2);
+            border-color: #4facfe;
+            transform: scale(1.05);
+        }
+        .controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .controls .play-btn {
+            min-width: 80px;
+            justify-content: center;
+        }
+        .controls input[type="range"] {
+            flex: 1;
+            min-width: 80px;
+            accent-color: #4facfe;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+        }
+        .time-display {
+            font-size: 0.8rem;
+            color: #a0a6c7;
+            min-width: 70px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
         }
         .options-grid {
             display: grid;
@@ -318,9 +294,9 @@
             .option-btn { min-height: 50px; padding: 14px; }
             .cover-image { width: 140px; height: 195px; }
             h1 { font-size: 1.8rem; }
-            .video-controls { gap: 8px; }
-            .video-controls button { font-size: 0.9rem; padding: 5px 12px; }
-            .video-controls .play-btn { min-width: 60px; }
+            .controls { gap: 8px; }
+            .controls button { font-size: 0.9rem; padding: 5px 12px; }
+            .controls .play-btn { min-width: 60px; }
             .time-display { min-width: 60px; font-size: 0.7rem; }
             .start-btn { font-size: 1.2rem; padding: 16px 20px; }
         }
@@ -338,22 +314,20 @@
     </div>
 
     <div class="player-wrapper">
+        <!-- Player audio (video nascosto) -->
+        <video id="audioPlayer" preload="metadata"></video>
+
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
 
-        <div class="custom-video">
-            <video id="videoPlayer" preload="metadata" playsinline></video>
-            <div class="video-controls">
-                <button id="seekBackBtn" title="Indietro 10s">⏪ -10</button>
-                <button id="playPauseBtn" class="play-btn" disabled>▶️ Riproduci</button>
-                <button id="seekForwardBtn" title="Avanti 10s">+10 ⏩</button>
-                <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1" disabled>
-                <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
-            </div>
+        <div class="controls">
+            <button id="seekBackBtn" title="Indietro 10s">⏪ -10</button>
+            <button id="playPauseBtn" class="play-btn" disabled>▶️ Riproduci</button>
+            <button id="seekForwardBtn" title="Avanti 10s">+10 ⏩</button>
+            <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1" disabled>
+            <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
         </div>
     </div>
-
-    <img id="coverImage" class="cover-image" src="" alt="Copertina non disponibile" style="display: none;">
 
     <div id="optionsContainer" class="options-grid"></div>
     <div id="feedback" class="feedback"></div>
@@ -380,13 +354,13 @@
     let questionsQueue = [];
     let isLoading = false;
 
-    const video = document.getElementById('videoPlayer');
-    let currentVideoUrl = null;
+    // Elemento audio (video nascosto)
+    const audio = document.getElementById('audioPlayer');
+    let currentAudioUrl = null;
 
     // DOM refs
     const audioVisual = document.getElementById('audioVisual');
     const nowPlaying = document.getElementById('nowPlaying');
-    const coverImage = document.getElementById('coverImage');
     const optionsContainer = document.getElementById('optionsContainer');
     const feedbackDiv = document.getElementById('feedback');
     const nextBtn = document.getElementById('nextBtn');
@@ -436,7 +410,7 @@
         return json.data;
     }
 
-    // ---------- OTTIENI PAGINA CASUALE DI OPENING ----------
+    // ---------- OTTIENI PAGINA CASUALE ----------
     async function getRandomOpeningPool(count) {
         // 1. Ottieni il numero totale di temi OP
         const countQuery = `
@@ -459,7 +433,7 @@
 
         const randomPage = Math.floor(Math.random() * lastPage) + 1;
 
-        // 2. Recupera i temi da quella pagina (senza cover)
+        // 2. Recupera i temi da quella pagina (con animethemeentries e videos)
         const fetchQuery = `
             query ($page: Int, $first: Int) {
                 animethemePagination(page: $page, first: $first, type: OP) {
@@ -471,10 +445,14 @@
                             id
                             title { romaji }
                         }
-                        videos {
+                        animethemeentries {
                             id
-                            link
-                            resolution
+                            version
+                            videos {
+                                id
+                                link
+                                resolution
+                            }
                         }
                     }
                 }
@@ -487,15 +465,22 @@
         const pool = [];
         for (const theme of themes) {
             if (!theme.anime) continue;
-            if (!theme.videos || theme.videos.length === 0) continue;
-            // Prendi il video con la risoluzione più alta
-            const sorted = theme.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-            const videoLink = sorted[0].link;
+            if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
+            // Prendi la prima entry che ha video
+            let videoLink = null;
+            for (const entry of theme.animethemeentries) {
+                if (entry.videos && entry.videos.length > 0) {
+                    // Prendi il video con la risoluzione più alta
+                    const sorted = entry.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
+                    videoLink = sorted[0].link;
+                    break;
+                }
+            }
+            if (!videoLink) continue;
             const name = theme.anime.title.romaji || 'Anime sconosciuto';
             pool.push({
                 name: name,
-                videoUrl: videoLink,
-                cover: null // non disponibile
+                videoUrl: videoLink
             });
         }
 
@@ -506,15 +491,21 @@
             const extraThemes = extraData.animethemePagination.data;
             for (const theme of extraThemes) {
                 if (!theme.anime) continue;
-                if (!theme.videos || theme.videos.length === 0) continue;
-                const sorted = theme.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-                const videoLink = sorted[0].link;
+                if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
+                let videoLink = null;
+                for (const entry of theme.animethemeentries) {
+                    if (entry.videos && entry.videos.length > 0) {
+                        const sorted = entry.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
+                        videoLink = sorted[0].link;
+                        break;
+                    }
+                }
+                if (!videoLink) continue;
                 const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
                     pool.push({
                         name: name,
-                        videoUrl: videoLink,
-                        cover: null
+                        videoUrl: videoLink
                     });
                 }
             }
@@ -577,9 +568,8 @@
             nextBtn.disabled = true;
             audioVisual.className = 'audio-visual';
             nowPlaying.textContent = '🏁 Quiz finito!';
-            coverImage.style.display = 'none';
-            video.pause();
-            video.src = '';
+            audio.pause();
+            audio.src = '';
             playPauseBtn.disabled = true;
             seekBackBtn.disabled = true;
             seekForwardBtn.disabled = true;
@@ -591,17 +581,17 @@
         const q = questionsQueue[currentQuestion];
         correctAnime = q.anime;
         currentOptions = q.options;
-        currentVideoUrl = q.anime.videoUrl;
+        currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
-        coverImage.style.display = 'none';
 
-        video.src = currentVideoUrl;
-        video.load();
-        video.currentTime = 0;
+        // Carica l'audio (video nascosto)
+        audio.src = currentAudioUrl;
+        audio.load();
+        audio.currentTime = 0;
         playPauseBtn.disabled = false;
         playPauseBtn.textContent = '▶️ Riproduci';
         seekBackBtn.disabled = false;
@@ -610,27 +600,25 @@
         progressBar.value = 0;
         timeDisplay.textContent = '0:00 / 0:00';
 
-        // Nessuna copertina disponibile
-        coverImage.style.display = 'none';
-
         audioVisual.className = 'audio-visual';
         audioVisual.textContent = '⏳';
-        nowPlaying.textContent = '🎵 Caricamento video...';
+        nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        video.onloadedmetadata = () => {
+        // Eventi audio
+        audio.onloadedmetadata = () => {
             nowPlaying.textContent = '🎵 Pronto per la riproduzione';
             audioVisual.textContent = '▶️';
         };
 
-        video.ontimeupdate = () => {
-            if (video.duration) {
-                const percent = (video.currentTime / video.duration) * 100;
+        audio.ontimeupdate = () => {
+            if (audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
-                timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+                timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
             }
         };
 
-        video.onplay = () => {
+        audio.onplay = () => {
             isPlaying = true;
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
@@ -638,23 +626,23 @@
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
-        video.onpause = () => {
+        audio.onpause = () => {
             isPlaying = false;
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '⏸️';
             playPauseBtn.textContent = '▶️ Riproduci';
         };
 
-        video.onended = () => {
+        audio.onended = () => {
             isPlaying = false;
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '⏹️';
             playPauseBtn.textContent = '▶️ Riproduci';
         };
 
-        video.onerror = (e) => {
-            console.error('Errore video:', e);
-            feedbackDiv.innerHTML = '⚠️ Errore nel caricamento del video. Passa alla prossima domanda.';
+        audio.onerror = (e) => {
+            console.error('Errore audio:', e);
+            feedbackDiv.innerHTML = '⚠️ Errore nel caricamento dell\'audio. Passa alla prossima domanda.';
             feedbackDiv.style.color = '#f39c12';
             if (!isAnswered) {
                 nextBtn.disabled = false;
@@ -662,7 +650,7 @@
             }
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '🚫';
-            nowPlaying.textContent = '⛔ Video non disponibile';
+            nowPlaying.textContent = '⛔ Audio non disponibile';
             playPauseBtn.disabled = true;
             seekBackBtn.disabled = true;
             seekForwardBtn.disabled = true;
@@ -672,17 +660,17 @@
         renderOptions(q.options);
     }
 
-    // ---------- CONTROLLI VIDEO ----------
+    // ---------- CONTROLLI ----------
     function togglePlayPause() {
-        if (video.paused) {
-            video.play().catch(e => console.warn('Autoplay bloccato:', e));
+        if (audio.paused) {
+            audio.play().catch(e => console.warn('Autoplay bloccato:', e));
         } else {
-            video.pause();
+            audio.pause();
         }
     }
 
     function seekBy(seconds) {
-        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + seconds));
     }
 
     // ---------- RENDER OPZIONI ----------
@@ -698,7 +686,7 @@
         });
     }
 
-    // ---------- GESTIONE CLICK OPZIONE ----------
+    // ---------- GESTIONE CLICK ----------
     function handleOptionClick(index) {
         if (isAnswered || isLoading) return;
         isAnswered = true;
@@ -733,7 +721,7 @@
     // ---------- PROSSIMA DOMANDA ----------
     function goToNextQuestion() {
         if (isLoading) return;
-        video.pause();
+        audio.pause();
         currentQuestion++;
         if (currentQuestion < questionsQueue.length) {
             loadQuestion();
@@ -742,7 +730,7 @@
         }
     }
 
-    // ---------- UI HELPERS ----------
+    // ---------- UI ----------
     function updateScoreAndCounter() {
         scoreDisplay.textContent = `🏆 ${score}`;
         const total = questionsQueue.length || MAX_QUESTIONS;
@@ -766,7 +754,7 @@
         errorMsg.classList.add('hidden');
     }
 
-    // ---------- AVVIA IL GIOCO ----------
+    // ---------- AVVIA ----------
     async function startGame() {
         hideError();
         startBtn.disabled = true;
@@ -779,8 +767,8 @@
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
         progressBar.disabled = true;
-        video.pause();
-        video.src = '';
+        audio.pause();
+        audio.src = '';
 
         try {
             await prepareQuestions();
@@ -804,9 +792,9 @@
     seekForwardBtn.addEventListener('click', () => seekBy(10));
 
     progressBar.addEventListener('input', (e) => {
-        if (video.duration) {
-            const time = (e.target.value / 100) * video.duration;
-            video.currentTime = time;
+        if (audio.duration) {
+            const time = (e.target.value / 100) * audio.duration;
+            audio.currentTime = time;
         }
     });
 
