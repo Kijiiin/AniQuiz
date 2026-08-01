@@ -4,7 +4,247 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎵 Anime Opening Quiz</title>
-    <link rel="stylesheet" href="opening.css">
+    <style>
+        /* ---------- RESET E VARIABILI ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+            --dark: #2d3436;
+            --light: #f9f9f9;
+            --shadow: 0 8px 20px rgba(0,0,0,0.15);
+            --radius: 20px;
+        }
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .game-container {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 30px 25px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .game-container::before {
+            content: "🎌";
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 120px;
+            opacity: 0.1;
+            transform: rotate(20deg);
+            pointer-events: none;
+        }
+
+        /* ---------- HEADER ---------- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        .score-box {
+            background: var(--dark);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .score-box span {
+            color: var(--secondary);
+        }
+
+        /* ---------- PLAYER YOUTUBE (titolo nascosto) ---------- */
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            background: #000;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: -60px;
+            left: 0;
+            width: 100%;
+            height: calc(100% + 60px);
+            border: 0;
+            pointer-events: auto;
+        }
+
+        /* ---------- AREA DOMANDA ---------- */
+        .question-area {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .question-area .counter {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .question-area .hint {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            background: #f7f7f7;
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: inline-block;
+        }
+        .opening-title {
+            display: none;
+        }
+
+        /* ---------- OPZIONI ---------- */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 15px 0 25px;
+        }
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 14px 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark);
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            text-align: center;
+            word-break: break-word;
+        }
+        .option-btn:hover:not(.disabled) {
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(78, 205, 196, 0.2);
+        }
+        .option-btn.correct {
+            border-color: #2ecc71;
+            background: #eafaf1;
+            color: #1e8449;
+        }
+        .option-btn.wrong {
+            border-color: #e74c3c;
+            background: #fdedec;
+            color: #922b21;
+        }
+        .option-btn.disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        .option-btn:active:not(.disabled) {
+            transform: scale(0.96);
+        }
+
+        /* ---------- PULSANTE PROSSIMA ---------- */
+        .next-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+            margin-top: 5px;
+        }
+        .next-btn:hover:not(:disabled) {
+            background: #3dbdb5;
+            transform: translateY(-2px);
+        }
+        .next-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ---------- SCHERMATA FINALE ---------- */
+        .final-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .final-screen h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .final-screen .final-score {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .final-screen .message {
+            font-size: 1.2rem;
+            color: #555;
+            margin: 15px 0 25px;
+        }
+        .final-screen .restart-btn {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(255,107,107,0.3);
+        }
+        .final-screen .restart-btn:hover {
+            transform: scale(1.03);
+            background: #ff5252;
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 550px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            .game-container {
+                padding: 20px 15px 30px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="game-container">
@@ -24,7 +264,7 @@
             <div class="question-area">
                 <div class="counter" id="questionCounter">Domanda 1 / 10</div>
                 <div class="hint">🎧 Ascolta l'opening e indovina l'anime!</div>
-                <div class="opening-title" id="openingTitle"></div> <!-- nascosto -->
+                <div class="opening-title" id="openingTitle"></div>
             </div>
             <div class="options-grid" id="optionsContainer"></div>
             <button class="next-btn" id="nextBtn" disabled>▶ Prossima domanda</button>
@@ -39,6 +279,8 @@
         </div>
     </div>
 
+    <!-- Caricamento dei due script separati -->
+    <script src="opening-database.js"></script>
     <script src="opening.js"></script>
 </body>
 </html>
