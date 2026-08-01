@@ -80,7 +80,6 @@
             color: #b0b7d9;
         }
 
-        /* Player audio */
         .player-wrapper {
             position: relative;
             width: 100%;
@@ -130,7 +129,6 @@
             min-height: 28px;
         }
 
-        /* Controlli */
         .controls {
             display: flex;
             justify-content: center;
@@ -348,7 +346,6 @@
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
         <div id="youtube-player-container"></div>
 
-        <!-- Controlli -->
         <div class="controls">
             <button id="seekBackBtn" title="Indietro 10s">⏪ -10</button>
             <button id="playPauseBtn" class="play-btn" disabled>▶️ Riproduci</button>
@@ -367,7 +364,6 @@
     <div id="errorMsg" class="error-msg hidden"></div>
 </div>
 
-<!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
@@ -393,6 +389,7 @@
     let currentVideoId = null;
     let playerReady = false;
     let isPaused = false;
+    let pendingVideoId = null; // video da caricare quando player è pronto
 
     // DOM refs
     const playerContainer = document.getElementById('youtube-player-container');
@@ -598,10 +595,16 @@
         seekForwardBtn.disabled = true;
         playPauseBtn.textContent = '⏳ Caricamento...';
 
-        // Carica il video nel player YouTube
+        // Carica il video
         if (ytPlayer && playerReady) {
+            // Player pronto, carica subito
             ytPlayer.loadVideoById(q.videoId);
-            ytPlayer.playVideo();
+            // Forza la riproduzione dopo un breve ritardo per evitare il blocco dell'autoplay
+            setTimeout(() => {
+                if (ytPlayer && playerReady) {
+                    ytPlayer.playVideo();
+                }
+            }, 300);
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
             nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -611,8 +614,11 @@
             seekBackBtn.disabled = false;
             seekForwardBtn.disabled = false;
         } else {
-            // Se player non è ancora pronto, verrà gestito da onPlayerReady
-            nowPlaying.textContent = '🎶 Caricamento...';
+            // Player non pronto, metti in coda
+            pendingVideoId = q.videoId;
+            nowPlaying.textContent = '🎶 Caricamento player...';
+            // Se il player non esiste, verrà creato da onYouTubeIframeAPIReady
+            // e poi gestirà il pending
         }
 
         renderOptions(q.options);
@@ -630,7 +636,7 @@
                 rel: 0,
                 showinfo: 0,
                 loop: 1,
-                playlist: '', // verrà impostato dopo
+                playlist: '',
                 autoplay: 1,
                 mute: 0,
             },
@@ -645,9 +651,33 @@
     function onPlayerReady(event) {
         playerReady = true;
         // Se c'è un video in attesa, caricalo
-        if (currentVideoId) {
+        if (pendingVideoId) {
+            const vid = pendingVideoId;
+            pendingVideoId = null;
+            ytPlayer.loadVideoById(vid);
+            setTimeout(() => {
+                if (ytPlayer && playerReady) {
+                    ytPlayer.playVideo();
+                }
+            }, 300);
+            audioVisual.className = 'audio-visual playing';
+            audioVisual.textContent = '🔊';
+            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            isPlaying = true;
+            playPauseBtn.textContent = '⏸️ Pausa';
+            playPauseBtn.disabled = false;
+            seekBackBtn.disabled = false;
+            seekForwardBtn.disabled = false;
+        } else if (currentVideoId) {
+            // Caso in cui il player si è pronto dopo che loadQuestion è già stata chiamata
+            // ma non c'era pending perché forse era già stato impostato
+            // Ricarichiamo il video corrente
             ytPlayer.loadVideoById(currentVideoId);
-            ytPlayer.playVideo();
+            setTimeout(() => {
+                if (ytPlayer && playerReady) {
+                    ytPlayer.playVideo();
+                }
+            }, 300);
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
             nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -677,8 +707,6 @@
             audioVisual.textContent = '⏸️';
             playPauseBtn.textContent = '▶️ Riproduci';
         } else if (state === YT.PlayerState.ENDED) {
-            // Lo facciamo ripartire da capo? Oppure lo lasciamo fermo.
-            // Per il quiz, meglio tenerlo in pausa a fine.
             isPlaying = false;
             isPaused = true;
             audioVisual.className = 'audio-visual';
@@ -698,7 +726,6 @@
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
-        // Permetti di andare avanti dopo un po'
         setTimeout(() => {
             if (!isAnswered) {
                 nextBtn.disabled = false;
@@ -821,7 +848,11 @@
             await prepareQuestions();
             loader.classList.add('hidden');
             if (questionsQueue.length > 0) {
+                // Se il player non è ancora pronto, loadQuestion metterà in coda il video
+                // e onPlayerReady lo avvierà
                 loadQuestion();
+                // Se il player è già pronto, loadQuestion avvia la riproduzione
+                // Se non lo è, il pending verrà gestito
             } else {
                 showError('Nessuna domanda disponibile. Riprova più tardi.');
             }
@@ -839,35 +870,43 @@
 
     // ---------- AVVIO ----------
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+    // Gestione del caso in cui l'API è già caricata (es. se lo script è stato eseguito dopo)
+    if (typeof YT !== 'undefined' && YT.loaded) {
+        onYouTubeIframeAPIReady();
+    }
+
     window.addEventListener('load', () => {
-        // L'API YouTube si caricherà asincronamente; il gioco parte quando il player è pronto?
-        // Iniziamo il caricamento dei dati, ma il player potrebbe non essere ancora pronto.
-        // Per sicurezza, avviamo dopo un breve ritardo per dare tempo all'API.
+        // Se dopo 2 secondi il player non è ancora pronto, proviamo a crearlo manualmente
         setTimeout(() => {
-            if (typeof YT !== 'undefined' && YT.loaded) {
-                initGame();
-            } else {
-                // Se l'API non è ancora caricata, aspettiamo l'evento onYouTubeIframeAPIReady
-                // che chiamerà onYouTubeIframeAPIReady e poi initGame? 
-                // Meglio: avviare initGame quando il player è pronto, ma per ora lo facciamo subito
-                // e se il player non è pronto, le funzioni lo gestiranno.
+            if (!ytPlayer && typeof YT !== 'undefined' && YT.Player) {
+                onYouTubeIframeAPIReady();
+            }
+            // Avvia il gioco (se non è già stato avviato)
+            if (!isLoading && questionsQueue.length === 0) {
                 initGame();
             }
-        }, 500);
+        }, 1000);
     });
 
-    // Se per qualche motivo l'API non si carica, proviamo comunque
-    window.addEventListener('load', function() {
-        // Fallback: se dopo 3 secondi l'API non è pronta, iniziamo comunque
-        setTimeout(() => {
-            if (!ytPlayer) {
-                // Prova a creare il player manualmente
-                if (typeof YT !== 'undefined' && YT.Player) {
-                    onYouTubeIframeAPIReady();
-                }
+    // Fallback: se l'API non si carica affatto, iniziamo comunque dopo 5 secondi
+    setTimeout(() => {
+        if (!ytPlayer) {
+            // Forziamo la creazione del player se possibile
+            if (typeof YT !== 'undefined' && YT.Player) {
+                onYouTubeIframeAPIReady();
+            } else {
+                // Se proprio non funziona, mostriamo un errore ma permettiamo di proseguire
+                // (ma il player non funzionerà)
+                console.warn('YouTube API non caricata, impossibile riprodurre audio.');
+                showError('Impossibile caricare il player YouTube. Verifica la connessione.');
             }
-        }, 3000);
-    });
+        }
+        // Avvia il gioco se non ancora avviato
+        if (!isLoading && questionsQueue.length === 0) {
+            initGame();
+        }
+    }, 5000);
 </script>
 
 </body>
