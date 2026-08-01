@@ -91,6 +91,9 @@
             box-shadow: 0 0 80px rgba(245,87,108,0.5);
             animation: pulse 1.5s infinite alternate;
         }
+        .audio-visual.buffering {
+            box-shadow: 0 0 60px rgba(241,196,15,0.6);
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
             100% { transform: scale(1.05); }
@@ -312,7 +315,7 @@
     </div>
 
     <div class="player-wrapper">
-        <video id="audioPlayer" preload="metadata"></video>
+        <video id="audioPlayer" preload="auto"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
@@ -407,7 +410,7 @@
         return json.data;
     }
 
-    // ---------- OTTIENI PAGINA CASUALE CON RETRY ----------
+    // ---------- OTTIENI PAGINA CASUALE CON RISOLUZIONE MINIMA ----------
     async function getRandomOpeningPool(count) {
         const countQuery = `
             query {
@@ -465,7 +468,7 @@
                 let videoLink = null;
                 for (const entry of theme.animethemeentries) {
                     if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
-                        // 🔽 MODIFICA: ordinamento ascendente per prendere la risoluzione più bassa
+                        // 🔽 FORZO la risoluzione più bassa in assoluto
                         const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
                         videoLink = sorted[0].link;
                         break;
@@ -534,7 +537,7 @@
         loadQuestion();
     }
 
-    // ---------- CARICA DOMANDA ----------
+    // ---------- CARICA DOMANDA (con gestione buffering) ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
@@ -562,6 +565,8 @@
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
+        // Imposta il player con preload auto
+        audio.preload = 'auto';
         audio.src = currentAudioUrl;
         audio.load();
         audio.currentTime = 0;
@@ -577,9 +582,47 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
+        // --- GESTIONE BUFFERING ---
+        let bufferingTimeout = null;
+
+        audio.onwaiting = () => {
+            audioVisual.className = 'audio-visual buffering';
+            audioVisual.textContent = '⏳';
+            nowPlaying.textContent = '⏳ Buffering in corso...';
+            clearTimeout(bufferingTimeout);
+            bufferingTimeout = setTimeout(() => {
+                if (!audio.paused) {
+                    audio.pause();
+                    audio.load();
+                    audio.play().catch(() => {});
+                }
+            }, 5000);
+        };
+
+        audio.oncanplaythrough = () => {
+            clearTimeout(bufferingTimeout);
+            if (!audio.paused) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            } else {
+                audioVisual.className = 'audio-visual';
+                audioVisual.textContent = '▶️';
+                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            }
+        };
+
         audio.onloadedmetadata = () => {
-            nowPlaying.textContent = '🎵 Pronto per la riproduzione';
-            audioVisual.textContent = '▶️';
+            clearTimeout(bufferingTimeout);
+            if (!audio.paused && !audio.seeking) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            } else {
+                audioVisual.className = 'audio-visual';
+                audioVisual.textContent = '▶️';
+                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            }
         };
 
         audio.ontimeupdate = () => {
@@ -594,7 +637,7 @@
             isPlaying = true;
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
-            nowPlaying.textContent = `🎵 Ascolta l'opening...`;
+            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
