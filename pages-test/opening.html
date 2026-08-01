@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 Anime Opening Quiz (animethemes.moe)</title>
+    <title>🎵 Anime Opening Quiz</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
@@ -71,7 +71,6 @@
             flex-direction: column;
             align-items: center;
         }
-        /* Player video personalizzato */
         .custom-video {
             width: 100%;
             max-width: 400px;
@@ -90,19 +89,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 12px;
             padding: 12px 16px;
             background: rgba(0,0,0,0.4);
             border-radius: 0 0 20px 20px;
             backdrop-filter: blur(8px);
+            flex-wrap: wrap;
         }
         .video-controls button {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 60px;
             color: #f0f0f0;
-            font-size: 1.2rem;
-            padding: 6px 18px;
+            font-size: 1.1rem;
+            padding: 6px 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
@@ -143,21 +143,21 @@
             cursor: pointer;
         }
         .time-display {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #a0a6c7;
-            min-width: 80px;
+            min-width: 70px;
             text-align: center;
             font-variant-numeric: tabular-nums;
         }
         .audio-visual {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             background: radial-gradient(circle at 30% 30%, #4facfe, #1a1e2f);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 3rem;
+            font-size: 2.8rem;
             box-shadow: 0 0 40px rgba(79,172,254,0.3);
             transition: box-shadow 0.3s ease;
             margin: 0 auto 10px;
@@ -180,8 +180,8 @@
         .cover-image {
             display: block;
             margin: 10px auto 20px;
-            width: 180px;
-            height: 250px;
+            width: 160px;
+            height: 220px;
             object-fit: cover;
             border-radius: 20px;
             box-shadow: 0 15px 30px -8px rgba(0,0,0,0.7);
@@ -317,10 +317,10 @@
             .option-btn { min-height: 50px; padding: 14px; }
             .cover-image { width: 140px; height: 195px; }
             h1 { font-size: 1.8rem; }
-            .video-controls { flex-wrap: wrap; gap: 10px; }
-            .video-controls button { font-size: 1rem; padding: 6px 14px; }
-            .video-controls .play-btn { min-width: 70px; }
-            .time-display { min-width: 60px; font-size: 0.75rem; }
+            .video-controls { gap: 8px; }
+            .video-controls button { font-size: 0.9rem; padding: 5px 12px; }
+            .video-controls .play-btn { min-width: 60px; }
+            .time-display { min-width: 60px; font-size: 0.7rem; }
             .start-btn { font-size: 1.2rem; padding: 16px 20px; }
         }
     </style>
@@ -337,18 +337,16 @@
     </div>
 
     <div class="player-wrapper">
-        <!-- Icona animata e testo -->
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
 
-        <!-- Player video personalizzato -->
         <div class="custom-video">
             <video id="videoPlayer" preload="metadata" playsinline></video>
             <div class="video-controls">
                 <button id="seekBackBtn" title="Indietro 10s">⏪ -10</button>
                 <button id="playPauseBtn" class="play-btn" disabled>▶️ Riproduci</button>
                 <button id="seekForwardBtn" title="Avanti 10s">+10 ⏩</button>
-                <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1">
+                <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1" disabled>
                 <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
             </div>
         </div>
@@ -367,13 +365,11 @@
 
 <script>
     // ---------- CONFIG ----------
-    const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
-    const ANIMETHEMES_API = 'https://api.animethemes.moe';
     const MAX_QUESTIONS = 10;
-    const REQUEST_DELAY = 500; // ms tra richieste ad animethemes (per non sovraccaricare)
+    const POOL_SIZE = 20;
+    const ANIMETHEMES_API = 'https://api.animethemes.moe';
 
     // ---------- STATO ----------
-    let animeList = [];
     let currentQuestion = 0;
     let score = 0;
     let correctAnime = null;
@@ -383,7 +379,6 @@
     let questionsQueue = [];
     let isLoading = false;
 
-    // Player video
     const video = document.getElementById('videoPlayer');
     let currentVideoUrl = null;
 
@@ -414,12 +409,6 @@
         return arr;
     }
 
-    function getAnimeTitle(anime) {
-        return anime.title.romaji || anime.title.english || anime.title.native || 'Anime sconosciuto';
-    }
-
-    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
     function formatTime(seconds) {
         if (!seconds || isNaN(seconds)) return '0:00';
         const m = Math.floor(seconds / 60);
@@ -427,116 +416,80 @@
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
-    // ---------- API ANILIST ----------
-    async function fetchAnimeList() {
-        const query = `
-            query ($page: Int, $perPage: Int) {
-                Page(page: $page, perPage: $perPage) {
-                    media(sort: POPULARITY_DESC, type: ANIME, isAdult: false) {
-                        id
-                        title { romaji english native }
-                        coverImage { large }
-                    }
-                }
-            }
-        `;
-        const variables = { page: 1, perPage: 50 };
-        try {
-            const response = await fetch(ANILIST_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ query, variables })
-            });
-            const json = await response.json();
-            if (json.errors) throw new Error(json.errors[0].message);
-            return json.data.Page.media;
-        } catch (e) {
-            console.error('Errore Anilist:', e);
-            throw new Error('Impossibile caricare gli anime da Anilist.');
-        }
-    }
-
-    // ---------- API ANIMETHEMES.MOE ----------
-    async function fetchAnimeTheme(anilistId) {
-        const url = `${ANIMETHEMES_API}/anime?filter[anilist_id]=${anilistId}&include=themes.videos`;
+    // ---------- API ANIMETHEMES.MOE (endpoint corretto con sort=random) ----------
+    async function fetchRandomOpenings(count) {
+        // Endpoint corretto: /themes?sort=random&filter[type]=OP&include=videos&limit=N
+        // Documentazione: https://api-docs.animethemes.moe[reference:2][reference:3]
+        const url = `${ANIMETHEMES_API}/themes?sort=random&filter[type]=OP&include=videos&limit=${count}`;
         try {
             const response = await fetch(url);
-            if (!response.ok) return null;
+            if (!response.ok) return [];
             const data = await response.json();
-            if (!data.anime || data.anime.length === 0) return null;
-            const anime = data.anime[0];
-            // Cerca un tema di tipo "OP" (Opening)
-            const opTheme = anime.themes.find(t => t.type === 'OP');
-            if (!opTheme) return null;
-            // Prendi il primo video (qualità più alta disponibile)
-            const videos = opTheme.videos || [];
-            // Ordina per risoluzione (preferisci 1080 > 720 > 480)
-            const sorted = videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-            if (sorted.length === 0) return null;
-            return sorted[0].link; // link diretto al file
+            if (!data.themes || data.themes.length === 0) return [];
+
+            const result = [];
+            for (const theme of data.themes) {
+                const anime = theme.anime;
+                if (!anime) continue;
+                const videos = theme.videos || [];
+                if (videos.length === 0) continue;
+                // Prendi il video con la risoluzione più alta
+                const sorted = videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
+                const videoLink = sorted[0].link;
+                const cover = anime.cover ? anime.cover.large : null;
+                result.push({
+                    name: anime.name,
+                    videoUrl: videoLink,
+                    cover: cover
+                });
+            }
+            return result;
         } catch (e) {
-            console.warn(`Errore per anime ID ${anilistId}:`, e);
-            return null;
+            console.warn('Errore fetchRandomOpenings:', e);
+            return [];
         }
     }
 
     // ---------- PREPARAZIONE DOMANDE ----------
     async function prepareQuestions() {
-        if (animeList.length === 0) {
-            animeList = await fetchAnimeList();
-            if (!animeList || animeList.length < 10) throw new Error('Non ci sono abbastanza anime (servono almeno 10).');
-            shuffleArray(animeList);
+        // Raccogli una pool di anime in una sola richiesta
+        let pool = await fetchRandomOpenings(POOL_SIZE);
+
+        if (pool.length < MAX_QUESTIONS + 3) {
+            throw new Error(`Pool troppo piccola (${pool.length}). Servono almeno ${MAX_QUESTIONS + 3} anime.`);
         }
 
+        shuffleArray(pool);
+
+        const corrects = pool.slice(0, MAX_QUESTIONS);
         questionsQueue = [];
-        const usedIndices = new Set();
-        let attempts = 0;
-        const maxAttempts = animeList.length * 2;
+        const usedCorrectNames = new Set();
 
-        while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
-            attempts++;
-            const idx = Math.floor(Math.random() * animeList.length);
-            if (usedIndices.has(idx)) continue;
-            usedIndices.add(idx);
+        for (let i = 0; i < corrects.length; i++) {
+            const correct = corrects[i];
+            usedCorrectNames.add(correct.name);
 
-            const candidate = animeList[idx];
-            // Cerca l'opening su animethemes.moe
-            const videoUrl = await fetchAnimeTheme(candidate.id);
-            await sleep(REQUEST_DELAY); // pausa per non sovraccaricare il server
-
-            if (!videoUrl) {
-                usedIndices.delete(idx);
-                continue;
-            }
-
-            // Distrattori (3)
-            const distractors = [];
-            const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
+            // Distrattori: dalla pool totale escluso il corrente e quelli già usati
+            const available = pool.filter(item => item.name !== correct.name && !usedCorrectNames.has(item.name));
             shuffleArray(available);
-            for (let i = 0; i < 3 && i < available.length; i++) {
-                distractors.push(available[i]);
-            }
+            let distractors = available.slice(0, 3);
             if (distractors.length < 3) {
-                usedIndices.delete(idx);
-                continue;
+                const extra = pool.filter(item => item.name !== correct.name && !distractors.some(d => d.name === item.name));
+                shuffleArray(extra);
+                const needed = 3 - distractors.length;
+                distractors = distractors.concat(extra.slice(0, needed));
             }
 
-            const options = [candidate, ...distractors];
-            shuffleArray(options);
+            const optionNames = [correct.name, ...distractors.map(d => d.name)];
+            shuffleArray(optionNames);
+
             questionsQueue.push({
-                anime: candidate,
-                videoUrl: videoUrl,
-                options: options
+                anime: correct,
+                options: optionNames
             });
         }
 
-        if (questionsQueue.length === 0) {
-            throw new Error('Impossibile trovare abbastanza opening. Riprova più tardi.');
-        }
-
-        if (questionsQueue.length > MAX_QUESTIONS) {
-            questionsQueue = questionsQueue.slice(0, MAX_QUESTIONS);
-        }
+        shuffleArray(questionsQueue);
 
         currentQuestion = 0;
         score = 0;
@@ -566,7 +519,7 @@
         const q = questionsQueue[currentQuestion];
         correctAnime = q.anime;
         currentOptions = q.options;
-        currentVideoUrl = q.videoUrl;
+        currentVideoUrl = q.anime.videoUrl;
         isAnswered = false;
 
         updateScoreAndCounter();
@@ -574,7 +527,6 @@
         nextBtn.disabled = true;
         coverImage.style.display = 'none';
 
-        // Imposta il video
         video.src = currentVideoUrl;
         video.load();
         video.currentTime = 0;
@@ -586,20 +538,22 @@
         progressBar.value = 0;
         timeDisplay.textContent = '0:00 / 0:00';
 
-        // Aggiorna l'UI audio
+        if (q.anime.cover) {
+            coverImage.src = q.anime.cover;
+            coverImage.style.display = 'block';
+        } else {
+            coverImage.style.display = 'none';
+        }
+
         audioVisual.className = 'audio-visual';
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento video...';
 
-        // Quando il video è caricato, parte la riproduzione automatica?
-        // L'utente dovrà cliccare su play (per evitare autoplay bloccato)
         video.onloadedmetadata = () => {
             nowPlaying.textContent = '🎵 Pronto per la riproduzione';
             audioVisual.textContent = '▶️';
-            // Non partiamo automaticamente, lasciamo che l'utente prema play
         };
 
-        // Aggiorna la barra di progresso durante la riproduzione
         video.ontimeupdate = () => {
             if (video.duration) {
                 const percent = (video.currentTime / video.duration) * 100;
@@ -612,7 +566,7 @@
             isPlaying = true;
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            nowPlaying.textContent = `🎵 Ascolta l'opening...`;
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
@@ -666,10 +620,10 @@
     // ---------- RENDER OPZIONI ----------
     function renderOptions(options) {
         optionsContainer.innerHTML = '';
-        options.forEach((anime, index) => {
+        options.forEach((optionName, index) => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
-            btn.textContent = getAnimeTitle(anime);
+            btn.textContent = optionName;
             btn.dataset.index = index;
             btn.addEventListener('click', () => handleOptionClick(index));
             optionsContainer.appendChild(btn);
@@ -681,14 +635,13 @@
         if (isAnswered || isLoading) return;
         isAnswered = true;
 
-        const selectedAnime = currentOptions[index];
-        const isCorrect = selectedAnime.id === correctAnime.id;
+        const selectedName = currentOptions[index];
+        const isCorrect = selectedName === correctAnime.name;
 
         const buttons = document.querySelectorAll('.option-btn');
         buttons.forEach((btn, i) => {
             btn.disabled = true;
-            const anime = currentOptions[i];
-            if (anime.id === correctAnime.id) {
+            if (currentOptions[i] === correctAnime.name) {
                 btn.classList.add('correct');
             } else if (i === index && !isCorrect) {
                 btn.classList.add('wrong');
@@ -700,15 +653,17 @@
             feedbackDiv.innerHTML = '✅ Corretto! +1 punto';
             feedbackDiv.style.color = '#2ecc71';
         } else {
-            feedbackDiv.innerHTML = `❌ Sbagliato! Era "${getAnimeTitle(correctAnime)}"`;
+            feedbackDiv.innerHTML = `❌ Sbagliato! Era "${correctAnime.name}"`;
             feedbackDiv.style.color = '#e74c3c';
         }
 
         updateScoreAndCounter();
 
-        if (correctAnime.coverImage && correctAnime.coverImage.large) {
-            coverImage.src = correctAnime.coverImage.large;
-            coverImage.style.display = 'block';
+        if (!coverImage.src || coverImage.style.display === 'none') {
+            if (correctAnime.cover) {
+                coverImage.src = correctAnime.cover;
+                coverImage.style.display = 'block';
+            }
         }
 
         nextBtn.disabled = false;
@@ -723,7 +678,7 @@
         if (currentQuestion < questionsQueue.length) {
             loadQuestion();
         } else {
-            loadQuestion(); // fine
+            loadQuestion();
         }
     }
 
@@ -788,7 +743,6 @@
     seekBackBtn.addEventListener('click', () => seekBy(-10));
     seekForwardBtn.addEventListener('click', () => seekBy(10));
 
-    // Barra di progresso (click per saltare)
     progressBar.addEventListener('input', (e) => {
         if (video.duration) {
             const time = (e.target.value / 100) * video.duration;
@@ -798,9 +752,7 @@
 
     startBtn.addEventListener('click', startGame);
 
-    // ---------- AVVIO ----------
-    // Non serve più YouTube API, quindi niente iframe.
-    // Il gioco è pronto.
+    console.log('🎵 Anime Opening Quiz caricato! Premi "Inizia Quiz" per giocare.');
 </script>
 </body>
 </html>
