@@ -335,8 +335,8 @@
     const MAX_QUESTIONS = 10;
     const CACHE_KEY = 'animeOpeningCache';
     const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
-    const REQUEST_DELAY = 600; // ms tra una richiesta YouTube e l'altra
-    const MAX_RETRIES = 2;
+    const REQUEST_DELAY = 1000; // ms tra una richiesta e l'altra
+    const MAX_RETRIES = 1; // solo un tentativo dopo il primo fallimento
 
     // ---------- STATO ----------
     let animeList = [];
@@ -437,59 +437,59 @@
         }
     }
 
-    // ---------- API YOUTUBE CON CACHE E RATE LIMITING ----------
+    // ---------- API YOUTUBE CON BACKOFF ESPONENZIALE ----------
     async function searchYouTubeOpening(anime, cache) {
         const title = getAnimeTitle(anime);
-        // Controlla cache
         if (cache[title]) {
             return cache[title];
         }
 
-        const queries = [`${title} opening`, `${title} OP`, `${title} opening full`];
-        for (const query of queries) {
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`;
-            let retries = MAX_RETRIES;
-            while (retries >= 0) {
-                try {
-                    const response = await fetch(url);
-                    if (response.status === 429) {
-                        // Troppe richieste: attendiamo e riproviamo
-                        const wait = (MAX_RETRIES - retries + 1) * 2000;
-                        console.warn(`Rate limit per "${title}", attendiamo ${wait}ms...`);
-                        await sleep(wait);
-                        retries--;
-                        continue;
-                    }
-                    if (!response.ok) {
-                        console.warn(`HTTP ${response.status} per "${query}"`);
-                        break;
-                    }
-                    const data = await response.json();
-                    if (data.items && data.items.length > 0) {
-                        // Cerca un video che sembri l'opening (evita trailer o AMV)
-                        const video = data.items.find(item => {
-                            const snippet = item.snippet || {};
-                            const desc = snippet.description || '';
-                            const titleLower = snippet.title ? snippet.title.toLowerCase() : '';
-                            // Filtra video troppo corti (meno di 60 secondi) o con parole chiave sospette
-                            return !desc.includes('trailer') && !desc.includes('amv') &&
-                                   !titleLower.includes('trailer') && !titleLower.includes('amv') &&
-                                   !titleLower.includes('preview') && !titleLower.includes('clip');
-                        }) || data.items[0];
-                        if (video.id && video.id.videoId) {
-                            const videoId = video.id.videoId;
-                            cache[title] = videoId;
-                            return videoId;
-                        }
-                    }
-                    break;
-                } catch (e) {
-                    console.warn(`Errore ricerca per "${query}":`, e);
-                    retries--;
-                    await sleep(1000);
+        // Una sola query: "titolo opening" (più efficace e riduce il carico)
+        const query = `${title} opening`;
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`;
+
+        let retries = 0;
+        let backoff = 2000; // ms iniziali
+
+        while (retries <= MAX_RETRIES) {
+            try {
+                const response = await fetch(url);
+                if (response.status === 429) {
+                    // Troppe richieste: attendiamo con backoff esponenziale
+                    console.warn(`Rate limit per "${title}", attesa ${backoff}ms...`);
+                    await sleep(backoff);
+                    backoff *= 2; // raddoppia per il prossimo tentativo
+                    retries++;
+                    continue;
                 }
+                if (!response.ok) {
+                    console.warn(`HTTP ${response.status} per "${title}"`);
+                    return null;
+                }
+                const data = await response.json();
+                if (data.items && data.items.length > 0) {
+                    // Cerca un video che sembri l'opening (filtra trailer/amv)
+                    const video = data.items.find(item => {
+                        const snippet = item.snippet || {};
+                        const desc = snippet.description ? snippet.description.toLowerCase() : '';
+                        const titleLower = snippet.title ? snippet.title.toLowerCase() : '';
+                        return !desc.includes('trailer') && !desc.includes('amv') &&
+                               !titleLower.includes('trailer') && !titleLower.includes('amv') &&
+                               !titleLower.includes('preview') && !titleLower.includes('clip');
+                    }) || data.items[0];
+                    if (video.id && video.id.videoId) {
+                        const videoId = video.id.videoId;
+                        cache[title] = videoId;
+                        return videoId;
+                    }
+                }
+                return null;
+            } catch (e) {
+                console.warn(`Errore di rete per "${title}":`, e);
+                retries++;
+                await sleep(backoff);
+                backoff *= 2;
             }
-            await sleep(REQUEST_DELAY);
         }
         return null;
     }
@@ -504,9 +504,9 @@
 
         const cache = getCache();
         questionsQueue = [];
-        let usedIndices = new Set();
+        const usedIndices = new Set();
         let attempts = 0;
-        const maxAttempts = animeList.length * 3;
+        const maxAttempts = animeList.length * 2;
 
         while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
             attempts++;
@@ -516,6 +516,7 @@
 
             const candidate = animeList[idx];
             const videoId = await searchYouTubeOpening(candidate, cache);
+            // Attesa obbligatoria tra una richiesta e l'altra (evita 429)
             await sleep(REQUEST_DELAY);
 
             if (!videoId) {
@@ -523,7 +524,7 @@
                 continue;
             }
 
-            // Prendiamo 3 distrattori
+            // Distrattori (3)
             const distractors = [];
             const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
             shuffleArray(available);
@@ -544,14 +545,12 @@
             });
         }
 
-        // Salva cache
         setCache(cache);
 
         if (questionsQueue.length === 0) {
             throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
         }
 
-        // Se abbiamo più di MAX_QUESTIONS, tagliamo
         if (questionsQueue.length > MAX_QUESTIONS) {
             questionsQueue = questionsQueue.slice(0, MAX_QUESTIONS);
         }
@@ -599,7 +598,6 @@
 
         if (ytPlayer && playerReady) {
             ytPlayer.loadVideoById(q.videoId);
-            // La riproduzione partirà automaticamente da onStateChange
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '⏳';
             nowPlaying.textContent = '🎵 Caricamento video...';
@@ -671,7 +669,6 @@
             audioVisual.textContent = '⏹️';
             playPauseBtn.textContent = '▶️ Riproduci';
         } else if (state === YT.PlayerState.UNSTARTED) {
-            // Video caricato ma non ancora avviato: abilitiamo play
             playPauseBtn.disabled = false;
             playPauseBtn.textContent = '▶️ Riproduci';
             nowPlaying.textContent = '🎵 Pronto per la riproduzione';
@@ -682,7 +679,6 @@
         console.error('Errore YouTube:', event.data);
         playerErrorCount++;
         if (event.data === 150 || event.data === 101) {
-            // Video non embeddable o non disponibile
             feedbackDiv.innerHTML = '⚠️ Questo video non è riproducibile. Passa alla prossima domanda.';
             feedbackDiv.style.color = '#f39c12';
             if (!isAnswered) {
@@ -696,9 +692,7 @@
             seekBackBtn.disabled = true;
             seekForwardBtn.disabled = true;
         } else {
-            // Altri errori (es. 2 - richiesta non valida)
             if (playerErrorCount < 3) {
-                // Riprova a caricare il video dopo un secondo
                 setTimeout(() => {
                     if (ytPlayer && playerReady && currentVideoId) {
                         ytPlayer.loadVideoById(currentVideoId);
@@ -792,7 +786,7 @@
         if (currentQuestion < questionsQueue.length) {
             loadQuestion();
         } else {
-            loadQuestion(); // fine
+            loadQuestion();
         }
     }
 
@@ -865,8 +859,8 @@
             if (typeof YT !== 'undefined' && YT.Player) {
                 onYouTubeIframeAPIReady();
             } else {
-                console.warn('YouTube API non caricata. Verifica ad blocker o connessione.');
-                nowPlaying.textContent = '⚠️ Player YouTube non caricato. Disabilita ad blocker per questo sito.';
+                console.warn('YouTube API non caricata. Verifica ad blocker.');
+                nowPlaying.textContent = '⚠️ Player YouTube non caricato. Disabilita ad blocker.';
             }
         }
     }, 5000);
