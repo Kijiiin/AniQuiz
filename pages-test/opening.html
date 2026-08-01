@@ -186,6 +186,7 @@
             border-radius: 20px;
             box-shadow: 0 15px 30px -8px rgba(0,0,0,0.7);
             border: 2px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.05);
         }
         .options-grid {
             display: grid;
@@ -352,7 +353,7 @@
         </div>
     </div>
 
-    <img id="coverImage" class="cover-image" src="" alt="Copertina anime" style="display: none;">
+    <img id="coverImage" class="cover-image" src="" alt="Copertina non disponibile" style="display: none;">
 
     <div id="optionsContainer" class="options-grid"></div>
     <div id="feedback" class="feedback"></div>
@@ -372,14 +373,13 @@
     // ---------- STATO ----------
     let currentQuestion = 0;
     let score = 0;
-    let correctAnime = null;          // { name, videoUrl, cover? }
+    let correctAnime = null;
     let currentOptions = [];
     let isAnswered = false;
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
 
-    // Player video
     const video = document.getElementById('videoPlayer');
     let currentVideoUrl = null;
 
@@ -436,7 +436,7 @@
         return json.data;
     }
 
-    // ---------- OTTIENI TOTALE E PAGINA CASUALE ----------
+    // ---------- OTTIENI PAGINA CASUALE DI OPENING ----------
     async function getRandomOpeningPool(count) {
         // 1. Ottieni il numero totale di temi OP
         const countQuery = `
@@ -451,15 +451,15 @@
             }
         `;
         const countData = await graphqlFetch(countQuery);
-        const total = countData.animethemePagination.paginatorInfo.total;
-        const perPage = countData.animethemePagination.paginatorInfo.perPage;
         const lastPage = countData.animethemePagination.paginatorInfo.lastPage;
 
-        // Se perPage è 15 di default, ma noi vogliamo prenderne 50, dobbiamo specificare first: 50
-        // La query successiva userà first: 50 e page casuale
+        if (!lastPage || lastPage === 0) {
+            throw new Error('Nessun tema OP trovato.');
+        }
+
         const randomPage = Math.floor(Math.random() * lastPage) + 1;
 
-        // 2. Recupera i temi da quella pagina
+        // 2. Recupera i temi da quella pagina (senza cover)
         const fetchQuery = `
             query ($page: Int, $first: Int) {
                 animethemePagination(page: $page, first: $first, type: OP) {
@@ -470,7 +470,6 @@
                         anime {
                             id
                             title { romaji }
-                            cover { large }
                         }
                         videos {
                             id
@@ -484,7 +483,7 @@
         const fetchData = await graphqlFetch(fetchQuery, { page: randomPage, first: count });
         const themes = fetchData.animethemePagination.data;
 
-        // 3. Trasforma in oggetti utili, scartando quelli senza video o senza anime
+        // 3. Trasforma in oggetti utili
         const pool = [];
         for (const theme of themes) {
             if (!theme.anime) continue;
@@ -492,43 +491,35 @@
             // Prendi il video con la risoluzione più alta
             const sorted = theme.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
             const videoLink = sorted[0].link;
-            const cover = theme.anime.cover ? theme.anime.cover.large : null;
-            const name = theme.anime.title.romaji || theme.anime.title.english || 'Anime sconosciuto';
+            const name = theme.anime.title.romaji || 'Anime sconosciuto';
             pool.push({
                 name: name,
                 videoUrl: videoLink,
-                cover: cover
+                cover: null // non disponibile
             });
         }
 
-        // Se la pool è troppo piccola, ricorsivamente aggiungi altre pagine (ma per sicurezza)
+        // Se la pool è troppo piccola, prova un'altra pagina
         if (pool.length < MAX_QUESTIONS + 3) {
-            // Prova a prendere un'altra pagina casuale e unisci
             const extraPage = Math.floor(Math.random() * lastPage) + 1;
             const extraData = await graphqlFetch(fetchQuery, { page: extraPage, first: count });
             const extraThemes = extraData.animethemePagination.data;
-            const extraPool = [];
             for (const theme of extraThemes) {
                 if (!theme.anime) continue;
                 if (!theme.videos || theme.videos.length === 0) continue;
                 const sorted = theme.videos.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
                 const videoLink = sorted[0].link;
-                const cover = theme.anime.cover ? theme.anime.cover.large : null;
-                const name = theme.anime.title.romaji || theme.anime.title.english || 'Anime sconosciuto';
-                // Evita duplicati per nome
+                const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
-                    extraPool.push({
+                    pool.push({
                         name: name,
                         videoUrl: videoLink,
-                        cover: cover
+                        cover: null
                     });
                 }
             }
-            // Unisci e mescola
-            pool.push(...extraPool);
         }
 
-        // Mescola e restituisci
         shuffleArray(pool);
         return pool;
     }
@@ -551,7 +542,6 @@
             const correct = corrects[i];
             usedCorrectNames.add(correct.name);
 
-            // Distrattori: dalla pool totale escluso il corrente e quelli già usati
             const available = pool.filter(item => item.name !== correct.name && !usedCorrectNames.has(item.name));
             shuffleArray(available);
             let distractors = available.slice(0, 3);
@@ -620,12 +610,8 @@
         progressBar.value = 0;
         timeDisplay.textContent = '0:00 / 0:00';
 
-        if (q.anime.cover) {
-            coverImage.src = q.anime.cover;
-            coverImage.style.display = 'block';
-        } else {
-            coverImage.style.display = 'none';
-        }
+        // Nessuna copertina disponibile
+        coverImage.style.display = 'none';
 
         audioVisual.className = 'audio-visual';
         audioVisual.textContent = '⏳';
@@ -740,14 +726,6 @@
         }
 
         updateScoreAndCounter();
-
-        if (!coverImage.src || coverImage.style.display === 'none') {
-            if (correctAnime.cover) {
-                coverImage.src = correctAnime.cover;
-                coverImage.style.display = 'block';
-            }
-        }
-
         nextBtn.disabled = false;
         nextBtn.textContent = '➡ Prossima domanda';
     }
