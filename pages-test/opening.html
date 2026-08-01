@@ -91,6 +91,9 @@
             box-shadow: 0 0 80px rgba(245,87,108,0.5);
             animation: pulse 1.5s infinite alternate;
         }
+        .audio-visual.buffering {
+            box-shadow: 0 0 60px rgba(241,196,15,0.6);
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
             100% { transform: scale(1.05); }
@@ -312,7 +315,7 @@
     </div>
 
     <div class="player-wrapper">
-        <video id="audioPlayer" preload="metadata"></video>
+        <video id="audioPlayer" preload="auto"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
@@ -338,7 +341,7 @@
 <script>
     // ---------- CONFIG ----------
     const MAX_QUESTIONS = 10;
-    const POOL_SIZE = 50; // aumentato per avere più probabilità
+    const POOL_SIZE = 50;
     const GRAPHQL_URL = 'https://graphql.animethemes.moe/';
     const MAX_PAGE_ATTEMPTS = 20;
 
@@ -354,6 +357,7 @@
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
+    let isBuffering = false;
 
     // DOM refs
     const audioVisual = document.getElementById('audioVisual');
@@ -407,9 +411,8 @@
         return json.data;
     }
 
-    // ---------- OTTIENI PAGINA CASUALE CON RETRY ----------
+    // ---------- OTTIENI PAGINA CASUALE ----------
     async function getRandomOpeningPool(count) {
-        // 1. Ottieni il numero totale di temi OP
         const countQuery = `
             query {
                 animethemePagination(first: 1, type: OP) {
@@ -428,7 +431,6 @@
             throw new Error('Nessun tema OP trovato.');
         }
 
-        // 2. Prova più pagine casuali finché non otteniamo abbastanza elementi
         let pool = [];
         let attempts = 0;
 
@@ -464,26 +466,29 @@
                 if (!theme.anime) continue;
                 if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
 
-                let videoLink = null;
+                let bestVideo = null;
                 for (const entry of theme.animethemeentries) {
                     if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
-                        const sorted = entry.videos.nodes.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-                        videoLink = sorted[0].link;
-                        break;
+                        // Scegli il video con la risoluzione più bassa (priorità: 480p > 720p > 1080p)
+                        // così il file è più leggero e lo streaming è più fluido
+                        const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
+                        // Prendi il primo che ha risoluzione >= 480 (se disponibile)
+                        const chosen = sorted.find(v => v.resolution >= 480) || sorted[0];
+                        if (!bestVideo || chosen.resolution < bestVideo.resolution) {
+                            bestVideo = chosen;
+                        }
                     }
                 }
-                if (!videoLink) continue;
+                if (!bestVideo) continue;
 
                 const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
                     pool.push({
                         name: name,
-                        videoUrl: videoLink
+                        videoUrl: bestVideo.link
                     });
                 }
             }
-
-            // Se abbiamo abbastanza, fermiamoci
             if (pool.length >= MAX_QUESTIONS + 3) break;
         }
 
@@ -559,6 +564,7 @@
         currentOptions = q.options;
         currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
+        isBuffering = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
@@ -579,13 +585,36 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
+        // Eventi per il buffering
+        audio.onwaiting = () => {
+            isBuffering = true;
+            audioVisual.className = 'audio-visual buffering';
+            audioVisual.textContent = '⏳';
+            nowPlaying.textContent = '⏳ Buffering in corso...';
+        };
+
+        audio.oncanplaythrough = () => {
+            isBuffering = false;
+            if (!audio.paused) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            } else {
+                audioVisual.className = 'audio-visual';
+                audioVisual.textContent = '▶️';
+                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            }
+        };
+
         audio.onloadedmetadata = () => {
-            nowPlaying.textContent = '🎵 Pronto per la riproduzione';
-            audioVisual.textContent = '▶️';
+            if (!isBuffering) {
+                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+                audioVisual.textContent = '▶️';
+            }
         };
 
         audio.ontimeupdate = () => {
-            if (audio.duration) {
+            if (audio.duration && !isBuffering) {
                 const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
                 timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
@@ -594,9 +623,11 @@
 
         audio.onplay = () => {
             isPlaying = true;
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = `🎵 Ascolta l'opening...`;
+            if (!isBuffering) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            }
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
