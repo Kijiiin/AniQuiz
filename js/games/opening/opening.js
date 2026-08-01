@@ -1,9 +1,13 @@
 // ============================================================
 //  LOGICA DI GIOCO – NON MODIFICARE SE NON SAI COSA FARE
-//  Il gioco usa la variabile globale `questions` definita in data.js
+//  Usa l'API di YouTube per cercare le opening
 // ============================================================
 
 (function() {
+    // 🔑 INSERISCI QUI LA TUA API KEY DI YOUTUBE
+    // (prendila dalla console Google Cloud, come nel tuo altro progetto)
+    const YOUTUBE_API_KEY = "AIzaSyCeM7KVc9lZsdd8HM5b-PAfhx0usN8Aubo";
+
     // Decodifica Base64
     function decodeBase64(str) {
         return atob(str);
@@ -42,8 +46,25 @@
         return encodedOptions.map(enc => decodeBase64(enc));
     }
 
+    // 🔍 CERCA UN VIDEO SU YOUTUBE
+    async function searchYouTubeVideo(query) {
+        try {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&type=video&videoEmbeddable=true`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.items && data.items.length > 0) {
+                return data.items[0].id.videoId;
+            }
+            return null;
+        } catch (error) {
+            console.error("Errore ricerca YouTube:", error);
+            return null;
+        }
+    }
+
     // Carica una domanda
-    function loadQuestion(index) {
+    async function loadQuestion(index) {
         if (index >= totalQuestions) {
             showFinalScreen();
             return;
@@ -52,8 +73,26 @@
         const q = questions[index];
         questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
 
-        // Carica video YouTube
-        youtubePlayer.src = `https://www.youtube.com/embed/${q.videoId}?rel=0&modestbranding=1&autoplay=1&origin=${window.location.origin}`;
+        // 🔍 Decodifica il nome dell'opening per la ricerca
+        const openingName = decodeBase64(q.opening);
+        const animeName = decodeBase64(q.anime);
+        
+        // Mostra un messaggio di caricamento
+        questionCounter.textContent = `🔍 Cerco "${openingName}"...`;
+
+        // Cerca il video su YouTube
+        const searchQuery = `${openingName} ${animeName} opening`;
+        const videoId = await searchYouTubeVideo(searchQuery);
+
+        if (videoId) {
+            // Carica il video (senza origin per evitare blocchi)
+            youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1`;
+            questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
+        } else {
+            // Fallback: usa un video placeholder o mostra errore
+            questionCounter.textContent = `⚠️ Video non trovato per "${openingName}"`;
+            youtubePlayer.src = "";
+        }
 
         // Decodifica e mescola le opzioni
         const decodedOptions = decodeOptions(q.options);
