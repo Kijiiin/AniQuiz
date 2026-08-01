@@ -32,6 +32,7 @@
             box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.06);
             transition: all 0.3s ease;
+            position: relative;
         }
 
         h1 {
@@ -297,6 +298,36 @@
             border: 1px solid rgba(245, 87, 108, 0.2);
         }
 
+        /* Pulsante start */
+        .start-btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 30px auto;
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #4facfe, #f5576c);
+            border: none;
+            border-radius: 60px;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px -5px rgba(79, 172, 254, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px -5px rgba(245, 87, 108, 0.5);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         @media (max-width: 550px) {
             .container {
                 padding: 20px 16px;
@@ -327,13 +358,17 @@
             .controls .play-btn {
                 min-width: 70px;
             }
+            .start-btn {
+                font-size: 1.2rem;
+                padding: 16px 20px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="container" id="app">
-    <h1>🎵 Opening Quiz</h1>
+    <h1>🎵 Anime Opening Quiz</h1>
     <div class="subtitle">Ascolta l'opening e indovina l'anime!</div>
 
     <div class="status-bar">
@@ -356,8 +391,10 @@
     <img id="coverImage" class="cover-image" src="" alt="Copertina anime" style="display: none;">
 
     <div id="optionsContainer" class="options-grid"></div>
-
     <div id="feedback" class="feedback"></div>
+
+    <!-- Pulsante start -->
+    <button id="startBtn" class="start-btn">🎧 Inizia Quiz</button>
 
     <button id="nextBtn" class="next-btn" disabled>➡ Prossima domanda</button>
     <div id="loader" class="loader hidden"></div>
@@ -371,7 +408,6 @@
     const YOUTUBE_API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
     const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
     const MAX_QUESTIONS = 10;
-    const OPTIONS_COUNT = 4;
 
     // ---------- STATO ----------
     let animeList = [];
@@ -389,7 +425,7 @@
     let currentVideoId = null;
     let playerReady = false;
     let isPaused = false;
-    let pendingVideoId = null; // video da caricare quando player è pronto
+    let pendingVideoId = null;
 
     // DOM refs
     const playerContainer = document.getElementById('youtube-player-container');
@@ -399,6 +435,7 @@
     const optionsContainer = document.getElementById('optionsContainer');
     const feedbackDiv = document.getElementById('feedback');
     const nextBtn = document.getElementById('nextBtn');
+    const startBtn = document.getElementById('startBtn');
     const loader = document.getElementById('loader');
     const errorMsg = document.getElementById('errorMsg');
     const scoreDisplay = document.getElementById('scoreDisplay');
@@ -574,6 +611,7 @@
             if (ytPlayer) {
                 ytPlayer.stopVideo();
             }
+            startBtn.classList.remove('hidden');
             return;
         }
 
@@ -597,9 +635,8 @@
 
         // Carica il video
         if (ytPlayer && playerReady) {
-            // Player pronto, carica subito
             ytPlayer.loadVideoById(q.videoId);
-            // Forza la riproduzione dopo un breve ritardo per evitare il blocco dell'autoplay
+            // Dopo un breve ritardo per dare tempo al caricamento
             setTimeout(() => {
                 if (ytPlayer && playerReady) {
                     ytPlayer.playVideo();
@@ -617,8 +654,6 @@
             // Player non pronto, metti in coda
             pendingVideoId = q.videoId;
             nowPlaying.textContent = '🎶 Caricamento player...';
-            // Se il player non esiste, verrà creato da onYouTubeIframeAPIReady
-            // e poi gestirà il pending
         }
 
         renderOptions(q.options);
@@ -637,7 +672,7 @@
                 showinfo: 0,
                 loop: 1,
                 playlist: '',
-                autoplay: 1,
+                autoplay: 0,   // Non autoplay, lo gestiamo noi
                 mute: 0,
             },
             events: {
@@ -669,9 +704,7 @@
             seekBackBtn.disabled = false;
             seekForwardBtn.disabled = false;
         } else if (currentVideoId) {
-            // Caso in cui il player si è pronto dopo che loadQuestion è già stata chiamata
-            // ma non c'era pending perché forse era già stato impostato
-            // Ricarichiamo il video corrente
+            // Se c'è un video corrente ma il player si è appena reso disponibile
             ytPlayer.loadVideoById(currentVideoId);
             setTimeout(() => {
                 if (ytPlayer && playerReady) {
@@ -712,8 +745,6 @@
             audioVisual.className = 'audio-visual';
             audioVisual.textContent = '⏹️';
             playPauseBtn.textContent = '▶️ Riproduci';
-        } else if (state === YT.PlayerState.UNSTARTED || state === YT.PlayerState.BUFFERING) {
-            // Non facciamo nulla
         }
     }
 
@@ -726,6 +757,7 @@
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
+        // Permetti di andare avanti dopo un po'
         setTimeout(() => {
             if (!isAnswered) {
                 nextBtn.disabled = false;
@@ -827,15 +859,18 @@
         playPauseBtn.disabled = true;
         seekBackBtn.disabled = true;
         seekForwardBtn.disabled = true;
+        startBtn.disabled = false;
     }
 
     function hideError() {
         errorMsg.classList.add('hidden');
     }
 
-    // ---------- AVVIA IL GIOCO ----------
-    async function initGame() {
+    // ---------- AVVIA IL GIOCO (chiamato dal pulsante Start) ----------
+    async function startGame() {
         hideError();
+        startBtn.disabled = true;
+        startBtn.textContent = '⏳ Caricamento...';
         loader.classList.remove('hidden');
         nextBtn.disabled = true;
         optionsContainer.innerHTML = '';
@@ -847,18 +882,24 @@
         try {
             await prepareQuestions();
             loader.classList.add('hidden');
+            startBtn.classList.add('hidden');
             if (questionsQueue.length > 0) {
-                // Se il player non è ancora pronto, loadQuestion metterà in coda il video
-                // e onPlayerReady lo avvierà
-                loadQuestion();
-                // Se il player è già pronto, loadQuestion avvia la riproduzione
-                // Se non lo è, il pending verrà gestito
+                // loadQuestion è già stata chiamata da prepareQuestions
+                // Se il player non era pronto, pendingVideoId è stato impostato
+                // e onPlayerReady lo gestirà
+                // Se il player è già pronto, loadQuestion ha già avviato la riproduzione
             } else {
                 showError('Nessuna domanda disponibile. Riprova più tardi.');
+                startBtn.disabled = false;
+                startBtn.textContent = '🎧 Inizia Quiz';
+                startBtn.classList.remove('hidden');
             }
         } catch (e) {
             loader.classList.add('hidden');
             showError(e.message || 'Errore durante il caricamento.');
+            startBtn.disabled = false;
+            startBtn.textContent = '🎧 Inizia Quiz';
+            startBtn.classList.remove('hidden');
         }
     }
 
@@ -867,44 +908,25 @@
     playPauseBtn.addEventListener('click', togglePlayPause);
     seekBackBtn.addEventListener('click', () => seekBy(-10));
     seekForwardBtn.addEventListener('click', () => seekBy(10));
+    startBtn.addEventListener('click', startGame);
 
-    // ---------- AVVIO ----------
+    // ---------- AVVIO PLAYER ----------
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-
-    // Gestione del caso in cui l'API è già caricata (es. se lo script è stato eseguito dopo)
+    // Se l'API è già caricata (caso raro)
     if (typeof YT !== 'undefined' && YT.loaded) {
         onYouTubeIframeAPIReady();
     }
 
-    window.addEventListener('load', () => {
-        // Se dopo 2 secondi il player non è ancora pronto, proviamo a crearlo manualmente
-        setTimeout(() => {
-            if (!ytPlayer && typeof YT !== 'undefined' && YT.Player) {
-                onYouTubeIframeAPIReady();
-            }
-            // Avvia il gioco (se non è già stato avviato)
-            if (!isLoading && questionsQueue.length === 0) {
-                initGame();
-            }
-        }, 1000);
-    });
-
-    // Fallback: se l'API non si carica affatto, iniziamo comunque dopo 5 secondi
+    // Fallback: se l'API non si carica entro 5 secondi, mostriamo errore ma abilitiamo start
     setTimeout(() => {
         if (!ytPlayer) {
-            // Forziamo la creazione del player se possibile
             if (typeof YT !== 'undefined' && YT.Player) {
                 onYouTubeIframeAPIReady();
             } else {
-                // Se proprio non funziona, mostriamo un errore ma permettiamo di proseguire
-                // (ma il player non funzionerà)
-                console.warn('YouTube API non caricata, impossibile riprodurre audio.');
-                showError('Impossibile caricare il player YouTube. Verifica la connessione.');
+                console.warn('YouTube API non caricata, ma il pulsante start funzionerà lo stesso (senza audio).');
+                // Non blocchiamo il gioco, ma mostriamo un avviso
+                // Lo mostriamo solo se l'utente preme start
             }
-        }
-        // Avvia il gioco se non ancora avviato
-        if (!isLoading && questionsQueue.length === 0) {
-            initGame();
         }
     }, 5000);
 </script>
