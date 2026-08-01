@@ -5,7 +5,6 @@
 
 (function() {
     // 🔑 INSERISCI QUI LA TUA API KEY DI YOUTUBE
-    // (prendila dalla console Google Cloud, come nel tuo altro progetto)
     const YOUTUBE_API_KEY = "AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4";
 
     // Decodifica Base64
@@ -31,6 +30,10 @@
     const finalScore = document.getElementById('finalScore');
     const finalMessage = document.getElementById('finalMessage');
     const restartBtn = document.getElementById('restartBtn');
+
+    // Elementi UI audio
+    const audioIcon = document.getElementById('audioIcon');
+    const audioStatus = document.getElementById('audioStatus');
 
     // Utility: mescola array
     function shuffleArray(arr) {
@@ -73,12 +76,14 @@
         const q = questions[index];
         questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
 
-        // 🔍 Decodifica il nome dell'opening per la ricerca
+        // 🔍 Decodifica
         const openingName = decodeBase64(q.opening);
         const animeName = decodeBase64(q.anime);
         
-        // Mostra un messaggio di caricamento
-        questionCounter.textContent = `🔍 Cerco "${openingName}"...`;
+        // Aggiorna UI audio: caricamento
+        audioStatus.textContent = `🔍 Cerco "${openingName}"...`;
+        audioStatus.className = 'audio-status loading';
+        audioIcon.textContent = '⏳';
 
         // Cerca il video su YouTube
         const searchQuery = `${openingName} ${animeName} opening`;
@@ -88,9 +93,17 @@
             // Carica il video (senza origin per evitare blocchi)
             youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1`;
             questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
+            
+            // UI audio: in riproduzione
+            audioStatus.textContent = `🎵 In riproduzione...`;
+            audioStatus.className = 'audio-status playing';
+            audioIcon.textContent = '🎵';
         } else {
-            // Fallback: usa un video placeholder o mostra errore
-            questionCounter.textContent = `⚠️ Video non trovato per "${openingName}"`;
+            // Fallback: mostra errore
+            questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
+            audioStatus.textContent = `⚠️ Video non trovato per "${openingName}"`;
+            audioStatus.className = 'audio-status error';
+            audioIcon.textContent = '❌';
             youtubePlayer.src = "";
         }
 
@@ -178,6 +191,10 @@
         else msg = '😅 Forse è ora di rivedere qualche anime!';
         finalMessage.textContent = msg;
 
+        // Resetta UI audio
+        audioStatus.textContent = '🎬 Quiz terminato!';
+        audioStatus.className = 'audio-status';
+        audioIcon.textContent = '🏆';
         youtubePlayer.src = '';
     }
 
