@@ -335,11 +335,11 @@
     const MAX_QUESTIONS = 10;
     const CACHE_KEY = 'animeOpeningCache';
     const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
-    const REQUEST_DELAY = 2500; // ms tra una richiesta e l'altra (aumentato)
+    const REQUEST_DELAY = 2500;
     const MAX_RETRIES = 2;
-    const CONSECUTIVE_429_LIMIT = 3; // se otteniamo 3 429 di fila, passiamo al fallback
+    const CONSECUTIVE_429_LIMIT = 3;
 
-    // ---------- LISTA DI BACKUP (emergenza) ----------
+    // ---------- FALLBACK ----------
     const FALLBACK_ANIME = [
         { id: 1, title: { romaji: "Kimetsu no Yaiba" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-F6Tu5L6s8P4A.jpg" }, videoId: "pmanD_7S6GM" },
         { id: 2, title: { romaji: "Jujutsu Kaisen" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx117075-SbN7Fk5HwZ6F.jpg" }, videoId: "1tk1Gv3M9lE" },
@@ -368,7 +368,7 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
-    let consecutive429 = 0; // conta i 429 consecutivi
+    let consecutive429 = 0;
     let usingFallback = false;
 
     // YouTube player
@@ -378,6 +378,7 @@
     let isPaused = false;
     let pendingVideoId = null;
     let playerErrorCount = 0;
+    let playerReadyTimeout = null;
 
     // DOM refs
     const audioVisual = document.getElementById('audioVisual');
@@ -395,7 +396,7 @@
     const seekBackBtn = document.getElementById('seekBackBtn');
     const seekForwardBtn = document.getElementById('seekForwardBtn');
 
-    // ---------- FUNZIONI DI UTILITÀ ----------
+    // ---------- FUNZIONI ----------
     function shuffleArray(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -430,7 +431,7 @@
         } catch {}
     }
 
-    // ---------- API ANILIST ----------
+    // ---------- API ----------
     async function fetchAnimeList() {
         const query = `
             query ($page: Int, $perPage: Int) {
@@ -455,24 +456,19 @@
             return json.data.Page.media;
         } catch (e) {
             console.error('Errore Anilist:', e);
-            // In caso di errore di AniList, usiamo direttamente il fallback
             return null;
         }
     }
 
-    // ---------- API YOUTUBE CON BACKOFF E FALLBACK ----------
     async function searchYouTubeOpening(anime, cache) {
         const title = getAnimeTitle(anime);
-        if (cache[title]) {
-            return cache[title];
-        }
+        if (cache[title]) return cache[title];
 
         const query = `${title} opening`;
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`;
 
         let retries = 0;
-        let backoff = 3000; // ms iniziali
-
+        let backoff = 3000;
         while (retries <= MAX_RETRIES) {
             try {
                 const response = await fetch(url);
@@ -480,19 +476,14 @@
                     consecutive429++;
                     console.warn(`Rate limit per "${title}", attesa ${backoff}ms...`);
                     await sleep(backoff);
-                    backoff *= 2; // raddoppia
+                    backoff *= 2;
                     retries++;
                     continue;
                 }
-                // Se abbiamo avuto 429, resettiamo il contatore solo se riceviamo un 200
                 consecutive429 = 0;
-                if (!response.ok) {
-                    console.warn(`HTTP ${response.status} per "${title}"`);
-                    return null;
-                }
+                if (!response.ok) return null;
                 const data = await response.json();
                 if (data.items && data.items.length > 0) {
-                    // Filtra trailer/amv
                     const video = data.items.find(item => {
                         const snippet = item.snippet || {};
                         const desc = snippet.description ? snippet.description.toLowerCase() : '';
@@ -509,7 +500,7 @@
                 }
                 return null;
             } catch (e) {
-                console.warn(`Errore di rete per "${title}":`, e);
+                console.warn(`Errore per "${title}":`, e);
                 retries++;
                 await sleep(backoff);
                 backoff *= 2;
@@ -518,16 +509,13 @@
         return null;
     }
 
-    // ---------- PREPARAZIONE DOMANDE (ibrida) ----------
+    // ---------- PREPARAZIONE DOMANDE ----------
     async function prepareQuestions() {
-        // Prova a prendere la lista da AniList
         let fetched = await fetchAnimeList();
         if (fetched && fetched.length >= 10) {
             animeList = fetched;
             shuffleArray(animeList);
         } else {
-            // Se AniList fallisce, usiamo il fallback
-            console.warn('AniList non disponibile, uso fallback.');
             animeList = [];
             usingFallback = true;
         }
@@ -538,7 +526,6 @@
         let attempts = 0;
         const maxAttempts = animeList.length > 0 ? animeList.length * 2 : FALLBACK_ANIME.length * 2;
 
-        // Se abbiamo animeList da AniList, proviamo a cercare su YouTube
         if (animeList.length > 0) {
             while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts && consecutive429 < CONSECUTIVE_429_LIMIT) {
                 attempts++;
@@ -555,7 +542,6 @@
                     continue;
                 }
 
-                // Distrattori
                 const distractors = [];
                 const available = animeList.filter((_, i) => !usedIndices.has(i) && i !== idx);
                 shuffleArray(available);
@@ -577,17 +563,14 @@
             }
         }
 
-        // Se non abbiamo abbastanza domande o abbiamo avuto troppi 429, usiamo il fallback
         if (questionsQueue.length < MAX_QUESTIONS || consecutive429 >= CONSECUTIVE_429_LIMIT) {
-            console.warn('Passaggio al fallback per completare il quiz.');
+            console.warn('Passaggio al fallback.');
             usingFallback = true;
-            // Usa la lista FALLBACK_ANIME
             const fallbackShuffled = shuffleArray([...FALLBACK_ANIME]);
             const fallbackUsed = new Set();
             for (const candidate of fallbackShuffled) {
                 if (fallbackUsed.has(candidate.id)) continue;
                 fallbackUsed.add(candidate.id);
-                // Prendi 3 distrattori dal fallback stesso
                 const others = FALLBACK_ANIME.filter(a => a.id !== candidate.id && !fallbackUsed.has(a.id));
                 shuffleArray(others);
                 const distractors = others.slice(0, 3);
@@ -606,7 +589,7 @@
         setCache(cache);
 
         if (questionsQueue.length === 0) {
-            throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
+            throw new Error('Impossibile preparare domande.');
         }
 
         if (questionsQueue.length > MAX_QUESTIONS) {
@@ -624,56 +607,9 @@
         }
     }
 
-    // ---------- CARICARE UNA DOMANDA ----------
-    function loadQuestion() {
-        if (currentQuestion >= questionsQueue.length) {
-            feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
-            optionsContainer.innerHTML = '';
-            nextBtn.disabled = true;
-            audioVisual.className = 'audio-visual';
-            nowPlaying.textContent = '🏁 Quiz finito!';
-            coverImage.style.display = 'none';
-            playPauseBtn.disabled = true;
-            seekBackBtn.disabled = true;
-            seekForwardBtn.disabled = true;
-            if (ytPlayer) ytPlayer.stopVideo();
-            startBtn.classList.remove('hidden');
-            return;
-        }
-
-        const q = questionsQueue[currentQuestion];
-        correctAnime = q.anime;
-        currentOptions = q.options;
-        currentVideoId = q.videoId;
-        isAnswered = false;
-        isPaused = false;
-        playerErrorCount = 0;
-
-        updateScoreAndCounter();
-        feedbackDiv.innerHTML = '';
-        nextBtn.disabled = true;
-        coverImage.style.display = 'none';
-
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
-        playPauseBtn.textContent = '⏳ Caricamento...';
-
-        if (ytPlayer && playerReady) {
-            ytPlayer.loadVideoById(q.videoId);
-            audioVisual.className = 'audio-visual';
-            audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '🎵 Caricamento video...';
-        } else {
-            pendingVideoId = q.videoId;
-            nowPlaying.textContent = '🎶 Attivazione player...';
-        }
-
-        renderOptions(q.options);
-    }
-
-    // ---------- PLAYER YOUTUBE ----------
+    // ---------- PLAYER ----------
     function onYouTubeIframeAPIReady() {
+        // Aggiungiamo l'origin esplicitamente per evitare errori di postMessage
         ytPlayer = new YT.Player('youtube-player-container', {
             height: '0',
             width: '0',
@@ -686,7 +622,7 @@
                 loop: 0,
                 autoplay: 0,
                 mute: 0,
-                origin: window.location.origin,
+                origin: window.location.origin, // IMPORTANTE: imposta l'origine corretta
             },
             events: {
                 onReady: onPlayerReady,
@@ -694,10 +630,28 @@
                 onError: onPlayerError,
             }
         });
+
+        // Timeout per il caricamento del player
+        if (playerReadyTimeout) clearTimeout(playerReadyTimeout);
+        playerReadyTimeout = setTimeout(() => {
+            if (!playerReady) {
+                console.warn('Player YouTube non pronto dopo 10 secondi.');
+                nowPlaying.textContent = '⚠️ Player in ritardo, riprova tra poco.';
+                // Non blocchiamo il gioco: possiamo abilitare il pulsante "Salta" se la domanda è già visualizzata
+                if (!isAnswered && currentQuestion < questionsQueue.length) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = '⏭️ Salta (player non caricato)';
+                }
+            }
+        }, 10000);
     }
 
     function onPlayerReady(event) {
         playerReady = true;
+        if (playerReadyTimeout) {
+            clearTimeout(playerReadyTimeout);
+            playerReadyTimeout = null;
+        }
         if (pendingVideoId) {
             const vid = pendingVideoId;
             pendingVideoId = null;
@@ -773,24 +727,54 @@
         }
     }
 
-    // ---------- CONTROLLI ----------
-    function togglePlayPause() {
-        if (!ytPlayer || !playerReady) return;
-        if (isPaused || !isPlaying) {
-            ytPlayer.playVideo();
-        } else {
-            ytPlayer.pauseVideo();
+    // ---------- CARICA DOMANDA ----------
+    function loadQuestion() {
+        if (currentQuestion >= questionsQueue.length) {
+            feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
+            optionsContainer.innerHTML = '';
+            nextBtn.disabled = true;
+            audioVisual.className = 'audio-visual';
+            nowPlaying.textContent = '🏁 Quiz finito!';
+            coverImage.style.display = 'none';
+            playPauseBtn.disabled = true;
+            seekBackBtn.disabled = true;
+            seekForwardBtn.disabled = true;
+            if (ytPlayer) ytPlayer.stopVideo();
+            startBtn.classList.remove('hidden');
+            return;
         }
+
+        const q = questionsQueue[currentQuestion];
+        correctAnime = q.anime;
+        currentOptions = q.options;
+        currentVideoId = q.videoId;
+        isAnswered = false;
+        isPaused = false;
+        playerErrorCount = 0;
+
+        updateScoreAndCounter();
+        feedbackDiv.innerHTML = '';
+        nextBtn.disabled = true;
+        coverImage.style.display = 'none';
+
+        playPauseBtn.disabled = true;
+        seekBackBtn.disabled = true;
+        seekForwardBtn.disabled = true;
+        playPauseBtn.textContent = '⏳ Caricamento...';
+
+        if (ytPlayer && playerReady) {
+            ytPlayer.loadVideoById(q.videoId);
+            audioVisual.className = 'audio-visual';
+            audioVisual.textContent = '⏳';
+            nowPlaying.textContent = '🎵 Caricamento video...';
+        } else {
+            pendingVideoId = q.videoId;
+            nowPlaying.textContent = '🎶 Attivazione player...';
+        }
+
+        renderOptions(q.options);
     }
 
-    function seekBy(seconds) {
-        if (!ytPlayer || !playerReady) return;
-        const currentTime = ytPlayer.getCurrentTime();
-        const newTime = Math.max(0, currentTime + seconds);
-        ytPlayer.seekTo(newTime, true);
-    }
-
-    // ---------- RENDER OPZIONI ----------
     function renderOptions(options) {
         optionsContainer.innerHTML = '';
         options.forEach((anime, index) => {
@@ -803,7 +787,6 @@
         });
     }
 
-    // ---------- GESTIONE CLICK OPZIONE ----------
     function handleOptionClick(index) {
         if (isAnswered || isLoading) return;
         isAnswered = true;
@@ -842,7 +825,6 @@
         nextBtn.textContent = '➡ Prossima domanda';
     }
 
-    // ---------- PROSSIMA DOMANDA ----------
     function goToNextQuestion() {
         if (isLoading) return;
         currentQuestion++;
@@ -853,7 +835,24 @@
         }
     }
 
-    // ---------- UI HELPERS ----------
+    // ---------- CONTROLLI ----------
+    function togglePlayPause() {
+        if (!ytPlayer || !playerReady) return;
+        if (isPaused || !isPlaying) {
+            ytPlayer.playVideo();
+        } else {
+            ytPlayer.pauseVideo();
+        }
+    }
+
+    function seekBy(seconds) {
+        if (!ytPlayer || !playerReady) return;
+        const currentTime = ytPlayer.getCurrentTime();
+        const newTime = Math.max(0, currentTime + seconds);
+        ytPlayer.seekTo(newTime, true);
+    }
+
+    // ---------- UI ----------
     function updateScoreAndCounter() {
         scoreDisplay.textContent = `🏆 ${score}`;
         const total = questionsQueue.length || MAX_QUESTIONS;
@@ -876,7 +875,7 @@
         errorMsg.classList.add('hidden');
     }
 
-    // ---------- AVVIA IL GIOCO ----------
+    // ---------- START ----------
     async function startGame() {
         hideError();
         startBtn.disabled = true;
@@ -913,12 +912,13 @@
     seekForwardBtn.addEventListener('click', () => seekBy(10));
     startBtn.addEventListener('click', startGame);
 
-    // ---------- AVVIO PLAYER ----------
+    // ---------- INIZIALIZZAZIONE PLAYER ----------
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
     if (typeof YT !== 'undefined' && YT.loaded) {
         onYouTubeIframeAPIReady();
     }
 
+    // Fallback se l'API non si carica
     setTimeout(() => {
         if (!ytPlayer) {
             if (typeof YT !== 'undefined' && YT.Player) {
