@@ -315,7 +315,7 @@
     </div>
 
     <div class="player-wrapper">
-        <video id="audioPlayer" preload="auto"></video>
+        <video id="audioPlayer" preload="metadata"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
@@ -354,6 +354,7 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
+    let isSeeking = false; // flag per evitare che il buffering forzato interferisca
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
@@ -537,7 +538,7 @@
         loadQuestion();
     }
 
-    // ---------- CARICA DOMANDA (con gestione buffering) ----------
+    // ---------- CARICA DOMANDA (con gestione seek) ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
@@ -560,13 +561,14 @@
         currentOptions = q.options;
         currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
+        isSeeking = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
-        // Imposta il player con preload auto
-        audio.preload = 'auto';
+        // Imposta il player con preload metadata (carica solo metadati)
+        audio.preload = 'metadata';
         audio.src = currentAudioUrl;
         audio.load();
         audio.currentTime = 0;
@@ -582,16 +584,18 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        // --- GESTIONE BUFFERING ---
+        // --- GESTIONE BUFFERING E SEEK ---
         let bufferingTimeout = null;
 
         audio.onwaiting = () => {
+            // Se stiamo cercando di spostarci, non attiviamo il buffering forzato
+            if (isSeeking) return;
             audioVisual.className = 'audio-visual buffering';
             audioVisual.textContent = '⏳';
             nowPlaying.textContent = '⏳ Buffering in corso...';
             clearTimeout(bufferingTimeout);
             bufferingTimeout = setTimeout(() => {
-                if (!audio.paused) {
+                if (!audio.paused && !isSeeking) {
                     audio.pause();
                     audio.load();
                     audio.play().catch(() => {});
@@ -601,7 +605,7 @@
 
         audio.oncanplaythrough = () => {
             clearTimeout(bufferingTimeout);
-            if (!audio.paused) {
+            if (!audio.paused && !isSeeking) {
                 audioVisual.className = 'audio-visual playing';
                 audioVisual.textContent = '🔊';
                 nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -614,7 +618,7 @@
 
         audio.onloadedmetadata = () => {
             clearTimeout(bufferingTimeout);
-            if (!audio.paused && !audio.seeking) {
+            if (!audio.paused && !audio.seeking && !isSeeking) {
                 audioVisual.className = 'audio-visual playing';
                 audioVisual.textContent = '🔊';
                 nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -626,6 +630,33 @@
         };
 
         audio.ontimeupdate = () => {
+            if (audio.duration && !isSeeking) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressBar.value = percent;
+                timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+            }
+        };
+
+        // Eventi per gestire il seek
+        audio.onseeking = () => {
+            isSeeking = true;
+            audioVisual.className = 'audio-visual buffering';
+            audioVisual.textContent = '⏳';
+            nowPlaying.textContent = '⏳ Caricamento...';
+        };
+
+        audio.onseeked = () => {
+            isSeeking = false;
+            if (!audio.paused) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            } else {
+                audioVisual.className = 'audio-visual';
+                audioVisual.textContent = '▶️';
+                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            }
+            // Aggiorna la barra di progresso
             if (audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
@@ -635,9 +666,11 @@
 
         audio.onplay = () => {
             isPlaying = true;
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            if (!isSeeking) {
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            }
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
@@ -685,7 +718,17 @@
     }
 
     function seekBy(seconds) {
-        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + seconds));
+        if (!audio.duration) return;
+        let newTime = audio.currentTime + seconds;
+        newTime = Math.max(0, Math.min(audio.duration, newTime));
+        // Usa fastSeek se disponibile per evitare buffering pesante
+        if (audio.fastSeek) {
+            audio.fastSeek(newTime);
+        } else {
+            audio.currentTime = newTime;
+        }
+        // Se il player era in pausa, rimane in pausa; se era in play, continua
+        // L'evento onseeked gestirà l'aggiornamento dell'UI
     }
 
     // ---------- RENDER OPZIONI ----------
@@ -809,7 +852,11 @@
     progressBar.addEventListener('input', (e) => {
         if (audio.duration) {
             const time = (e.target.value / 100) * audio.duration;
-            audio.currentTime = time;
+            if (audio.fastSeek) {
+                audio.fastSeek(time);
+            } else {
+                audio.currentTime = time;
+            }
         }
     });
 
