@@ -79,35 +79,53 @@
             color: var(--secondary);
         }
 
-        /* ---------- PLAYER AUDIO (NASCOSTO) ---------- */
+        /* ---------- PLAYER AUDIO (video invisibile ma funzionante) ---------- */
         .player-wrapper {
+            position: relative;
             background: #1a1a2e;
             border-radius: 16px;
-            padding: 20px;
-            text-align: center;
+            overflow: hidden;
             margin-bottom: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-height: 180px;
         }
 
-        /* Nascondi il video, ma l'audio continua a funzionare */
-        .video-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
+        /* Contenitore video: invisibile ma funzionante */
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
             overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
+            background: #000;
         }
 
-        /* UI dell'audio fittizia */
-        .audio-player-ui {
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            opacity: 0;           /* Rende il video invisibile */
+            pointer-events: none; /* Impedisce interazione */
+        }
+
+        /* Overlay con UI audio fittizia (sopra il video) */
+        .audio-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 10px;
-            padding: 15px;
+            padding: 20px;
+            background: #1a1a2e;
+            z-index: 2;
+            pointer-events: none;
         }
 
         .audio-icon {
@@ -300,15 +318,13 @@
             <div class="score-box">🏆 <span id="scoreDisplay">0</span> / <span id="totalDisplay">0</span></div>
         </div>
 
-        <!-- Player Audio (video nascosto) -->
+        <!-- Player Audio (video invisibile ma funzionante) -->
         <div class="player-wrapper">
-            <!-- Iframe YouTube nascosto (riproduce solo l'audio) -->
-            <div class="video-hidden">
+            <div class="video-container">
                 <iframe id="youtubePlayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             </div>
-            
-            <!-- UI fittizia per l'audio (mostrata all'utente) -->
-            <div class="audio-player-ui">
+            <!-- UI fittizia sopra il video -->
+            <div class="audio-overlay">
                 <div class="audio-icon" id="audioIcon">🎵</div>
                 <div class="audio-status" id="audioStatus">⏳ Caricamento...</div>
             </div>
@@ -334,7 +350,6 @@
         </div>
     </div>
 
-    <!-- Caricamento dei due script separati -->
     <script src="../js/games/opening/opening-database.js"></script>
     <script src="../js/games/opening/opening.js"></script>
 </body>
