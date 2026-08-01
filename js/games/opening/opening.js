@@ -6,7 +6,7 @@
 (function() {
     // 🔑 INSERISCI QUI LA TUA API KEY DI YOUTUBE
     // (prendila dalla console Google Cloud, come nel tuo altro progetto)
-    const YOUTUBE_API_KEY = "AIzaSyCeM7KVc9lZsdd8HM5b-PAfhx0usN8Aubo";
+    const YOUTUBE_API_KEY = "AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4";
 
     // Decodifica Base64
     function decodeBase64(str) {
