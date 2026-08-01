@@ -342,8 +342,7 @@
     // ---------- CONFIG ----------
     const MAX_QUESTIONS = 10;
     const POOL_SIZE = 50;
-    const GRAPHQL_URL = 'https://graphql.animethemes.moe/';
-    const MAX_PAGE_ATTEMPTS = 20;
+    const API_URL = 'https://api.animethemes.moe/animethemes?filter[type]=OP&sort=random&limit=' + POOL_SIZE + '&include=videos';
 
     // ---------- STATO ----------
     let currentQuestion = 0;
@@ -392,113 +391,45 @@
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
-    // ---------- API GRAPHQL ----------
-    async function graphqlFetch(query, variables = {}) {
-        const response = await fetch(GRAPHQL_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ query, variables })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const json = await response.json();
-        if (json.errors) {
-            console.error('GraphQL errors:', json.errors);
-            throw new Error(json.errors[0].message);
-        }
-        return json.data;
-    }
-
-    // ---------- OTTIENI PAGINA CASUALE ----------
-    async function getRandomOpeningPool(count) {
-        const countQuery = `
-            query {
-                animethemePagination(first: 1, type: OP) {
-                    paginatorInfo {
-                        total
-                        lastPage
-                        perPage
-                    }
-                }
-            }
-        `;
-        const countData = await graphqlFetch(countQuery);
-        const lastPage = countData.animethemePagination.paginatorInfo.lastPage;
-
-        if (!lastPage || lastPage === 0) {
-            throw new Error('Nessun tema OP trovato.');
-        }
-
-        let pool = [];
-        let attempts = 0;
-
-        while (pool.length < MAX_QUESTIONS + 3 && attempts < MAX_PAGE_ATTEMPTS) {
-            attempts++;
-            const randomPage = Math.floor(Math.random() * lastPage) + 1;
-
-            const fetchQuery = `
-                query ($page: Int, $first: Int) {
-                    animethemePagination(page: $page, first: $first, type: OP) {
-                        data {
-                            id
-                            anime {
-                                id
-                                title { romaji }
-                            }
-                            animethemeentries {
-                                videos {
-                                    nodes {
-                                        link
-                                        resolution
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            `;
-            const fetchData = await graphqlFetch(fetchQuery, { page: randomPage, first: count });
-            const themes = fetchData.animethemePagination.data;
+    // ---------- OTTIENI POOL CON API REST ----------
+    async function getRandomOpeningPool() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const themes = data.animethemes || [];
+            const pool = [];
 
             for (const theme of themes) {
                 if (!theme.anime) continue;
-                if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
+                if (!theme.videos || theme.videos.length === 0) continue;
 
-                let bestVideo = null;
-                for (const entry of theme.animethemeentries) {
-                    if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
-                        // Scegli il video con la risoluzione più bassa (priorità: 480p > 720p > 1080p)
-                        // così il file è più leggero e lo streaming è più fluido
-                        const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
-                        // Prendi il primo che ha risoluzione >= 480 (se disponibile)
-                        const chosen = sorted.find(v => v.resolution >= 480) || sorted[0];
-                        if (!bestVideo || chosen.resolution < bestVideo.resolution) {
-                            bestVideo = chosen;
-                        }
-                    }
-                }
-                if (!bestVideo) continue;
+                // Scegli il video con risoluzione più bassa (priorità: 480p > 720p > 1080p)
+                const sorted = theme.videos.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
+                // Prendi il primo con risoluzione >= 480, altrimenti il più basso
+                const chosen = sorted.find(v => v.resolution >= 480) || sorted[0];
+                if (!chosen) continue;
 
                 const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
                     pool.push({
                         name: name,
-                        videoUrl: bestVideo.link
+                        videoUrl: chosen.link
                     });
                 }
             }
-            if (pool.length >= MAX_QUESTIONS + 3) break;
-        }
 
-        shuffleArray(pool);
-        return pool;
+            shuffleArray(pool);
+            return pool;
+        } catch (e) {
+            console.error('Errore nel caricamento della pool:', e);
+            return [];
+        }
     }
 
     // ---------- PREPARAZIONE DOMANDE ----------
     async function prepareQuestions() {
-        let pool = await getRandomOpeningPool(POOL_SIZE);
+        let pool = await getRandomOpeningPool();
 
         if (pool.length < MAX_QUESTIONS + 3) {
             throw new Error(`Pool troppo piccola (${pool.length}). Servono almeno ${MAX_QUESTIONS + 3} anime.`);
@@ -585,7 +516,6 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        // Eventi per il buffering
         audio.onwaiting = () => {
             isBuffering = true;
             audioVisual.className = 'audio-visual buffering';
