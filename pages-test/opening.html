@@ -32,7 +32,6 @@
             box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.06);
             transition: all 0.3s ease;
-            position: relative;
         }
 
         h1 {
@@ -84,18 +83,21 @@
         .player-wrapper {
             position: relative;
             width: 100%;
-            padding: 10px 0 20px;
+            padding-bottom: 30px;
+            margin-bottom: 10px;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            flex-direction: column;
         }
 
-        #youtube-player-container {
+        #youtube-player {
             width: 0;
             height: 0;
+            border: none;
             opacity: 0;
-            pointer-events: none;
             position: absolute;
+            pointer-events: none;
         }
 
         .audio-visual {
@@ -124,49 +126,10 @@
 
         .now-playing {
             text-align: center;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             color: #7a82aa;
             margin-top: 5px;
-            min-height: 28px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 12px 0 8px;
-        }
-
-        .controls button {
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 60px;
-            color: #f0f0f0;
-            font-size: 1.2rem;
-            padding: 8px 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .controls button:hover:not(:disabled) {
-            background: rgba(79, 172, 254, 0.2);
-            border-color: #4facfe;
-            transform: scale(1.05);
-        }
-
-        .controls button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .controls .play-btn {
-            min-width: 100px;
-            justify-content: center;
+            min-height: 24px;
         }
 
         .cover-image {
@@ -298,43 +261,6 @@
             border: 1px solid rgba(245, 87, 108, 0.2);
         }
 
-        .start-btn {
-            display: block;
-            width: 100%;
-            max-width: 300px;
-            margin: 30px auto;
-            padding: 20px 30px;
-            background: linear-gradient(135deg, #4facfe, #f5576c);
-            border: none;
-            border-radius: 60px;
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px -5px rgba(79, 172, 254, 0.4);
-            letter-spacing: 1px;
-        }
-
-        .start-btn:hover:not(:disabled) {
-            transform: scale(1.05);
-            box-shadow: 0 15px 40px -5px rgba(245, 87, 108, 0.5);
-        }
-
-        .start-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .progress-text {
-            text-align: center;
-            color: #a0a6c7;
-            font-size: 0.95rem;
-            margin: 10px 0;
-            min-height: 24px;
-        }
-
         @media (max-width: 550px) {
             .container {
                 padding: 20px 16px;
@@ -354,28 +280,13 @@
             h1 {
                 font-size: 1.8rem;
             }
-            .controls {
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-            .controls button {
-                font-size: 1rem;
-                padding: 6px 14px;
-            }
-            .controls .play-btn {
-                min-width: 70px;
-            }
-            .start-btn {
-                font-size: 1.2rem;
-                padding: 16px 20px;
-            }
         }
     </style>
 </head>
 <body>
 
 <div class="container" id="app">
-    <h1>🎵 Anime Opening Quiz</h1>
+    <h1>🎵 Opening Quiz</h1>
     <div class="subtitle">Ascolta l'opening e indovina l'anime!</div>
 
     <div class="status-bar">
@@ -385,73 +296,53 @@
 
     <div class="player-wrapper">
         <div class="audio-visual" id="audioVisual">🔊</div>
-        <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
-        <div id="youtube-player-container"></div>
-
-        <div class="controls">
-            <button id="seekBackBtn" title="Indietro 10s">⏪ -10</button>
-            <button id="playPauseBtn" class="play-btn" disabled>▶️ Riproduci</button>
-            <button id="seekForwardBtn" title="Avanti 10s">+10 ⏩</button>
-        </div>
+        <div class="now-playing" id="nowPlaying">🎶 In riproduzione...</div>
+        <iframe id="youtube-player" allow="autoplay; encrypted-media" allowfullscreen></iframe>
     </div>
 
     <img id="coverImage" class="cover-image" src="" alt="Copertina anime" style="display: none;">
 
     <div id="optionsContainer" class="options-grid"></div>
+
     <div id="feedback" class="feedback"></div>
 
-    <button id="startBtn" class="start-btn">🎧 Inizia Quiz</button>
-    <div id="progressText" class="progress-text hidden"></div>
+    <button id="nextBtn" class="next-btn" disabled>➡ Prossima domanda</button>
     <div id="loader" class="loader hidden"></div>
     <div id="errorMsg" class="error-msg hidden"></div>
-
-    <button id="nextBtn" class="next-btn" disabled>➡ Prossima domanda</button>
 </div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
     // ---------- CONFIG ----------
     const YOUTUBE_API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
     const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
     const MAX_QUESTIONS = 10;
-    const TIMEOUT_SECONDS = 30; // timeout globale per la preparazione
+    const OPTIONS_COUNT = 4;
 
     // ---------- STATO ----------
-    let animeList = [];
+    let animeList = [];          // tutti gli anime caricati
     let currentQuestion = 0;
     let score = 0;
-    let correctAnime = null;
-    let currentOptions = [];
+    let correctAnime = null;     // anime corrente (oggetto)
+    let currentOptions = [];     // array di oggetti anime (4)
     let isAnswered = false;
     let isPlaying = false;
-    let questionsQueue = [];
+    let youtubeIframe = null;
+    let currentVideoId = null;
+    let questionsQueue = [];     // coda di domande pronte
     let isLoading = false;
 
-    // YouTube player
-    let ytPlayer = null;
-    let currentVideoId = null;
-    let playerReady = false;
-    let isPaused = false;
-    let pendingVideoId = null;
-
     // DOM refs
-    const playerContainer = document.getElementById('youtube-player-container');
+    const playerIframe = document.getElementById('youtube-player');
     const audioVisual = document.getElementById('audioVisual');
     const nowPlaying = document.getElementById('nowPlaying');
     const coverImage = document.getElementById('coverImage');
     const optionsContainer = document.getElementById('optionsContainer');
     const feedbackDiv = document.getElementById('feedback');
     const nextBtn = document.getElementById('nextBtn');
-    const startBtn = document.getElementById('startBtn');
     const loader = document.getElementById('loader');
     const errorMsg = document.getElementById('errorMsg');
     const scoreDisplay = document.getElementById('scoreDisplay');
     const questionCounter = document.getElementById('questionCounter');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const seekBackBtn = document.getElementById('seekBackBtn');
-    const seekForwardBtn = document.getElementById('seekForwardBtn');
-    const progressText = document.getElementById('progressText');
 
     // ---------- FUNZIONI DI UTILITÀ ----------
     function shuffleArray(arr) {
@@ -515,155 +406,119 @@
         }
     }
 
-    // ---------- API YOUTUBE (con timeout) ----------
-    async function searchYouTubeOpening(anime, signal) {
+    // ---------- API YOUTUBE ----------
+    async function searchYouTubeOpening(anime) {
         const title = getAnimeTitle(anime);
-        // Solo una query per velocizzare
-        const query = `${title} opening`;
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
-        try {
-            const response = await fetch(url, { signal });
-            const data = await response.json();
-            if (data.items && data.items.length > 0) {
-                const item = data.items[0];
-                if (item.id && item.id.videoId) {
-                    return item.id.videoId;
+        // Prova con "opening" e "OP"
+        const queries = [
+            `${title} opening`,
+            `${title} OP`,
+            `${title} opening full`,
+        ];
+        for (const query of queries) {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.items && data.items.length > 0) {
+                    // Prendiamo il primo video che sembra essere un opening (escludiamo trailer, etc?)
+                    // Per semplicità prendiamo il primo
+                    const item = data.items[0];
+                    if (item.id && item.id.videoId) {
+                        return item.id.videoId;
+                    }
                 }
+            } catch (e) {
+                console.warn(`Ricerca fallita per "${query}"`, e);
             }
-            return null;
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                console.warn('Richiesta YouTube annullata per timeout:', title);
-            } else {
-                console.warn(`Errore ricerca per "${query}"`, e);
-            }
-            return null;
+            // Piccola pausa per evitare rate limit
+            await sleep(200);
         }
+        return null;
     }
 
-    // ---------- PREPARAZIONE DOMANDE (in parallelo) ----------
+    // ---------- CARICAMENTO DOMANDE ----------
     async function prepareQuestions() {
         if (animeList.length === 0) {
-            animeList = await fetchAnimeList();
-            if (!animeList || animeList.length === 0) {
-                throw new Error('Nessun anime trovato.');
+            try {
+                animeList = await fetchAnimeList();
+                if (!animeList || animeList.length === 0) {
+                    throw new Error('Nessun anime trovato.');
+                }
+                // Mescoliamo per varietà
+                shuffleArray(animeList);
+            } catch (e) {
+                showError(e.message);
+                return;
             }
-            shuffleArray(animeList);
         }
 
-        // Prendiamo un pool di anime (i primi 30 per velocità)
-        const pool = animeList.slice(0, 30);
-        // Mescoliamo e prendiamo i primi 20 per tentativi
-        shuffleArray(pool);
-        const candidates = pool.slice(0, 20);
+        // Prepariamo MAX_QUESTIONS domande
+        questionsQueue = [];
+        let attempts = 0;
+        const maxAttempts = animeList.length * 3;
+        let usedAnimeIds = new Set();
 
-        const results = [];
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_SECONDS * 1000);
+        while (questionsQueue.length < MAX_QUESTIONS && attempts < maxAttempts) {
+            attempts++;
+            const candidate = animeList[Math.floor(Math.random() * animeList.length)];
+            if (usedAnimeIds.has(candidate.id)) continue;
+            usedAnimeIds.add(candidate.id);
 
-        try {
-            // Ricerca in parallelo con Promise.allSettled
-            const searchPromises = candidates.map(async (anime, index) => {
-                const videoId = await searchYouTubeOpening(anime, controller.signal);
-                // Aggiorniamo il progresso
-                const progress = Math.min(100, Math.round(((index + 1) / candidates.length) * 100));
-                progressText.textContent = `🔍 Ricerca opening: ${progress}%`;
-                if (videoId) {
-                    return { anime, videoId };
-                }
-                return null;
+            // Cerchiamo il video su YouTube
+            const videoId = await searchYouTubeOpening(candidate);
+            if (!videoId) {
+                // Se non troviamo video, saltiamo questo anime
+                usedAnimeIds.delete(candidate.id);
+                continue;
+            }
+
+            // Selezioniamo 3 distrattori (anime diversi)
+            const distractors = [];
+            const available = animeList.filter(a => a.id !== candidate.id && !usedAnimeIds.has(a.id));
+            shuffleArray(available);
+            for (let i = 0; i < 3 && i < available.length; i++) {
+                distractors.push(available[i]);
+            }
+            if (distractors.length < 3) {
+                // Se non abbiamo abbastanza distrattori, riproviamo
+                usedAnimeIds.delete(candidate.id);
+                continue;
+            }
+
+            // Costruiamo l'array di opzioni (mescolato)
+            const options = [candidate, ...distractors];
+            shuffleArray(options);
+
+            questionsQueue.push({
+                anime: candidate,
+                videoId: videoId,
+                options: options,
             });
-
-            const settled = await Promise.allSettled(searchPromises);
-            clearTimeout(timeoutId);
-
-            const found = [];
-            for (const result of settled) {
-                if (result.status === 'fulfilled' && result.value) {
-                    found.push(result.value);
-                }
-            }
-
-            if (found.length === 0) {
-                throw new Error('Nessuna opening trovata su YouTube.');
-            }
-
-            // Selezioniamo MAX_QUESTIONS tra quelle trovate
-            shuffleArray(found);
-            const selected = found.slice(0, MAX_QUESTIONS);
-
-            // Per ogni anime selezionato, dobbiamo trovare 3 distrattori
-            const usedIds = new Set(selected.map(s => s.anime.id));
-            const availableDistractors = animeList.filter(a => !usedIds.has(a.id));
-            shuffleArray(availableDistractors);
-
-            questionsQueue = [];
-            for (const item of selected) {
-                const distractors = [];
-                for (const dist of availableDistractors) {
-                    if (distractors.length >= 3) break;
-                    if (!usedIds.has(dist.id)) {
-                        distractors.push(dist);
-                        usedIds.add(dist.id);
-                    }
-                }
-                // Se non abbiamo abbastanza distrattori, cerchiamo tra tutti (anche già usati?)
-                if (distractors.length < 3) {
-                    // Rimescoliamo e prendiamo da tutto l'elenco
-                    const allOthers = animeList.filter(a => a.id !== item.anime.id);
-                    shuffleArray(allOthers);
-                    for (const dist of allOthers) {
-                        if (distractors.length >= 3) break;
-                        if (!distractors.some(d => d.id === dist.id)) {
-                            distractors.push(dist);
-                        }
-                    }
-                }
-                // Se ancora meno di 3, saltiamo
-                if (distractors.length < 3) continue;
-
-                const options = [item.anime, ...distractors];
-                shuffleArray(options);
-                questionsQueue.push({
-                    anime: item.anime,
-                    videoId: item.videoId,
-                    options: options,
-                });
-            }
-
-            if (questionsQueue.length === 0) {
-                throw new Error('Impossibile costruire domande con distrattori sufficienti.');
-            }
-
-            // Tagliamo a MAX_QUESTIONS
-            questionsQueue = questionsQueue.slice(0, MAX_QUESTIONS);
-            currentQuestion = 0;
-            score = 0;
-            updateScoreAndCounter();
-
-        } catch (e) {
-            clearTimeout(timeoutId);
-            throw e;
-        } finally {
-            progressText.textContent = '';
         }
+
+        if (questionsQueue.length === 0) {
+            throw new Error('Impossibile preparare abbastanza domande. Riprova più tardi.');
+        }
+
+        // Reset stato
+        currentQuestion = 0;
+        score = 0;
+        updateScoreAndCounter();
+        loadQuestion();
     }
 
     // ---------- CARICARE UNA DOMANDA ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
+            // Fine del quiz
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${MAX_QUESTIONS}`;
             optionsContainer.innerHTML = '';
             nextBtn.disabled = true;
+            playerIframe.src = '';
             audioVisual.className = 'audio-visual';
             nowPlaying.textContent = '🏁 Quiz finito!';
             coverImage.style.display = 'none';
-            playPauseBtn.disabled = true;
-            seekBackBtn.disabled = true;
-            seekForwardBtn.disabled = true;
-            if (ytPlayer) {
-                ytPlayer.stopVideo();
-            }
             return;
         }
 
@@ -672,159 +527,59 @@
         currentOptions = q.options;
         currentVideoId = q.videoId;
         isAnswered = false;
-        isPaused = false;
+        isPlaying = false;
 
+        // Aggiorna UI
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
+
+        // Carica il player YouTube
+        loadYouTubePlayer(q.videoId);
+
+        // Mostra cover image dell'anime corretto (opzionale, ma lo mostriamo dopo che ha risposto?)
+        // Lo mostriamo subito come hint visivo? Meglio nasconderlo finché non si risponde.
         coverImage.style.display = 'none';
 
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
-        playPauseBtn.textContent = '⏳ Caricamento...';
-
-        if (ytPlayer && playerReady) {
-            ytPlayer.loadVideoById(q.videoId);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
-        } else {
-            pendingVideoId = q.videoId;
-            nowPlaying.textContent = '🎶 Caricamento player...';
-        }
-
+        // Genera opzioni
         renderOptions(q.options);
+
+        // Reset visuale audio
+        audioVisual.className = 'audio-visual';
+        audioVisual.textContent = '⏳';
+        nowPlaying.textContent = '🎶 Caricamento...';
     }
 
     // ---------- PLAYER YOUTUBE ----------
-    function onYouTubeIframeAPIReady() {
-        ytPlayer = new YT.Player('youtube-player-container', {
-            height: '0',
-            width: '0',
-            playerVars: {
-                controls: 0,
-                disablekb: 1,
-                modestbranding: 1,
-                rel: 0,
-                showinfo: 0,
-                loop: 1,
-                playlist: '',
-                autoplay: 0,
-                mute: 0,
-            },
-            events: {
-                onReady: onPlayerReady,
-                onStateChange: onPlayerStateChange,
-                onError: onPlayerError,
-            }
-        });
-    }
+    function loadYouTubePlayer(videoId) {
+        // Usiamo iframe con autoplay e parametri per nascondere controlli
+        const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&disablekb=1&modestbranding=1&rel=0&showinfo=0&loop=1&playlist=${videoId}&mute=0`;
+        playerIframe.src = src;
 
-    function onPlayerReady(event) {
-        playerReady = true;
-        if (pendingVideoId) {
-            const vid = pendingVideoId;
-            pendingVideoId = null;
-            ytPlayer.loadVideoById(vid);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
+        // Quando il video è caricato, cambiamo icona
+        playerIframe.onload = () => {
+            // Non possiamo sapere quando l'audio è realmente partito, ma diamo per buono
             audioVisual.className = 'audio-visual playing';
             audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+            nowPlaying.textContent = `🎵 In riproduzione: ${getAnimeTitle(correctAnime)}`;
             isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
-        } else if (currentVideoId) {
-            ytPlayer.loadVideoById(currentVideoId);
-            setTimeout(() => {
-                if (ytPlayer && playerReady) {
-                    ytPlayer.playVideo();
-                }
-            }, 300);
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
-        }
-    }
+        };
 
-    function onPlayerStateChange(event) {
-        const state = event.data;
-        if (state === YT.PlayerState.PLAYING) {
-            isPlaying = true;
-            isPaused = false;
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            playPauseBtn.textContent = '⏸️ Pausa';
-            playPauseBtn.disabled = false;
-            seekBackBtn.disabled = false;
-            seekForwardBtn.disabled = false;
-        } else if (state === YT.PlayerState.PAUSED) {
-            isPlaying = false;
-            isPaused = true;
+        // Se l'iframe non si carica (errore), gestiamo
+        playerIframe.onerror = () => {
             audioVisual.className = 'audio-visual';
-            audioVisual.textContent = '⏸️';
-            playPauseBtn.textContent = '▶️ Riproduci';
-        } else if (state === YT.PlayerState.ENDED) {
-            isPlaying = false;
-            isPaused = true;
-            audioVisual.className = 'audio-visual';
-            audioVisual.textContent = '⏹️';
-            playPauseBtn.textContent = '▶️ Riproduci';
-        }
-    }
-
-    function onPlayerError(event) {
-        console.error('Errore YouTube:', event.data);
-        audioVisual.className = 'audio-visual';
-        audioVisual.textContent = '⚠️';
-        nowPlaying.textContent = '❌ Errore di riproduzione';
-        feedbackDiv.innerHTML = '❌ Impossibile riprodurre l\'audio. Riprova.';
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
-        setTimeout(() => {
-            if (!isAnswered) {
-                nextBtn.disabled = false;
-            }
-        }, 2000);
-    }
-
-    // ---------- CONTROLLI ----------
-    function togglePlayPause() {
-        if (!ytPlayer || !playerReady) return;
-        if (isPaused || !isPlaying) {
-            ytPlayer.playVideo();
-        } else {
-            ytPlayer.pauseVideo();
-        }
-    }
-
-    function seekBy(seconds) {
-        if (!ytPlayer || !playerReady) return;
-        const currentTime = ytPlayer.getCurrentTime();
-        const newTime = Math.max(0, currentTime + seconds);
-        ytPlayer.seekTo(newTime, true);
+            audioVisual.textContent = '⚠️';
+            nowPlaying.textContent = '❌ Errore di riproduzione';
+            feedbackDiv.innerHTML = '❌ Impossibile riprodurre l\'audio. Riprova.';
+            // Permettiamo di passare alla prossima dopo un po'
+            setTimeout(() => {
+                if (!isAnswered) {
+                    // Saltiamo questa domanda?
+                    // meglio dare all'utente la possibilità di andare avanti
+                    nextBtn.disabled = false;
+                }
+            }, 2000);
+        };
     }
 
     // ---------- RENDER OPZIONI ----------
@@ -848,6 +603,7 @@
         const selectedAnime = currentOptions[index];
         const isCorrect = selectedAnime.id === correctAnime.id;
 
+        // Disabilita tutti i pulsanti
         const buttons = document.querySelectorAll('.option-btn');
         buttons.forEach((btn, i) => {
             btn.disabled = true;
@@ -859,6 +615,7 @@
             }
         });
 
+        // Aggiorna punteggio
         if (isCorrect) {
             score++;
             feedbackDiv.innerHTML = '✅ Corretto! +1 punto';
@@ -870,11 +627,15 @@
 
         updateScoreAndCounter();
 
+        // Mostra la cover dell'anime corretto
         if (correctAnime.coverImage && correctAnime.coverImage.large) {
             coverImage.src = correctAnime.coverImage.large;
             coverImage.style.display = 'block';
         }
 
+        // Ferma l'audio? Lo lasciamo continuare, ma possiamo fermarlo? Non importante.
+
+        // Abilita il pulsante "Prossima"
         nextBtn.disabled = false;
     }
 
@@ -885,7 +646,8 @@
         if (currentQuestion < questionsQueue.length) {
             loadQuestion();
         } else {
-            loadQuestion(); // gestisce fine
+            // Fine quiz
+            loadQuestion(); // gestisce il caso fine
         }
     }
 
@@ -900,13 +662,7 @@
         errorMsg.textContent = msg;
         errorMsg.classList.remove('hidden');
         loader.classList.add('hidden');
-        progressText.textContent = '';
         nextBtn.disabled = true;
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
-        startBtn.disabled = false;
-        startBtn.textContent = '🎧 Inizia Quiz';
     }
 
     function hideError() {
@@ -914,25 +670,16 @@
     }
 
     // ---------- AVVIA IL GIOCO ----------
-    async function startGame() {
+    async function initGame() {
         hideError();
-        startBtn.disabled = true;
-        startBtn.textContent = '⏳ Caricamento...';
         loader.classList.remove('hidden');
-        progressText.classList.remove('hidden');
-        progressText.textContent = '📡 Caricamento anime...';
         nextBtn.disabled = true;
         optionsContainer.innerHTML = '';
         feedbackDiv.innerHTML = '';
-        playPauseBtn.disabled = true;
-        seekBackBtn.disabled = true;
-        seekForwardBtn.disabled = true;
 
         try {
             await prepareQuestions();
             loader.classList.add('hidden');
-            progressText.classList.add('hidden');
-            startBtn.classList.add('hidden');
             if (questionsQueue.length > 0) {
                 loadQuestion();
             } else {
@@ -940,35 +687,28 @@
             }
         } catch (e) {
             loader.classList.add('hidden');
-            progressText.classList.add('hidden');
             showError(e.message || 'Errore durante il caricamento.');
         }
     }
 
     // ---------- EVENTI ----------
     nextBtn.addEventListener('click', goToNextQuestion);
-    playPauseBtn.addEventListener('click', togglePlayPause);
-    seekBackBtn.addEventListener('click', () => seekBy(-10));
-    seekForwardBtn.addEventListener('click', () => seekBy(10));
-    startBtn.addEventListener('click', startGame);
 
-    // ---------- AVVIO PLAYER ----------
-    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-    if (typeof YT !== 'undefined' && YT.loaded) {
-        onYouTubeIframeAPIReady();
-    }
+    // ---------- AVVIO ----------
+    window.addEventListener('load', () => {
+        initGame();
+    });
 
-    // Fallback: se l'API non si carica, mostriamo errore ma abilitiamo start
-    setTimeout(() => {
-        if (!ytPlayer) {
-            if (typeof YT !== 'undefined' && YT.Player) {
-                onYouTubeIframeAPIReady();
-            } else {
-                console.warn('YouTube API non caricata, il gioco funzionerà senza audio.');
-                // Non blocchiamo il gioco
-            }
-        }
-    }, 5000);
+    // Gestione errore iframe (se non si carica)
+    playerIframe.addEventListener('error', () => {
+        // Già gestito in onerror
+    });
+
+    // Se l'utente clicca su "Prossima" mentre è ancora in caricamento, non fare nulla
+    // (già gestito da isLoading)
+
+    // Funzione per ricaricare il gioco (se necessario)
+    window.restartGame = initGame;
 </script>
 
 </body>
