@@ -5,18 +5,34 @@
 
 (function() {
     // 🔑 INSERISCI QUI LA TUA API KEY DI YOUTUBE
+    // (prendila dalla console Google Cloud, come nel tuo altro progetto)
     const YOUTUBE_API_KEY = "AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4";
 
-    // Decodifica Base64
+    // Decodifica Base64 (opzionale)
+    function encodeBase64(str) {
+        return btoa(str);
+    }
+
     function decodeBase64(str) {
         return atob(str);
     }
 
-    // Stato del gioco
+    // Prepara le domande: converte in Base64 per offuscare
+    function prepareQuestions(data) {
+        return data.map(q => ({
+            opening: q.opening,
+            anime: q.anime,
+            options: q.options.map(opt => encodeBase64(opt)),
+            correct: encodeBase64(q.correct)
+        }));
+    }
+
+    // Stati del gioco
+    let questions = prepareQuestions(questionsData);
     let currentIndex = 0;
     let score = 0;
     let answered = false;
-    const totalQuestions = questions.length;
+    let totalQuestions = questions.length;
 
     // DOM elements
     const youtubePlayer = document.getElementById('youtubePlayer');
@@ -52,7 +68,7 @@
     // 🔍 CERCA UN VIDEO SU YOUTUBE
     async function searchYouTubeVideo(query) {
         try {
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&type=video&videoEmbeddable=true`;
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&type=video`;
             const response = await fetch(url);
             const data = await response.json();
             
@@ -76,9 +92,8 @@
         const q = questions[index];
         questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
 
-        // 🔍 Decodifica
-        const openingName = decodeBase64(q.opening);
-        const animeName = decodeBase64(q.anime);
+        const openingName = q.opening;
+        const animeName = q.anime;
         
         // Aggiorna UI audio: caricamento
         audioStatus.textContent = `🔍 Cerco "${openingName}"...`;
@@ -87,17 +102,29 @@
 
         // Cerca il video su YouTube
         const searchQuery = `${openingName} ${animeName} opening`;
-        const videoId = await searchYouTubeVideo(searchQuery);
+        let videoId = await searchYouTubeVideo(searchQuery);
+
+        // Se non trova, prova con solo il nome dell'opening
+        if (!videoId) {
+            videoId = await searchYouTubeVideo(`${openingName} opening`);
+        }
 
         if (videoId) {
-            // Carica il video (senza origin per evitare blocchi)
-            youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1`;
+            // Carica il video con autoplay e muto (per superare i blocchi browser)
+            youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1&mute=1`;
             questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
             
             // UI audio: in riproduzione
             audioStatus.textContent = `🎵 In riproduzione...`;
             audioStatus.className = 'audio-status playing';
             audioIcon.textContent = '🎵';
+
+            // Forza la riproduzione dopo il caricamento (se l'autoplay non parte)
+            setTimeout(() => {
+                try {
+                    youtubePlayer.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                } catch (e) { /* ignora */ }
+            }, 1000);
         } else {
             // Fallback: mostra errore
             questionCounter.textContent = `Domanda ${index + 1} / ${totalQuestions}`;
@@ -113,11 +140,9 @@
         const shuffled = shuffleArray([...decodedOptions]);
         const correctIndex = shuffled.indexOf(correctDecoded);
 
-        // Salva l'indice corretto nel container
         optionsContainer.dataset.correctIndex = correctIndex;
         optionsContainer.dataset.answered = 'false';
 
-        // Crea i bottoni
         optionsContainer.innerHTML = '';
         shuffled.forEach((opt, i) => {
             const btn = document.createElement('button');
@@ -205,6 +230,8 @@
         scoreDisplay.textContent = '0';
         answered = false;
         shuffleArray(questions);
+        totalQuestions = questions.length;
+        totalDisplay.textContent = totalQuestions;
         loadQuestion(0);
     }
 
@@ -217,4 +244,5 @@
     scoreDisplay.textContent = '0';
     shuffleArray(questions);
     loadQuestion(0);
+    console.log('🎮 Gioco avviato con', totalQuestions, 'domande');
 })();
