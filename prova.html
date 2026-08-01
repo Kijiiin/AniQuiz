@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cerca Opening Anime su YouTube</title>
+    <style>
+        /* Stili per rendere la pagina più carina */
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 800px;
+        }
+        input, button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        input {
+            width: 60%;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .video-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: left;
+        }
+        .video-item img {
+            width: 120px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .video-item a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+        .video-item a:hover {
+            color: #007bff;
+        }
+        .video-item p {
+            margin: 5px 0 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .error {
+            color: red;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Cerca Opening Anime</h1>
+        <p>Cerca la sigla del tuo anime preferito!</p>
+        <div>
+            <!-- Campo di ricerca -->
+            <input type="text" id="searchInput" placeholder="es. Attack on Titan opening" />
+            <!-- Pulsante per avviare la ricerca -->
+            <button id="searchButton">Cerca</button>
+        </div>
+        <!-- Zona dove verranno mostrati i risultati -->
+        <div id="results"></div>
+        <!-- Zona per mostrare eventuali errori -->
+        <div id="errorMessage" class="error"></div>
+    </div>
+
+    <script>
+        // --- INIZIO CODICE JAVASCRIPT ---
+
+        // 1. Inserisci QUI la tua chiave API
+        const API_KEY = '
+AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
+
+        // 2. Prendi i riferimenti agli elementi HTML
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('errorMessage');
+
+        // 3. Funzione per cercare i video
+        async function searchYouTube(query) {
+            // Pulisce i messaggi di errore precedenti
+            errorDiv.textContent = '';
+
+            // Se la query è vuota, mostra un avviso
+            if (!query.trim()) {
+                errorDiv.textContent = 'Inserisci il nome di un anime.';
+                return;
+            }
+
+            // Mostra un messaggio di caricamento
+            resultsDiv.innerHTML = '<p>Caricamento in corso...</p>';
+
+            // Costruisce l'URL per la chiamata API
+            // Aggiungiamo "opening" alla ricerca per trovare le sigle
+            // Impostiamo maxResults a 10 per avere 10 risultati
+            // Specifichiamo 'video' per avere solo video
+            // Impostiamo order by relevance per risultati più pertinenti
+            // Aggiungiamo videoEmbeddable true per assicurarci che i video possano essere riprodotti
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' opening')}&maxResults=10&type=video&order=relevance&videoEmbeddable=true&key=${API_KEY}`;
+
+            try {
+                // Fa la richiesta all'API di YouTube
+                const response = await fetch(url);
+
+                // Controlla se la risposta è ok (status 200)
+                if (!response.ok) {
+                    // Se non è ok, prova a leggere il messaggio di errore dall'API
+                    const errorData = await response.json();
+                    throw new Error(`Errore API: ${errorData.error.message || response.statusText}`);
+                }
+
+                // Converte la risposta in JSON
+                const data = await response.json();
+
+                // Controlla se ci sono risultati
+                if (data.items && data.items.length > 0) {
+                    displayResults(data.items);
+                } else {
+                    resultsDiv.innerHTML = '<p>Nessuna opening trovata per questo anime.</p>';
+                }
+
+            } catch (error) {
+                // Gestisce eventuali errori (di rete, di API, ecc.)
+                console.error('Errore durante la ricerca:', error);
+                errorDiv.textContent = `Si è verificato un errore: ${error.message}. Assicurati che la chiave API sia corretta.`;
+                resultsDiv.innerHTML = ''; // Pulisce i risultati in caso di errore
+            }
+        }
+
+        // 4. Funzione per mostrare i risultati nella pagina
+        function displayResults(videos) {
+            // Pulisce la zona dei risultati
+            resultsDiv.innerHTML = '';
+
+            // Itera su ogni video trovato
+            videos.forEach(video => {
+                const videoId = video.id.videoId;
+                const title = video.snippet.title;
+                const description = video.snippet.description;
+                const thumbnail = video.snippet.thumbnails.medium.url; // Prende l'immagine di anteprima
+
+                // Crea un elemento div per ogni video
+                const videoItem = document.createElement('div');
+                videoItem.className = 'video-item';
+
+                // Crea il contenuto HTML dell'elemento
+                videoItem.innerHTML = `
+                    <img src="${thumbnail}" alt="${title}" />
+                    <div>
+                        <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank">${title}</a>
+                        <p>${description.substring(0, 100)}...</p>
+                    </div>
+                `;
+
+                // Aggiunge l'elemento alla zona dei risultati
+                resultsDiv.appendChild(videoItem);
+            });
+        }
+
+        // 5. Aggiunge gli "ascoltatori" per gli eventi
+        // Cerca quando si clicca sul pulsante
+        searchButton.addEventListener('click', () => {
+            searchYouTube(searchInput.value);
+        });
+
+        // Cerca anche quando si preme "Invio" nella barra di ricerca
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                searchYouTube(searchInput.value);
+            }
+        });
+
+        // --- FINE CODICE JAVASCRIPT ---
+    </script>
+</body>
+</html>
