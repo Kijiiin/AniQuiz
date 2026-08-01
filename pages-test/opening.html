@@ -338,8 +338,9 @@
 <script>
     // ---------- CONFIG ----------
     const MAX_QUESTIONS = 10;
-    const POOL_SIZE = 20;
+    const POOL_SIZE = 50; // aumentato per avere più probabilità
     const GRAPHQL_URL = 'https://graphql.animethemes.moe/';
+    const MAX_PAGE_ATTEMPTS = 20;
 
     // ---------- STATO ----------
     let currentQuestion = 0;
@@ -351,7 +352,6 @@
     let questionsQueue = [];
     let isLoading = false;
 
-    // Elemento audio (video nascosto)
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
 
@@ -407,7 +407,7 @@
         return json.data;
     }
 
-    // ---------- OTTIENI PAGINA CASUALE ----------
+    // ---------- OTTIENI PAGINA CASUALE CON RETRY ----------
     async function getRandomOpeningPool(count) {
         // 1. Ottieni il numero totale di temi OP
         const countQuery = `
@@ -428,71 +428,42 @@
             throw new Error('Nessun tema OP trovato.');
         }
 
-        const randomPage = Math.floor(Math.random() * lastPage) + 1;
+        // 2. Prova più pagine casuali finché non otteniamo abbastanza elementi
+        let pool = [];
+        let attempts = 0;
 
-        // 2. Recupera i temi da quella pagina con animethemeentries e videos (nodes)
-        const fetchQuery = `
-            query ($page: Int, $first: Int) {
-                animethemePagination(page: $page, first: $first, type: OP) {
-                    data {
-                        id
-                        type
-                        sequence
-                        anime {
+        while (pool.length < MAX_QUESTIONS + 3 && attempts < MAX_PAGE_ATTEMPTS) {
+            attempts++;
+            const randomPage = Math.floor(Math.random() * lastPage) + 1;
+
+            const fetchQuery = `
+                query ($page: Int, $first: Int) {
+                    animethemePagination(page: $page, first: $first, type: OP) {
+                        data {
                             id
-                            title { romaji }
-                        }
-                        animethemeentries {
-                            id
-                            version
-                            videos {
-                                nodes {
-                                    id
-                                    link
-                                    resolution
+                            anime {
+                                id
+                                title { romaji }
+                            }
+                            animethemeentries {
+                                videos {
+                                    nodes {
+                                        link
+                                        resolution
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-        `;
-        const fetchData = await graphqlFetch(fetchQuery, { page: randomPage, first: count });
-        const themes = fetchData.animethemePagination.data;
+            `;
+            const fetchData = await graphqlFetch(fetchQuery, { page: randomPage, first: count });
+            const themes = fetchData.animethemePagination.data;
 
-        // 3. Trasforma in oggetti utili
-        const pool = [];
-        for (const theme of themes) {
-            if (!theme.anime) continue;
-            if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
-
-            let videoLink = null;
-            // Cerca una entry con video
-            for (const entry of theme.animethemeentries) {
-                if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
-                    // Prendi il video con la risoluzione più alta
-                    const sorted = entry.videos.nodes.sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-                    videoLink = sorted[0].link;
-                    break;
-                }
-            }
-            if (!videoLink) continue;
-
-            const name = theme.anime.title.romaji || 'Anime sconosciuto';
-            pool.push({
-                name: name,
-                videoUrl: videoLink
-            });
-        }
-
-        // Se la pool è troppo piccola, prova un'altra pagina
-        if (pool.length < MAX_QUESTIONS + 3) {
-            const extraPage = Math.floor(Math.random() * lastPage) + 1;
-            const extraData = await graphqlFetch(fetchQuery, { page: extraPage, first: count });
-            const extraThemes = extraData.animethemePagination.data;
-            for (const theme of extraThemes) {
+            for (const theme of themes) {
                 if (!theme.anime) continue;
                 if (!theme.animethemeentries || theme.animethemeentries.length === 0) continue;
+
                 let videoLink = null;
                 for (const entry of theme.animethemeentries) {
                     if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
@@ -502,6 +473,7 @@
                     }
                 }
                 if (!videoLink) continue;
+
                 const name = theme.anime.title.romaji || 'Anime sconosciuto';
                 if (!pool.some(p => p.name === name)) {
                     pool.push({
@@ -510,6 +482,9 @@
                     });
                 }
             }
+
+            // Se abbiamo abbastanza, fermiamoci
+            if (pool.length >= MAX_QUESTIONS + 3) break;
         }
 
         shuffleArray(pool);
