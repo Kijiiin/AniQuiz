@@ -79,25 +79,68 @@
             color: var(--secondary);
         }
 
-        /* ---------- PLAYER YOUTUBE (titolo nascosto) ---------- */
-        .video-wrapper {
-            position: relative;
-            padding-bottom: 56.25%;
-            height: 0;
-            overflow: hidden;
+        /* ---------- PLAYER AUDIO (NASCOSTO) ---------- */
+        .player-wrapper {
+            background: #1a1a2e;
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
             margin-bottom: 20px;
-            background: #000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .video-wrapper iframe {
+
+        /* Nascondi il video, ma l'audio continua a funzionare */
+        .video-hidden {
             position: absolute;
-            top: -60px;
-            left: 0;
-            width: 100%;
-            height: calc(100% + 60px);
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
             border: 0;
-            pointer-events: auto;
+        }
+
+        /* UI dell'audio fittizia */
+        .audio-player-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .audio-icon {
+            font-size: 4rem;
+            animation: pulse 1.5s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        .audio-status {
+            font-size: 0.9rem;
+            color: #aaa;
+            background: rgba(255,255,255,0.05);
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+
+        .audio-status.playing {
+            color: #4ecdc4;
+        }
+
+        .audio-status.loading {
+            color: #ffd93d;
+        }
+
+        .audio-status.error {
+            color: #ff6b6b;
         }
 
         /* ---------- AREA DOMANDA ---------- */
@@ -243,6 +286,9 @@
             .game-container {
                 padding: 20px 15px 30px;
             }
+            .audio-icon {
+                font-size: 3rem;
+            }
         }
     </style>
 </head>
@@ -254,9 +300,18 @@
             <div class="score-box">🏆 <span id="scoreDisplay">0</span> / <span id="totalDisplay">0</span></div>
         </div>
 
-        <!-- Player YouTube (titolo nascosto) -->
-        <div class="video-wrapper">
-            <iframe id="youtubePlayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        <!-- Player Audio (video nascosto) -->
+        <div class="player-wrapper">
+            <!-- Iframe YouTube nascosto (riproduce solo l'audio) -->
+            <div class="video-hidden">
+                <iframe id="youtubePlayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+            
+            <!-- UI fittizia per l'audio (mostrata all'utente) -->
+            <div class="audio-player-ui">
+                <div class="audio-icon" id="audioIcon">🎵</div>
+                <div class="audio-status" id="audioStatus">⏳ Caricamento...</div>
+            </div>
         </div>
 
         <!-- Area domanda -->
