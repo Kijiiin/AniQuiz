@@ -183,19 +183,6 @@
             width: 100%;
             height: 100%;
             border: none;
-            pointer-events: auto;
-        }
-
-        /* OVERLAY CHE FA PASSARE SOLO SPAZIO, FRECCE E CLICK */
-        .video-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            background: transparent;
-            pointer-events: auto;
         }
 
         .video-container .loading {
@@ -205,7 +192,6 @@
             transform: translate(-50%, -50%);
             color: #fff;
             font-size: 1.2rem;
-            z-index: 5;
         }
 
         .video-info {
@@ -356,6 +342,14 @@
             color: #ffd700;
         }
 
+        .key-hint {
+            color: #666;
+            font-size: 0.7rem;
+            display: block;
+            text-align: center;
+            margin-top: 4px;
+        }
+
         @media (max-width: 600px) {
             .game-wrapper {
                 padding: 20px;
@@ -400,14 +394,12 @@
                 <kbd>+</kbd> / <kbd>-</kbd> = +1/-1 punto &nbsp;|&nbsp; 
                 <kbd>Shift</kbd> + <kbd>+</kbd> = +5 punti &nbsp;|&nbsp; 
                 <kbd>N</kbd> = prossimo video &nbsp;|&nbsp; 
-                <kbd>E</kbd> = termina partita &nbsp;|&nbsp; 
-                <kbd>Spazio</kbd> <kbd>←</kbd> <kbd>→</kbd> = controlli video
+                <kbd>E</kbd> = termina partita
             </div>
 
             <div class="video-container" id="videoContainer">
                 <div class="loading">⏳ Caricamento video...</div>
                 <iframe id="videoPlayer" src="" allowfullscreen></iframe>
-                <div class="video-overlay" id="videoOverlay"></div>
             </div>
 
             <div class="video-info" id="videoInfo">
@@ -463,7 +455,6 @@
             const startGameBtn = $('startGameBtn');
             const videoContainer = $('videoContainer');
             const videoPlayer = $('videoPlayer');
-            const videoOverlay = $('videoOverlay');
             const videoInfo = $('videoInfo');
             const scoreBoard = $('scoreBoard');
             const nextVideoBtn = $('nextVideoBtn');
@@ -684,26 +675,15 @@
 
             // ============================================================
             //  SCORCIATOIE DA TASTIERA
-            //  - Spazio, Freccia Destra, Freccia Sinistra: passano al video
-            //  - Tutti gli altri: intercettati dal gioco
             // ============================================================
             document.addEventListener('keydown', (e) => {
-                // Se stiamo scrivendo in un input, lascia fare
+                // Ignora se stiamo scrivendo in un input
                 if (e.target.tagName === 'INPUT') return;
 
                 // Se la partita non è iniziata o è finita
                 if (!gameScreen.classList.contains('active') || state.gameOver) return;
 
                 const key = e.key;
-
-                // 🔹 TASTI CHE VANNO AL PLAYER (NON INTERCETTATI)
-                if (key === ' ' || key === 'Space' || 
-                    key === 'ArrowRight' || key === 'ArrowLeft') {
-                    // Non facciamo nulla, lasciamo che il player li gestisca
-                    return;
-                }
-
-                // 🔹 TASTI INTERCETTATI DAL GIOCO
 
                 // Numeri 1-6 per selezionare giocatore
                 if (key >= '1' && key <= '6') {
@@ -712,7 +692,6 @@
                         state.selectedPlayerIndex = idx;
                         updateScoreBoard();
                         e.preventDefault();
-                        e.stopPropagation();
                     }
                     return;
                 }
@@ -720,7 +699,6 @@
                 // + e - per punti
                 if (key === '+' || key === '=') {
                     e.preventDefault();
-                    e.stopPropagation();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points += 5;
@@ -733,7 +711,6 @@
 
                 if (key === '-' || key === '_') {
                     e.preventDefault();
-                    e.stopPropagation();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points = Math.max(0, player.points - 5);
@@ -747,7 +724,6 @@
                 // N = prossimo video
                 if (key === 'n' || key === 'N') {
                     e.preventDefault();
-                    e.stopPropagation();
                     loadVideo();
                     return;
                 }
@@ -755,18 +731,9 @@
                 // E = termina partita
                 if (key === 'e' || key === 'E') {
                     e.preventDefault();
-                    e.stopPropagation();
                     endGame();
                     return;
                 }
-            }, true);
-
-            // ============================================================
-            //  GESTIONE CLICK SULL'OVERLAY - LI FA PASSARE AL VIDEO
-            // ============================================================
-            videoOverlay.addEventListener('click', (e) => {
-                // Il click passa attraverso l'overlay al video
-                // Non facciamo nulla, lasciamo che l'evento arrivi al iframe
             });
 
             // ============================================================
