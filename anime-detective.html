@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Detective · Con Retry</title>
+    <title>Anime Detective · Veloce</title>
     <style>
         * {
             margin: 0;
@@ -239,27 +239,12 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .status-badge {
-            display: inline-block;
-            padding: 2px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .badge-aired {
-            background: #1a3a2a;
-            color: #5ad87a;
-        }
-        .badge-upcoming {
-            background: #3a2a1a;
-            color: #d8a05a;
-        }
         .retry-info {
             color: #d8a05a;
             font-size: 0.85rem;
             text-align: center;
             margin-top: 4px;
+            min-height: 24px;
         }
         @media (max-width: 550px) {
             .game-wrapper { padding: 14px; }
@@ -341,8 +326,7 @@
                 isAnswered: false,
                 isGameOver: false,
                 isLoading: false,
-                round: 0,
-                retryCount: 0
+                round: 0
             };
 
             // DOM
@@ -364,8 +348,7 @@
             // ----- CACHE PER ANIME CASUALI -----
             let animeCache = [];
             let isFetchingCache = false;
-            const MAX_RETRIES = 5;
-            const INITIAL_DELAY = 1000;
+            const MAX_RETRIES = 3;
 
             // ----- FUNZIONI DI UTILITY -----
             function shuffleArray(arr) {
@@ -380,7 +363,7 @@
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
 
-            // ----- RATE LIMIT CON RETRY E BACKOFF -----
+            // ----- RATE LIMIT -----
             let lastRequestTime = 0;
             async function rateLimitedFetch(url, retryCount = 0) {
                 const now = Date.now();
@@ -391,33 +374,25 @@
                 try {
                     const response = await fetch(url);
                     
-                    // Se è 429 (Too Many Requests), aspetta e riprova
                     if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After')) || 2;
                         const delay = retryAfter * 1000;
-                        state.retryCount++;
-                        retryInfo.textContent = `⏳ Rate limit (429). Attendo ${retryAfter}s... (tentativo ${state.retryCount})`;
-                        
-                        if (state.retryCount < MAX_RETRIES) {
+                        retryInfo.textContent = `⏳ Rate limit (429). Attendo ${retryAfter}s...`;
+                        if (retryCount < MAX_RETRIES) {
                             await sleep(delay);
                             return rateLimitedFetch(url, retryCount + 1);
-                        } else {
-                            throw new Error('Troppi tentativi (429)');
                         }
+                        throw new Error('Rate limit superato');
                     }
                     
-                    // Se è 504 (Gateway Timeout), riprova con backoff
-                    if (response.status === 504) {
-                        state.retryCount++;
-                        const delay = Math.min(INITIAL_DELAY * Math.pow(2, retryCount), 8000);
-                        retryInfo.textContent = `⏳ Timeout (504). Ritento tra ${delay/1000}s... (tentativo ${state.retryCount})`;
-                        
-                        if (state.retryCount < MAX_RETRIES) {
+                    if (response.status === 504 || response.status === 502 || response.status === 500) {
+                        const delay = Math.min(1000 * Math.pow(2, retryCount), 4000);
+                        retryInfo.textContent = `⏳ Errore ${response.status}. Ritento tra ${delay/1000}s...`;
+                        if (retryCount < MAX_RETRIES) {
                             await sleep(delay);
                             return rateLimitedFetch(url, retryCount + 1);
-                        } else {
-                            throw new Error('Troppi tentativi (504)');
                         }
+                        throw new Error(`Errore ${response.status} dopo ${MAX_RETRIES} tentativi`);
                     }
                     
                     if (!response.ok) {
@@ -425,17 +400,12 @@
                     }
                     
                     retryInfo.textContent = '';
-                    state.retryCount = 0;
                     return await response.json();
                     
                 } catch (error) {
-                    if (error.message.includes('HTTP 504') || error.message.includes('HTTP 429') || error.message.includes('Troppi tentativi')) {
-                        throw error;
-                    }
-                    // Altri errori, riprova con backoff
                     if (retryCount < MAX_RETRIES) {
-                        const delay = Math.min(INITIAL_DELAY * Math.pow(2, retryCount), 8000);
-                        retryInfo.textContent = `⏳ Errore. Ritento tra ${delay/1000}s... (tentativo ${retryCount + 1})`;
+                        const delay = Math.min(1000 * Math.pow(2, retryCount), 4000);
+                        retryInfo.textContent = `⏳ Errore. Ritento tra ${delay/1000}s...`;
                         await sleep(delay);
                         return rateLimitedFetch(url, retryCount + 1);
                     }
@@ -443,10 +413,9 @@
                 }
             }
 
-            // ----- RIEMPIE LA CACHE CON ANIME CASUALI -----
+            // ----- RIEMPIE LA CACHE CON ANIME CASUALI (VELOCE) -----
             async function fetchRandomAnimeBatch() {
                 if (isFetchingCache) {
-                    // Aspetta che la cache sia pronta
                     let waitCycles = 0;
                     while (isFetchingCache && waitCycles < 30) {
                         await sleep(200);
@@ -455,12 +424,11 @@
                     return;
                 }
                 isFetchingCache = true;
-                state.retryCount = 0;
                 
                 try {
-                    // Scegli una pagina casuale (fino a 100 pagine di anime)
+                    // Usa solo page number, senza ordinamento (molto più veloce)
                     const randomPage = Math.floor(Math.random() * 80) + 1;
-                    const url = `${API_BASE}?page=${randomPage}&limit=25&order_by=start_date&sort=desc`;
+                    const url = `${API_BASE}?page=${randomPage}&limit=25`;
                     
                     retryInfo.textContent = `📡 Caricamento pagina ${randomPage}...`;
                     const data = await rateLimitedFetch(url);
@@ -482,7 +450,6 @@
                             a.episodes > 0
                         );
                     } else {
-                        // Filtra solo anime già usciti (anno <= corrente)
                         const currentYear = new Date().getFullYear();
                         animeCache = results.filter(a => 
                             a.title && 
@@ -496,7 +463,7 @@
                     }
                     
                     // Se la cache è vuota, prova con un'altra pagina
-                    if (animeCache.length < 10) {
+                    if (animeCache.length < 8) {
                         retryInfo.textContent = `📡 Pochi anime validi, provo un'altra pagina...`;
                         const backupPage = Math.floor(Math.random() * 50) + 1;
                         const backupData = await rateLimitedFetch(`${API_BASE}?page=${backupPage}&limit=25`);
@@ -618,14 +585,7 @@
                         if (extra.length > 0 && !options.some(o => o.mal_id === extra[0].mal_id)) {
                             options.push(extra[0]);
                         } else {
-                            // Se non troviamo abbastanza distrattori, ricarica la cache
-                            await fetchRandomAnimeBatch();
-                            const newExtra = getRandomAnimeFromCache(1);
-                            if (newExtra.length > 0 && !options.some(o => o.mal_id === newExtra[0].mal_id)) {
-                                options.push(newExtra[0]);
-                            } else {
-                                break;
-                            }
+                            break;
                         }
                     }
                     options = shuffleArray(options).slice(0, 4);
@@ -690,7 +650,7 @@
             }
 
             // ----- GESTISCI CLICK SU OPZIONE -----
-            async function handleOptionClick(index) {
+            function handleOptionClick(index) {
                 if (state.isAnswered || state.isLoading) return;
                 if (index >= state.options.length) return;
                 
@@ -735,7 +695,7 @@
                 state.score = Math.max(0, state.score - 1);
                 setMessage(`⏭️ Saltato! Era "${state.targetAnime.title}". -1 punto`, false);
                 
-                optionsBtns.forEach((btn, i) => {
+                optionsBtns.forEach((btn) => {
                     const id = parseInt(btn.dataset.id);
                     if (id === state.targetAnime.mal_id) {
                         btn.classList.add('correct');
