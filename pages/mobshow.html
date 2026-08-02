@@ -48,6 +48,26 @@
             padding-bottom: 15px;
         }
 
+        .shortcuts-hint {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #ffd700;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 10px 0;
+            color: #ffd700;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .shortcuts-hint kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            font-family: monospace;
+            color: #fff;
+        }
+
         .screen {
             display: none;
         }
@@ -209,6 +229,13 @@
             color: #fff;
             min-width: 140px;
             justify-content: space-between;
+            transition: 0.2s;
+        }
+
+        .score-chip.active-player {
+            border-color: #ffd700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            background: rgba(255, 215, 0, 0.05);
         }
 
         .score-chip .name {
@@ -315,6 +342,14 @@
             color: #ffd700;
         }
 
+        .key-hint {
+            color: #666;
+            font-size: 0.7rem;
+            display: block;
+            text-align: center;
+            margin-top: 4px;
+        }
+
         @media (max-width: 600px) {
             .game-wrapper {
                 padding: 20px;
@@ -354,6 +389,14 @@
 
         <!-- GAME -->
         <div id="gameScreen" class="screen">
+            <div class="shortcuts-hint">
+                ⌨️ <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> ... = seleziona giocatore &nbsp;|&nbsp; 
+                <kbd>+</kbd> / <kbd>-</kbd> = +1/-1 punto &nbsp;|&nbsp; 
+                <kbd>Shift</kbd> + <kbd>+</kbd> = +5 punti &nbsp;|&nbsp; 
+                <kbd>N</kbd> = prossimo video &nbsp;|&nbsp; 
+                <kbd>E</kbd> = termina partita
+            </div>
+
             <div class="video-container" id="videoContainer">
                 <div class="loading">⏳ Caricamento video...</div>
                 <iframe id="videoPlayer" src="" allowfullscreen></iframe>
@@ -386,14 +429,14 @@
             // ============================================================
             //  🔑 QUI INSERISCI LA TUA API KEY
             // ============================================================
-            const API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';  // <-- SOSTITUISCI CON LA TUA
+            const API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';
 
             // ============================================================
             //  STATO
             // ============================================================
             const state = {
                 players: [],
-                currentPlayerIndex: 0,
+                selectedPlayerIndex: 0,
                 currentVideoId: null,
                 usedVideos: [],
                 videos: [],
@@ -524,7 +567,6 @@
             //  AVVIO
             // ============================================================
             startGameBtn.addEventListener('click', async () => {
-                // Leggi nomi
                 const inputs = playerInputs.querySelectorAll('input');
                 inputs.forEach((inp, i) => {
                     if (i < state.players.length) {
@@ -532,12 +574,11 @@
                     }
                 });
 
-                // Reset
                 state.players.forEach(p => { p.points = 0; });
                 state.usedVideos = [];
                 state.gameOver = false;
+                state.selectedPlayerIndex = 0;
 
-                // Carica video
                 try {
                     const videos = await searchMobShowVideos();
                     if (!videos || videos.length === 0) {
@@ -589,7 +630,7 @@
                 scoreBoard.innerHTML = '';
                 state.players.forEach((p, idx) => {
                     const chip = document.createElement('div');
-                    chip.className = 'score-chip';
+                    chip.className = 'score-chip' + (idx === state.selectedPlayerIndex ? ' active-player' : '');
                     chip.innerHTML = `
                         <span class="name">${p.name || `Giocatore ${idx+1}`}</span>
                         <span class="pts">${p.points}</span>
@@ -633,10 +674,72 @@
             }
 
             // ============================================================
+            //  SCORCIATOIE DA TASTIERA
+            // ============================================================
+            document.addEventListener('keydown', (e) => {
+                // Ignora se stiamo scrivendo in un input
+                if (e.target.tagName === 'INPUT') return;
+
+                // Se la partita non è iniziata o è finita
+                if (!gameScreen.classList.contains('active') || state.gameOver) return;
+
+                const key = e.key;
+
+                // Numeri 1-6 per selezionare giocatore
+                if (key >= '1' && key <= '6') {
+                    const idx = parseInt(key) - 1;
+                    if (idx < state.players.length) {
+                        state.selectedPlayerIndex = idx;
+                        updateScoreBoard();
+                        e.preventDefault();
+                    }
+                    return;
+                }
+
+                // + e - per punti
+                if (key === '+' || key === '=') {
+                    e.preventDefault();
+                    const player = state.players[state.selectedPlayerIndex];
+                    if (e.shiftKey) {
+                        player.points += 5;
+                    } else {
+                        player.points += 1;
+                    }
+                    updateScoreBoard();
+                    return;
+                }
+
+                if (key === '-' || key === '_') {
+                    e.preventDefault();
+                    const player = state.players[state.selectedPlayerIndex];
+                    if (e.shiftKey) {
+                        player.points = Math.max(0, player.points - 5);
+                    } else {
+                        player.points = Math.max(0, player.points - 1);
+                    }
+                    updateScoreBoard();
+                    return;
+                }
+
+                // N = prossimo video
+                if (key === 'n' || key === 'N') {
+                    e.preventDefault();
+                    loadVideo();
+                    return;
+                }
+
+                // E = termina partita
+                if (key === 'e' || key === 'E') {
+                    e.preventDefault();
+                    endGame();
+                    return;
+                }
+            });
+
+            // ============================================================
             //  CONTROLLI
             // ============================================================
             nextVideoBtn.addEventListener('click', loadVideo);
-
             endGameBtn.addEventListener('click', endGame);
 
             // ============================================================
@@ -669,6 +772,7 @@
                 initSetup();
                 state.gameOver = false;
                 state.usedVideos = [];
+                state.selectedPlayerIndex = 0;
             });
 
             // ============================================================
