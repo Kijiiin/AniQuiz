@@ -91,12 +91,17 @@
             box-shadow: 0 0 80px rgba(245,87,108,0.5);
             animation: pulse 1.5s infinite alternate;
         }
-        .audio-visual.buffering {
+        .audio-visual.loading {
             box-shadow: 0 0 60px rgba(241,196,15,0.6);
+            animation: spin 2s linear infinite;
         }
         @keyframes pulse {
             0% { transform: scale(1); }
             100% { transform: scale(1.05); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         .now-playing {
             text-align: center;
@@ -255,7 +260,6 @@
             animation: spin 0.9s linear infinite;
             margin: 20px auto;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .hidden { display: none !important; }
         .error-msg {
             color: #f5576c;
@@ -354,6 +358,7 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
+    let isAudioLoaded = false;  // indica se il buffer è pronto
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
@@ -537,7 +542,7 @@
         loadQuestion();
     }
 
-    // ---------- CARICA DOMANDA (con gestione buffering) ----------
+    // ---------- CARICA DOMANDA CON PRE-BUFFERING ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
@@ -560,71 +565,119 @@
         currentOptions = q.options;
         currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
+        isAudioLoaded = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
-        // Imposta il player con preload auto
-        audio.preload = 'auto';
-        audio.src = currentAudioUrl;
-        audio.load();
-        audio.currentTime = 0;
-        playPauseBtn.disabled = false;
-        playPauseBtn.textContent = '▶️ Riproduci';
-        seekBackBtn.disabled = false;
-        seekForwardBtn.disabled = false;
-        progressBar.disabled = false;
+        // Disabilita tutti i controlli finché non è caricato
+        playPauseBtn.disabled = true;
+        playPauseBtn.textContent = '⏳ Caricamento...';
+        seekBackBtn.disabled = true;
+        seekForwardBtn.disabled = true;
+        progressBar.disabled = true;
         progressBar.value = 0;
         timeDisplay.textContent = '0:00 / 0:00';
 
-        audioVisual.className = 'audio-visual';
+        audioVisual.className = 'audio-visual loading';
         audioVisual.textContent = '⏳';
-        nowPlaying.textContent = '🎵 Caricamento audio...';
+        nowPlaying.textContent = '📥 Caricamento in corso...';
 
-        // --- GESTIONE BUFFERING ---
-        let bufferingTimeout = null;
+        // Imposta la sorgente e avvia il caricamento
+        audio.preload = 'auto';
+        audio.src = currentAudioUrl;
+        audio.load();
 
-        audio.onwaiting = () => {
-            audioVisual.className = 'audio-visual buffering';
-            audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '⏳ Buffering in corso...';
-            clearTimeout(bufferingTimeout);
-            bufferingTimeout = setTimeout(() => {
-                if (!audio.paused) {
-                    audio.pause();
-                    audio.load();
-                    audio.play().catch(() => {});
+        // Rimuovi vecchi event listener per evitare duplicati
+        audio.oncanplaythrough = null;
+        audio.onloadedmetadata = null;
+        audio.onwaiting = null;
+        audio.onplay = null;
+        audio.onpause = null;
+        audio.onended = null;
+        audio.ontimeupdate = null;
+        audio.onerror = null;
+
+        // Listener per il caricamento completo
+        const handleCanPlayThrough = () => {
+            isAudioLoaded = true;
+            audioVisual.className = 'audio-visual';
+            audioVisual.textContent = '▶️';
+            nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+            playPauseBtn.disabled = false;
+            playPauseBtn.textContent = '▶️ Riproduci';
+            seekBackBtn.disabled = false;
+            seekForwardBtn.disabled = false;
+            progressBar.disabled = false;
+            // Rimuovi il listener per non accumularli
+            audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+            clearTimeout(loadingTimeout);
+        };
+
+        const handleError = (e) => {
+            console.error('Errore caricamento audio:', e);
+            audioVisual.className = 'audio-visual';
+            audioVisual.textContent = '🚫';
+            nowPlaying.textContent = '⛔ Errore caricamento';
+            feedbackDiv.innerHTML = '⚠️ Impossibile caricare l\'audio. Passa alla prossima domanda.';
+            feedbackDiv.style.color = '#f39c12';
+            if (!isAnswered) {
+                nextBtn.disabled = false;
+                nextBtn.textContent = '⏭️ Salta domanda';
+            }
+            playPauseBtn.disabled = true;
+            seekBackBtn.disabled = true;
+            seekForwardBtn.disabled = true;
+            progressBar.disabled = true;
+            audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+            clearTimeout(loadingTimeout);
+        };
+
+        // Timeout per evitare che rimanga bloccato in caricamento
+        const loadingTimeout = setTimeout(() => {
+            if (!isAudioLoaded) {
+                console.warn('Timeout caricamento, passo alla prossima domanda');
+                audioVisual.className = 'audio-visual';
+                audioVisual.textContent = '⏱️';
+                nowPlaying.textContent = '⏱️ Caricamento troppo lungo';
+                feedbackDiv.innerHTML = '⏱️ Il caricamento sta richiedendo troppo tempo. Passa alla prossima domanda.';
+                feedbackDiv.style.color = '#f39c12';
+                if (!isAnswered) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = '⏭️ Salta domanda';
                 }
-            }, 5000);
-        };
-
-        audio.oncanplaythrough = () => {
-            clearTimeout(bufferingTimeout);
-            if (!audio.paused) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            } else {
-                audioVisual.className = 'audio-visual';
-                audioVisual.textContent = '▶️';
-                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+                playPauseBtn.disabled = true;
+                seekBackBtn.disabled = true;
+                seekForwardBtn.disabled = true;
+                progressBar.disabled = true;
+                audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+                audio.removeEventListener('error', handleError);
             }
-        };
+        }, 15000); // 15 secondi
 
+        audio.addEventListener('canplaythrough', handleCanPlayThrough);
+        audio.addEventListener('error', handleError);
+
+        // Se il file è già caricato (metadati pronti), canplaythrough potrebbe non scattare?
+        // Aggiungiamo un controllo su loadedmetadata
         audio.onloadedmetadata = () => {
-            clearTimeout(bufferingTimeout);
-            if (!audio.paused && !audio.seeking) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            } else {
+            if (audio.readyState >= 3) {
+                // Già abbastanza caricato
+                isAudioLoaded = true;
                 audioVisual.className = 'audio-visual';
                 audioVisual.textContent = '▶️';
                 nowPlaying.textContent = '🎵 Pronto per la riproduzione';
+                playPauseBtn.disabled = false;
+                playPauseBtn.textContent = '▶️ Riproduci';
+                seekBackBtn.disabled = false;
+                seekForwardBtn.disabled = false;
+                progressBar.disabled = false;
+                clearTimeout(loadingTimeout);
             }
         };
 
+        // Eventi di riproduzione (dopo che è caricato)
         audio.ontimeupdate = () => {
             if (audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
@@ -634,11 +687,13 @@
         };
 
         audio.onplay = () => {
-            isPlaying = true;
-            audioVisual.className = 'audio-visual playing';
-            audioVisual.textContent = '🔊';
-            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            playPauseBtn.textContent = '⏸️ Pausa';
+            if (isAudioLoaded) {
+                isPlaying = true;
+                audioVisual.className = 'audio-visual playing';
+                audioVisual.textContent = '🔊';
+                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
+                playPauseBtn.textContent = '⏸️ Pausa';
+            }
         };
 
         audio.onpause = () => {
@@ -655,21 +710,11 @@
             playPauseBtn.textContent = '▶️ Riproduci';
         };
 
+        // Gestione degli errori generici
         audio.onerror = (e) => {
-            console.error('Errore audio:', e);
-            feedbackDiv.innerHTML = '⚠️ Errore nel caricamento dell\'audio. Passa alla prossima domanda.';
-            feedbackDiv.style.color = '#f39c12';
-            if (!isAnswered) {
-                nextBtn.disabled = false;
-                nextBtn.textContent = '⏭️ Salta domanda';
+            if (!isAudioLoaded) {
+                handleError(e);
             }
-            audioVisual.className = 'audio-visual';
-            audioVisual.textContent = '🚫';
-            nowPlaying.textContent = '⛔ Audio non disponibile';
-            playPauseBtn.disabled = true;
-            seekBackBtn.disabled = true;
-            seekForwardBtn.disabled = true;
-            progressBar.disabled = true;
         };
 
         renderOptions(q.options);
@@ -677,6 +722,7 @@
 
     // ---------- CONTROLLI ----------
     function togglePlayPause() {
+        if (!isAudioLoaded) return;
         if (audio.paused) {
             audio.play().catch(e => console.warn('Autoplay bloccato:', e));
         } else {
@@ -685,7 +731,8 @@
     }
 
     function seekBy(seconds) {
-        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + seconds));
+        if (!isAudioLoaded || !audio.duration) return;
+        audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
     }
 
     // ---------- RENDER OPZIONI ----------
@@ -807,7 +854,7 @@
     seekForwardBtn.addEventListener('click', () => seekBy(10));
 
     progressBar.addEventListener('input', (e) => {
-        if (audio.duration) {
+        if (audio.duration && isAudioLoaded) {
             const time = (e.target.value / 100) * audio.duration;
             audio.currentTime = time;
         }
