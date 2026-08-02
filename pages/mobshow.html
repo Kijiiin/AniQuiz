@@ -185,6 +185,18 @@
             border: none;
         }
 
+        /* OVERLAY CHE CATTURA I TASTI MA PASSA I CLICK */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            background: transparent;
+            pointer-events: none; /* I click passano al video */
+        }
+
         .video-container .loading {
             position: absolute;
             top: 50%;
@@ -192,6 +204,7 @@
             transform: translate(-50%, -50%);
             color: #fff;
             font-size: 1.2rem;
+            z-index: 5;
         }
 
         .video-info {
@@ -342,14 +355,6 @@
             color: #ffd700;
         }
 
-        .key-hint {
-            color: #666;
-            font-size: 0.7rem;
-            display: block;
-            text-align: center;
-            margin-top: 4px;
-        }
-
         @media (max-width: 600px) {
             .game-wrapper {
                 padding: 20px;
@@ -394,12 +399,14 @@
                 <kbd>+</kbd> / <kbd>-</kbd> = +1/-1 punto &nbsp;|&nbsp; 
                 <kbd>Shift</kbd> + <kbd>+</kbd> = +5 punti &nbsp;|&nbsp; 
                 <kbd>N</kbd> = prossimo video &nbsp;|&nbsp; 
-                <kbd>E</kbd> = termina partita
+                <kbd>E</kbd> = termina partita &nbsp;|&nbsp; 
+                <kbd>Spazio</kbd> <kbd>←</kbd> <kbd>→</kbd> = controlli video
             </div>
 
             <div class="video-container" id="videoContainer">
                 <div class="loading">⏳ Caricamento video...</div>
                 <iframe id="videoPlayer" src="" allowfullscreen></iframe>
+                <div class="video-overlay" id="videoOverlay"></div>
             </div>
 
             <div class="video-info" id="videoInfo">
@@ -455,6 +462,7 @@
             const startGameBtn = $('startGameBtn');
             const videoContainer = $('videoContainer');
             const videoPlayer = $('videoPlayer');
+            const videoOverlay = $('videoOverlay');
             const videoInfo = $('videoInfo');
             const scoreBoard = $('scoreBoard');
             const nextVideoBtn = $('nextVideoBtn');
@@ -674,10 +682,12 @@
             }
 
             // ============================================================
-            //  SCORCIATOIE DA TASTIERA
+            //  🔥 SOLUZIONE DEFINITIVA: CATTURA GLI EVENTI A LIVELLO DI WINDOW
+            //  Usa window.addEventListener invece di document
+            //  e cattura TUTTI gli eventi keydown
             // ============================================================
-            document.addEventListener('keydown', (e) => {
-                // Ignora se stiamo scrivendo in un input
+            window.addEventListener('keydown', (e) => {
+                // Se stiamo scrivendo in un input, lascia fare
                 if (e.target.tagName === 'INPUT') return;
 
                 // Se la partita non è iniziata o è finita
@@ -685,20 +695,29 @@
 
                 const key = e.key;
 
+                // 🔹 TASTI CHE VANNO AL PLAYER (NON INTERCETTATI)
+                if (key === ' ' || key === 'Space' || 
+                    key === 'ArrowRight' || key === 'ArrowLeft') {
+                    // Lasciamo che arrivino al player
+                    return;
+                }
+
+                // 🔹 TASTI INTERCETTATI DAL GIOCO
+                e.preventDefault();
+                e.stopPropagation();
+
                 // Numeri 1-6 per selezionare giocatore
                 if (key >= '1' && key <= '6') {
                     const idx = parseInt(key) - 1;
                     if (idx < state.players.length) {
                         state.selectedPlayerIndex = idx;
                         updateScoreBoard();
-                        e.preventDefault();
                     }
                     return;
                 }
 
                 // + e - per punti
                 if (key === '+' || key === '=') {
-                    e.preventDefault();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points += 5;
@@ -710,7 +729,6 @@
                 }
 
                 if (key === '-' || key === '_') {
-                    e.preventDefault();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points = Math.max(0, player.points - 5);
@@ -723,18 +741,16 @@
 
                 // N = prossimo video
                 if (key === 'n' || key === 'N') {
-                    e.preventDefault();
                     loadVideo();
                     return;
                 }
 
                 // E = termina partita
                 if (key === 'e' || key === 'E') {
-                    e.preventDefault();
                     endGame();
                     return;
                 }
-            });
+            }, true);
 
             // ============================================================
             //  CONTROLLI
