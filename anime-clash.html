@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Clash · Gioco di abilità</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0b0c1a 0%, #1a1e2f 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .game-wrapper {
+            max-width: 750px;
+            width: 100%;
+            background: rgba(20, 24, 48, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 56px;
+            padding: 28px 28px 38px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 2px #4a4f8a inset;
+            border: 1px solid #7a80cf;
+            transition: 0.2s;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #f7d875, #f5b34b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 12px #f5b34b77;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        h1 span {
+            font-size: 2.2rem;
+        }
+        .stats {
+            background: #12162b;
+            border-radius: 60px;
+            padding: 12px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #e3e8ff;
+            border: 1px solid #4d5399;
+            box-shadow: 0 4px 0 #0a0d1a;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #1f2542;
+            padding: 6px 16px 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: 1px solid #5f66b0;
+        }
+        .stat-item i {
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+        .stat-item .num {
+            background: #0b0e1f;
+            padding: 0 10px;
+            border-radius: 30px;
+            color: #ffd966;
+            min-width: 28px;
+            text-align: center;
+        }
+        .anime-arena {
+            background: #191f3b;
+            border-radius: 48px;
+            padding: 22px 18px;
+            box-shadow: inset 0 -8px 0 #0b0e1f, 0 10px 20px #00000055;
+            border: 1px solid #6a70bb;
+            margin-bottom: 20px;
+        }
+        .character-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #11152b;
+            border-radius: 40px;
+            padding: 12px 10px 18px;
+            border: 1px solid #6a70bb;
+            box-shadow: inset 0 0 20px #050712;
+        }
+        .character-emoji {
+            font-size: 8rem;
+            line-height: 1.2;
+            filter: drop-shadow(0 10px 6px #00000066);
+            transition: 0.2s;
+            background: #1f254a;
+            padding: 10px 24px;
+            border-radius: 120px;
+            border: 2px solid #868cdb;
+            background: radial-gradient(circle at 30% 30%, #2d3370, #131834);
+            margin-bottom: 6px;
+        }
+        .character-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #f0e9c0;
+            background: #1c2142;
+            padding: 4px 24px;
+            border-radius: 60px;
+            border: 1px solid #a3a9f0;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 0 #0a0c1a;
+        }
+        .power-bar {
+            width: 100%;
+            max-width: 360px;
+            margin: 16px auto 6px;
+            background: #22284b;
+            height: 14px;
+            border-radius: 40px;
+            border: 1px solid #6b72b5;
+            overflow: hidden;
+            box-shadow: inset 0 3px 6px #00000088;
+        }
+        .power-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #f7b731, #fd7e14);
+            border-radius: 40px;
+            transition: width 0.2s ease;
+            box-shadow: 0 0 12px #f7b731aa;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin: 18px 0 10px;
+        }
+        .action-btn {
+            background: #1a1f3f;
+            border: 2px solid #4d5399;
+            border-radius: 60px;
+            padding: 16px 6px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #d5dcff;
+            box-shadow: 0 6px 0 #0a0d1a, 0 6px 12px #00000055;
+            transition: all 0.05s linear;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.2;
+            text-shadow: 0 2px 0 #00000077;
+        }
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #0a0d1a;
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #0a0d1a;
+            pointer-events: none;
+            filter: grayscale(0.5);
+        }
+        .action-btn .sub {
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+        .action-btn.special {
+            background: #2a2f62;
+            border-color: #f5b34b;
+            color: #ffe49e;
+            box-shadow: 0 6px 0 #7a5f1e, 0 6px 12px #00000066;
+        }
+        .reset-area {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0 0;
+        }
+        .reset-btn {
+            background: #282f5a;
+            border: 1px solid #6a70bb;
+            padding: 12px 32px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #d5dcff;
+            box-shadow: 0 6px 0 #0b0e1f;
+            cursor: pointer;
+            transition: 0.08s linear;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .reset-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #0b0e1f;
+        }
+        .message-box {
+            background: #0e1229;
+            border-radius: 50px;
+            padding: 14px 18px;
+            margin: 18px 0 0;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #c8ceff;
+            border: 1px solid #5f66b0;
+            box-shadow: inset 0 2px 8px #00000077;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .message-box span {
+            background: #1d2347;
+            padding: 4px 18px;
+            border-radius: 40px;
+            border: 1px solid #7f86d1;
+        }
+        .footer-credit {
+            margin-top: 18px;
+            color: #737bbd;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        @media (max-width: 500px) {
+            .game-wrapper { padding: 16px; }
+            .character-emoji { font-size: 5.5rem; }
+            .action-grid { gap: 8px; }
+            .action-btn { font-size: 1rem; padding: 12px 4px; }
+            .stats { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <h1>
+            <span>⚔️</span> ANIME CLASH <span>⚔️</span>
+        </h1>
+        <div class="stats">
+            <div class="stat-item"><i>🏆</i> Vittorie <span class="num" id="winCount">0</span></div>
+            <div class="stat-item"><i>⚡</i> Energia <span class="num" id="energyDisplay">100</span></div>
+            <div class="stat-item"><i>🌀</i> Turno <span class="num" id="turnDisplay">1</span></div>
+        </div>
+
+        <div class="anime-arena">
+            <div class="character-box">
+                <div class="character-emoji" id="charEmoji">⚡</div>
+                <div class="character-name" id="charName">Pikachu</div>
+                <div class="power-bar">
+                    <div class="power-fill" id="powerFill" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-grid">
+            <button class="action-btn" id="attackBtn">⚔️ Attacco <span class="sub">-15 en.</span></button>
+            <button class="action-btn" id="defendBtn">🛡️ Difesa <span class="sub">-5 en.</span></button>
+            <button class="action-btn special" id="specialBtn">🌟 Speciale <span class="sub">-35 en.</span></button>
+            <button class="action-btn" id="healBtn">💚 Cura <span class="sub">+20 en.</span></button>
+            <button class="action-btn" id="chargeBtn">🔋 Carica <span class="sub">+10 en.</span></button>
+            <button class="action-btn" id="dodgeBtn">💨 Schivata <span class="sub">-8 en.</span></button>
+        </div>
+
+        <div class="reset-area">
+            <button class="reset-btn" id="resetBtn">🔄 Nuovo gioco</button>
+        </div>
+
+        <div class="message-box" id="messageBox">
+            <span>💬</span> Scegli la tua mossa!
+        </div>
+        <div class="footer-credit">✧  anime clash · sfida il destino ✧</div>
+    </div>
+    <script>
+        (function() {
+            // ----- DATABASE ANIME (personaggi) -----
+            const ANIME_CHARS = [
+                { name: 'Pikachu', emoji: '⚡', power: 90 },
+                { name: 'Naruto', emoji: '🍥', power: 88 },
+                { name: 'Goku', emoji: '🐉', power: 95 },
+                { name: 'Luffy', emoji: '🏴‍☠️', power: 85 },
+                { name: 'Sailor Moon', emoji: '🌙', power: 87 },
+                { name: 'Tanjiro', emoji: '🔥', power: 82 },
+                { name: 'Eren', emoji: '⚔️', power: 89 },
+                { name: 'Saitama', emoji: '👊', power: 99 },
+                { name: 'Gojo', emoji: '👁️', power: 93 },
+                { name: 'Ichigo', emoji: '⚔️', power: 86 }
+            ];
+
+            // ----- STATO GIOCO -----
+            let state = {
+                // personaggio attuale
+                character: null,
+                // energia (0-100)
+                energy: 100,
+                // turno corrente
+                turn: 1,
+                // vittorie totali
+                wins: 0,
+                // se il gioco è in corso
+                isGameOver: false,
+                // flag per evitare spam
+                processing: false,
+                // personaggio precedente (per evitare ripetizioni)
+                lastCharIndex: -1,
+            };
+
+            // elementi DOM
+            const charEmoji = document.getElementById('charEmoji');
+            const charName = document.getElementById('charName');
+            const powerFill = document.getElementById('powerFill');
+            const energyDisplay = document.getElementById('energyDisplay');
+            const turnDisplay = document.getElementById('turnDisplay');
+            const winCount = document.getElementById('winCount');
+            const messageBox = document.getElementById('messageBox');
+
+            const attackBtn = document.getElementById('attackBtn');
+            const defendBtn = document.getElementById('defendBtn');
+            const specialBtn = document.getElementById('specialBtn');
+            const healBtn = document.getElementById('healBtn');
+            const chargeBtn = document.getElementById('chargeBtn');
+            const dodgeBtn = document.getElementById('dodgeBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // tutti i bottoni d'azione
+            const actionButtons = [attackBtn, defendBtn, specialBtn, healBtn, chargeBtn, dodgeBtn];
+
+            // ----- FUNZIONI DI UTILITY -----
+            function randomChar() {
+                let idx;
+                do {
+                    idx = Math.floor(Math.random() * ANIME_CHARS.length);
+                } while (idx === state.lastCharIndex && ANIME_CHARS.length > 1);
+                state.lastCharIndex = idx;
+                return { ...ANIME_CHARS[idx] };
+            }
+
+            // aggiorna l'interfaccia in base allo stato
+            function updateUI() {
+                const char = state.character;
+                if (char) {
+                    charEmoji.textContent = char.emoji;
+                    charName.textContent = char.name;
+                    // power si basa sull'energia (simula potenza)
+                    const powerPercent = Math.min(100, Math.max(0, state.energy));
+                    powerFill.style.width = powerPercent + '%';
+                    // cambia colore in base all'energia
+                    if (powerPercent < 25) {
+                        powerFill.style.background = 'linear-gradient(90deg, #ff6b6b, #ee3b3b)';
+                    } else if (powerPercent < 55) {
+                        powerFill.style.background = 'linear-gradient(90deg, #f7b731, #fd7e14)';
+                    } else {
+                        powerFill.style.background = 'linear-gradient(90deg, #f7b731, #fd7e14)';
+                    }
+                }
+                energyDisplay.textContent = Math.max(0, state.energy);
+                turnDisplay.textContent = state.turn;
+                winCount.textContent = state.wins;
+
+                // Abilita/disabilita bottoni in base a game over o processing
+                const disabled = state.isGameOver || state.processing;
+                actionButtons.forEach(btn => btn.disabled = disabled);
+            }
+
+            // imposta un messaggio nella message box
+            function setMessage(msg, isGood = true) {
+                messageBox.innerHTML = `<span>${isGood ? '✨' : '⚠️'}</span> ${msg}`;
+            }
+
+            // controlla se l'energia è esaurita => game over
+            function checkGameOver() {
+                if (state.energy <= 0) {
+                    state.energy = 0;
+                    state.isGameOver = true;
+                    setMessage('💀 Energia esaurita! Hai perso... Ricomincia!', false);
+                    updateUI();
+                    return true;
+                }
+                // se turno arriva a 12, vittoria!
+                if (state.turn >= 12 && !state.isGameOver) {
+                    state.isGameOver = true;
+                    state.wins += 1;
+                    setMessage(`🏆 Vittoria! Hai superato 12 turni! Hai ${state.wins} vittorie!`, true);
+                    updateUI();
+                    return true;
+                }
+                return false;
+            }
+
+            // resetta il gioco (nuovo personaggio)
+            function resetGame(keepWins = true) {
+                state.processing = false;
+                state.isGameOver = false;
+                state.energy = 100;
+                state.turn = 1;
+                if (!keepWins) state.wins = 0;
+                // nuovo personaggio
+                state.character = randomChar();
+                // messaggio iniziale
+                setMessage(`⚡ Nuovo avversario: ${state.character.name}!`, true);
+                updateUI();
+                // assicura che i bottoni siano abilitati
+                actionButtons.forEach(btn => btn.disabled = false);
+            }
+
+            // ---- MOSSE ----
+            function executeAction(actionType) {
+                if (state.isGameOver || state.processing) return;
+                if (state.energy <= 0) {
+                    checkGameOver();
+                    return;
+                }
+
+                state.processing = true;
+                // disabilita bottoni per evitare doppi click
+                actionButtons.forEach(btn => btn.disabled = true);
+
+                // variabili per effetto
+                let energyCost = 0;
+                let message = '';
+                let success = true;
+
+                // esegui azione
+                switch (actionType) {
+                    case 'attack':
+                        energyCost = 15;
+                        if (state.energy >= energyCost) {
+                            const dmg = Math.floor(Math.random() * 18) + 10; // 10-28
+                            const crit = Math.random() < 0.15 ? 1.6 : 1;
+                            const finalDmg = Math.floor(dmg * crit);
+                            state.energy = Math.max(0, state.energy - energyCost);
+                            message = `⚔️ Attacco! Infliggi ${finalDmg} danni! ${crit > 1.4 ? '💥 CRITICO!' : ''}`;
+                            // l'energia del nemico (simbolica) si riduce, ma qui usiamo solo energia
+                            // aggiungiamo un po' di sfida: se l'attacco è forte, il nemico si arrabbia e consuma più energia (già fatto)
+                        } else {
+                            message = '❌ Non hai abbastanza energia!';
+                            success = false;
+                        }
+                        break;
+                    case 'defend':
+                        energyCost = 5;
+                        if (state.energy >= energyCost) {
+                            state.energy = Math.max(0, state.energy - energyCost);
+                            const block = Math.floor(Math.random() * 10) + 5;
+                            message = `🛡️ Difesa! Riduci danni subiti di ${block} punti.`;
+                            // non si subiscono danni in questo turno (si rigenera un po' di energia?)
+                            state.energy = Math.min(100, state.energy + 2); // piccolo bonus
+                        } else {
+                            message = '❌ Energia insufficiente!';
+                            success = false;
+                        }
+                        break;
+                    case 'special':
+                        energyCost = 35;
+                        if (state.energy >= energyCost) {
+                            state.energy = Math.max(0, state.energy - energyCost);
+                            const superDmg = Math.floor(Math.random() * 40) + 30; // 30-70
+                            message = `🌟 ATTACCO SPECIALE! Danni: ${superDmg}! Potere travolgente!`;
+                            // bonus se è critico
+                            if (Math.random() < 0.25) {
+                                message += ' 💫 Effetto extra!';
+                                state.energy = Math.min(100, state.energy + 6);
+                            }
+                        } else {
+                            message = '❌ Energia insufficiente per lo speciale!';
+                            success = false;
+                        }
+                        break;
+                    case 'heal':
+                        energyCost = 0; // cura non costa energia ma ne guadagna
+                        const healAmount = Math.floor(Math.random() * 20) + 15; // 15-35
+                        state.energy = Math.min(100, state.energy + healAmount);
+                        message = `💚 Cura! Recuperi ${healAmount} energia.`;
+                        break;
+                    case 'charge':
+                        energyCost = 0;
+                        const chargeAmt = Math.floor(Math.random() * 12) + 8; // 8-20
+                        state.energy = Math.min(100, state.energy + chargeAmt);
+                        message = `🔋 Carica! +${chargeAmt} energia.`;
+                        break;
+                    case 'dodge':
+                        energyCost = 8;
+                        if (state.energy >= energyCost) {
+                            state.energy = Math.max(0, state.energy - energyCost);
+                            const dodgeChance = Math.random();
+                            if (dodgeChance < 0.4) {
+                                message = `💨 Schivata riuscita! Eviti il prossimo attacco nemico.`;
+                                // bonus: recupera un po' di energia
+                                state.energy = Math.min(100, state.energy + 5);
+                            } else {
+                                message = `💨 Schivata fallita... Subisci danno leggero.`;
+                                const dmgTaken = Math.floor(Math.random() * 12) + 3;
+                                state.energy = Math.max(0, state.energy - dmgTaken);
+                            }
+                        } else {
+                            message = '❌ Non hai energia per schivare!';
+                            success = false;
+                        }
+                        break;
+                    default: break;
+                }
+
+                // se l'azione è fallita per mancanza energia, riabilitiamo i bottoni e usciamo
+                if (!success) {
+                    setMessage(message, false);
+                    state.processing = false;
+                    actionButtons.forEach(btn => btn.disabled = false);
+                    updateUI();
+                    return;
+                }
+
+                // se l'energia è scesa sotto 0, mettiamo a 0
+                if (state.energy < 0) state.energy = 0;
+
+                // Incrementa turno (se non è game over)
+                if (!state.isGameOver) {
+                    state.turn += 1;
+                }
+
+                // messaggio e update
+                setMessage(message, true);
+                updateUI();
+
+                // controlla game over dopo l'azione
+                const over = checkGameOver();
+                // se game over, i bottoni restano disabilitati
+                if (over) {
+                    state.processing = false;
+                    // aggiorna UI (disabilita bottoni)
+                    actionButtons.forEach(btn => btn.disabled = true);
+                    updateUI();
+                    return;
+                }
+
+                // se non game over, riabilita i bottoni dopo un breve ritardo (per evitare spam)
+                setTimeout(() => {
+                    state.processing = false;
+                    if (!state.isGameOver) {
+                        actionButtons.forEach(btn => btn.disabled = false);
+                    }
+                    updateUI();
+                }, 180);
+            }
+
+            // ----- EVENTI BOTTONI -----
+            attackBtn.addEventListener('click', () => executeAction('attack'));
+            defendBtn.addEventListener('click', () => executeAction('defend'));
+            specialBtn.addEventListener('click', () => executeAction('special'));
+            healBtn.addEventListener('click', () => executeAction('heal'));
+            chargeBtn.addEventListener('click', () => executeAction('charge'));
+            dodgeBtn.addEventListener('click', () => executeAction('dodge'));
+
+            resetBtn.addEventListener('click', () => {
+                // resetta mantenendo le vittorie
+                resetGame(true);
+                // se era game over, resetta
+                state.isGameOver = false;
+                state.processing = false;
+                actionButtons.forEach(btn => btn.disabled = false);
+                setMessage('🔄 Nuova partita! Scegli la mossa.', true);
+                updateUI();
+            });
+
+            // ----- INIZIALIZZA -----
+            (function init() {
+                state.character = randomChar();
+                state.energy = 100;
+                state.turn = 1;
+                state.wins = 0;
+                state.isGameOver = false;
+                state.processing = false;
+                setMessage('⚔️ Inizia la battaglia! Scegli la tua mossa.', true);
+                updateUI();
+                actionButtons.forEach(btn => btn.disabled = false);
+            })();
+
+        })();
+    </script>
+</body>
+</html>
