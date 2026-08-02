@@ -56,40 +56,6 @@
         }
 
         /* SETUP */
-        .api-section {
-            background: rgba(255, 51, 102, 0.1);
-            border: 2px solid #ff3366;
-            border-radius: 16px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        .api-section input {
-            width: 100%;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 12px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
-            font-family: monospace;
-        }
-
-        .api-section input:focus {
-            border-color: #ff3366;
-        }
-
-        .api-section .hint {
-            color: #888;
-            font-size: 0.8rem;
-            margin-top: 8px;
-        }
-
-        .api-section .hint a {
-            color: #ff3366;
-        }
-
         .setup-grid {
             display: flex;
             flex-wrap: wrap;
@@ -247,6 +213,7 @@
 
         .score-chip .name {
             color: #aaa;
+            min-width: 60px;
         }
 
         .score-chip .pts {
@@ -256,11 +223,13 @@
             color: #fff;
             font-weight: 800;
             font-size: 1.1rem;
+            min-width: 30px;
+            text-align: center;
         }
 
         .score-controls {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
 
@@ -268,10 +237,10 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid #333;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             color: #fff;
-            font-size: 1.2rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: 0.2s;
             display: flex;
@@ -285,14 +254,14 @@
         }
 
         .score-controls .points-input {
-            width: 50px;
+            width: 40px;
             background: #1a1a1a;
             border: 1px solid #333;
-            border-radius: 8px;
-            padding: 4px 6px;
+            border-radius: 6px;
+            padding: 4px 4px;
             color: #fff;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .score-controls .points-input:focus {
@@ -373,15 +342,6 @@
 
         <!-- SETUP -->
         <div id="setupScreen" class="screen active">
-            <div class="api-section">
-                <input type="password" id="apiKeyInput" placeholder="AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4">
-                <div class="hint">
-                    🔑 Come ottenere la chiave: 
-                    <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> → 
-                    Crea progetto → Attiva YouTube Data API v3 → Crea credenziali → Chiave API
-                </div>
-            </div>
-
             <div class="setup-grid" id="playerInputs"></div>
             <div style="text-align:center; margin: 6px 0;">
                 <button class="btn btn-secondary" style="padding:8px 24px; font-size:0.9rem;" id="addPlayerBtn">➕ Aggiungi Giocatore</button>
@@ -424,6 +384,11 @@
     <script>
         (function() {
             // ============================================================
+            //  🔑 QUI INSERISCI LA TUA API KEY
+            // ============================================================
+            const API_KEY = 'AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4';  // <-- SOSTITUISCI CON LA TUA
+
+            // ============================================================
             //  STATO
             // ============================================================
             const state = {
@@ -432,8 +397,7 @@
                 currentVideoId: null,
                 usedVideos: [],
                 videos: [],
-                gameOver: false,
-                apiKey: ''
+                gameOver: false
             };
 
             // ============================================================
@@ -446,7 +410,6 @@
             const playerInputs = $('playerInputs');
             const addPlayerBtn = $('addPlayerBtn');
             const startGameBtn = $('startGameBtn');
-            const apiKeyInput = $('apiKeyInput');
             const videoContainer = $('videoContainer');
             const videoPlayer = $('videoPlayer');
             const videoInfo = $('videoInfo');
@@ -481,7 +444,7 @@
                     div.className = 'player-card';
                     div.innerHTML = `
                         <label>Giocatore ${idx+1}</label>
-                        <input type="text" value="${p.name}" data-idx="${idx}" placeholder="Nome...">
+                        <input type="text" value="${p.name}" data-idx="${idx}" placeholder="Nome giocatore...">
                         <button class="remove-btn" data-idx="${idx}" ${state.players.length <= 2 ? 'disabled' : ''}>✕</button>
                     `;
                     playerInputs.appendChild(div);
@@ -506,16 +469,15 @@
 
             function initSetup() {
                 state.players = [
-                    { name: 'Naruto', points: 0 },
-                    { name: 'Luffy', points: 0 },
-                    { name: 'Goku', points: 0 }
+                    { name: '', points: 0 },
+                    { name: '', points: 0 }
                 ];
                 renderPlayerInputs();
             }
 
             addPlayerBtn.addEventListener('click', () => {
                 if (state.players.length < 6) {
-                    state.players.push({ name: `Giocatore ${state.players.length+1}`, points: 0 });
+                    state.players.push({ name: '', points: 0 });
                     renderPlayerInputs();
                 } else {
                     alert('Massimo 6 giocatori!');
@@ -525,7 +487,7 @@
             // ============================================================
             //  YOUTUBE API
             // ============================================================
-            async function searchMobShowVideos(apiKey) {
+            async function searchMobShowVideos() {
                 const queries = [
                     'mobshow anime quiz',
                     'mobshow indovina anime',
@@ -533,7 +495,7 @@
                     'mobshow anime game'
                 ];
                 const query = randomItem(queries);
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=50&key=${apiKey}`;
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=50&key=${API_KEY}`;
 
                 try {
                     const response = await fetch(url);
@@ -562,13 +524,6 @@
             //  AVVIO
             // ============================================================
             startGameBtn.addEventListener('click', async () => {
-                const apiKey = apiKeyInput.value.trim();
-                if (!apiKey) {
-                    alert('Inserisci una YouTube API Key valida!');
-                    return;
-                }
-                state.apiKey = apiKey;
-
                 // Leggi nomi
                 const inputs = playerInputs.querySelectorAll('input');
                 inputs.forEach((inp, i) => {
@@ -584,7 +539,7 @@
 
                 // Carica video
                 try {
-                    const videos = await searchMobShowVideos(apiKey);
+                    const videos = await searchMobShowVideos();
                     if (!videos || videos.length === 0) {
                         alert('Nessun video trovato! Riprova con un\'altra API Key.');
                         return;
@@ -636,7 +591,7 @@
                     const chip = document.createElement('div');
                     chip.className = 'score-chip';
                     chip.innerHTML = `
-                        <span class="name">${p.name}</span>
+                        <span class="name">${p.name || `Giocatore ${idx+1}`}</span>
                         <span class="pts">${p.points}</span>
                         <div class="score-controls">
                             <button class="minus-btn" data-idx="${idx}">−</button>
@@ -698,7 +653,7 @@
                     const card = document.createElement('div');
                     card.className = 'result-card' + (idx === 0 ? ' winner' : '');
                     card.innerHTML = `
-                        <div class="r-name">${idx === 0 ? '🏆 ' : ''}${p.name}</div>
+                        <div class="r-name">${idx === 0 ? '🏆 ' : ''}${p.name || 'Giocatore'}</div>
                         <div class="r-pts">${p.points} pts</div>
                     `;
                     resultGrid.appendChild(card);
