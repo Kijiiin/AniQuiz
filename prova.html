@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 MobShow Anime Quiz - Sfida tra Otaku</title>
+    <title>🎬 MobShow - Anime Video Player</title>
     <style>
         * {
             margin: 0;
@@ -11,27 +11,14 @@
             box-sizing: border-box;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        @keyframes slideIn {
-            0% { opacity: 0; transform: translateY(30px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-
         body {
-            font-family: 'Segoe UI', 'Arial Black', sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background: #0a0a0a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            background-image: 
-                radial-gradient(circle at 20% 50%, #1a0033 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, #001a33 0%, transparent 50%);
         }
 
         .game-wrapper {
@@ -41,8 +28,6 @@
             border-radius: 30px;
             padding: 30px;
             border: 2px solid #ff3366;
-            box-shadow: 0 0 60px rgba(255, 51, 102, 0.2);
-            position: relative;
         }
 
         .logo {
@@ -52,15 +37,12 @@
             background: linear-gradient(135deg, #ff3366, #ff6b35, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 4px;
             margin-bottom: 5px;
         }
 
         .logo-sub {
             text-align: center;
             color: #888;
-            font-size: 0.9rem;
-            letter-spacing: 4px;
             margin-bottom: 25px;
             border-bottom: 1px solid #333;
             padding-bottom: 15px;
@@ -68,13 +50,46 @@
 
         .screen {
             display: none;
-            animation: slideIn 0.5s ease;
         }
         .screen.active {
             display: block;
         }
 
         /* SETUP */
+        .api-section {
+            background: rgba(255, 51, 102, 0.1);
+            border: 2px solid #ff3366;
+            border-radius: 16px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .api-section input {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            font-family: monospace;
+        }
+
+        .api-section input:focus {
+            border-color: #ff3366;
+        }
+
+        .api-section .hint {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .api-section .hint a {
+            color: #ff3366;
+        }
+
         .setup-grid {
             display: flex;
             flex-wrap: wrap;
@@ -84,12 +99,13 @@
         }
 
         .player-card {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 16px;
             padding: 12px 16px;
             flex: 1 1 160px;
             border: 1px solid #333;
         }
+
         .player-card label {
             display: block;
             font-size: 0.7rem;
@@ -98,6 +114,7 @@
             letter-spacing: 2px;
             margin-bottom: 4px;
         }
+
         .player-card input {
             width: 100%;
             background: transparent;
@@ -108,11 +125,12 @@
             padding: 4px 0;
             outline: none;
             font-weight: 600;
-            transition: 0.3s;
         }
+
         .player-card input:focus {
             border-bottom-color: #ff3366;
         }
+
         .player-card .remove-btn {
             background: none;
             border: none;
@@ -122,67 +140,9 @@
             margin-top: 4px;
             opacity: 0.5;
         }
+
         .player-card .remove-btn:hover {
             opacity: 1;
-        }
-
-        .api-section {
-            background: rgba(255,255,255,0.03);
-            border-radius: 16px;
-            padding: 15px 20px;
-            margin: 15px 0;
-            border: 1px solid #222;
-        }
-        .api-section input {
-            width: 100%;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 10px 14px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .api-section input:focus {
-            border-color: #ff3366;
-        }
-        .api-section .hint {
-            color: #666;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        .setup-options {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            background: rgba(255,255,255,0.03);
-            border-radius: 20px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 1px solid #222;
-        }
-        .setup-options label {
-            color: #aaa;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-        }
-        .setup-options input[type="number"] {
-            width: 60px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 6px 8px;
-            color: #fff;
-            font-size: 1rem;
-            text-align: center;
-        }
-        .setup-options input[type="number"]:focus {
-            border-color: #ff3366;
-            outline: none;
         }
 
         .btn {
@@ -199,23 +159,23 @@
             letter-spacing: 2px;
             box-shadow: 0 4px 20px rgba(255, 51, 102, 0.3);
         }
+
         .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 30px rgba(255, 51, 102, 0.5);
         }
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
+
         .btn-secondary {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             box-shadow: none;
             border: 1px solid #333;
         }
+
         .btn-secondary:hover:not(:disabled) {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             box-shadow: none;
         }
+
         .btn-center {
             display: flex;
             justify-content: center;
@@ -223,71 +183,7 @@
             flex-wrap: wrap;
         }
 
-        /* GAME */
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .round-badge {
-            background: rgba(255,51,102,0.2);
-            padding: 6px 20px;
-            border-radius: 30px;
-            border: 1px solid #ff3366;
-            color: #ff6b6b;
-            font-weight: 700;
-        }
-        .turn-badge {
-            background: linear-gradient(135deg, #ff3366, #ff6b35);
-            padding: 8px 24px;
-            border-radius: 30px;
-            font-weight: 800;
-            color: #fff;
-            animation: pulse 1.5s ease infinite;
-        }
-
-        .scores {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .score-chip {
-            background: rgba(255,255,255,0.05);
-            padding: 6px 16px 6px 14px;
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid #333;
-            transition: 0.3s;
-            font-weight: 600;
-        }
-        .score-chip.active {
-            border-color: #ffd700;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
-            background: rgba(255, 215, 0, 0.1);
-        }
-        .score-chip .name {
-            color: #aaa;
-        }
-        .score-chip .pts {
-            background: #ff3366;
-            padding: 0 12px;
-            border-radius: 20px;
-            color: #fff;
-            font-weight: 800;
-        }
-        .score-chip .streak {
-            color: #ffd700;
-            font-size: 0.8rem;
-        }
-
-        /* VIDEO PLAYER */
+        /* VIDEO */
         .video-container {
             background: #000;
             border-radius: 16px;
@@ -296,11 +192,13 @@
             position: relative;
             aspect-ratio: 16/9;
         }
+
         .video-container iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
+
         .video-container .loading {
             position: absolute;
             top: 50%;
@@ -311,7 +209,7 @@
         }
 
         .video-info {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             padding: 12px 16px;
             margin: 10px 0;
@@ -319,181 +217,169 @@
             color: #aaa;
             font-size: 0.9rem;
         }
+
         .video-info strong {
             color: #fff;
         }
 
-        .question-section {
-            margin: 15px 0;
-        }
-        .question-section .label {
-            color: #888;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        /* PUNTEGGIO */
+        .scores {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
         }
 
-        .options-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin: 10px 0;
-        }
-        .option-btn {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid #333;
-            border-radius: 16px;
-            padding: 16px 14px;
-            color: #fff;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            text-align: left;
+        .score-chip {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 30px;
             display: flex;
             align-items: center;
             gap: 12px;
+            border: 1px solid #333;
+            font-weight: 600;
+            color: #fff;
+            min-width: 140px;
+            justify-content: space-between;
         }
-        .option-btn .letter {
-            background: rgba(255,255,255,0.1);
+
+        .score-chip .name {
+            color: #aaa;
+        }
+
+        .score-chip .pts {
+            background: #ff3366;
+            padding: 0 12px;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .score-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .score-controls button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+            border-radius: 50%;
             width: 30px;
             height: 30px;
-            border-radius: 50%;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            color: #888;
-            flex-shrink: 0;
-        }
-        .option-btn:hover:not(:disabled) {
-            border-color: #ff3366;
-            transform: scale(1.02);
-        }
-        .option-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .option-btn.correct {
-            border-color: #00ff88;
-            background: rgba(0, 255, 136, 0.1);
-        }
-        .option-btn.wrong {
-            border-color: #ff3366;
-            background: rgba(255, 51, 102, 0.1);
         }
 
-        .powerups {
+        .score-controls button:hover {
+            background: rgba(255, 51, 102, 0.3);
+            border-color: #ff3366;
+        }
+
+        .score-controls .points-input {
+            width: 50px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 4px 6px;
+            color: #fff;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .score-controls .points-input:focus {
+            border-color: #ff3366;
+            outline: none;
+        }
+
+        .controls {
             display: flex;
             gap: 12px;
             justify-content: center;
             flex-wrap: wrap;
             margin: 15px 0;
         }
-        .powerup-btn {
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid #ffd700;
-            border-radius: 30px;
-            padding: 8px 20px;
-            color: #ffd700;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.3s;
+
+        .controls .btn {
+            padding: 10px 24px;
             font-size: 0.9rem;
         }
-        .powerup-btn:hover:not(:disabled) {
-            background: rgba(255, 215, 0, 0.2);
-            transform: scale(1.05);
-        }
-        .powerup-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .powerup-btn.used {
-            opacity: 0.3;
-        }
 
-        .feedback {
-            text-align: center;
-            padding: 12px;
-            border-radius: 12px;
-            margin: 10px 0;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        .feedback.good {
-            background: rgba(0, 255, 136, 0.1);
-            border: 1px solid #00ff88;
-            color: #00ff88;
-        }
-        .feedback.wrong {
-            background: rgba(255, 51, 102, 0.1);
-            border: 1px solid #ff3366;
-            color: #ff3366;
-        }
-        .feedback.info {
-            background: rgba(51, 102, 255, 0.1);
-            border: 1px solid #3366ff;
-            color: #3366ff;
-        }
-
-        /* RESULTS */
         .result-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
             margin: 30px 0;
         }
+
         .result-card {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 20px;
             padding: 20px;
             text-align: center;
             border: 1px solid #333;
-            transition: 0.3s;
         }
+
         .result-card.winner {
             border-color: #ffd700;
             box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
             transform: scale(1.05);
         }
+
         .result-card .r-name {
             font-size: 1.3rem;
             font-weight: 700;
             color: #fff;
         }
+
         .result-card .r-pts {
             font-size: 2.5rem;
             font-weight: 900;
             color: #ffd700;
         }
-        .result-card .r-stats {
-            color: #888;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
 
         @media (max-width: 600px) {
-            .game-wrapper { padding: 20px; }
-            .logo { font-size: 1.8rem; }
-            .options-grid { grid-template-columns: 1fr; }
-            .video-container { aspect-ratio: 16/9; }
-            .setup-options { flex-direction: column; align-items: stretch; }
-            .player-card { flex: 1 1 100%; }
-            .btn { width: 100%; justify-content: center; }
+            .game-wrapper {
+                padding: 20px;
+            }
+            .logo {
+                font-size: 1.8rem;
+            }
+            .player-card {
+                flex: 1 1 100%;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .score-chip {
+                min-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="game-wrapper">
-        <div class="logo">🎬 MOBSHOW QUIZ</div>
-        <div class="logo-sub">⚡ Sfida i tuoi amici con i video di MobShow</div>
+        <div class="logo">🎬 MOBSHOW</div>
+        <div class="logo-sub">⚡ Anime Video Player</div>
 
         <!-- SETUP -->
         <div id="setupScreen" class="screen active">
             <div class="api-section">
-                <input type="password" id="apiKeyInput" placeholder="Inserisci la tua YouTube API Key" value="AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4">
-                <div class="hint">🔑 Inserisci la tua API Key di YouTube (gratuita da Google Cloud Console)</div>
+                <input type="password" id="apiKeyInput" placeholder="AIzaSyCXsFDpO4dYRiwlTPA4s5rbaIpCG4_7EB4">
+                <div class="hint">
+                    🔑 Come ottenere la chiave: 
+                    <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> → 
+                    Crea progetto → Attiva YouTube Data API v3 → Crea credenziali → Chiave API
+                </div>
             </div>
 
             <div class="setup-grid" id="playerInputs"></div>
@@ -501,25 +387,13 @@
                 <button class="btn btn-secondary" style="padding:8px 24px; font-size:0.9rem;" id="addPlayerBtn">➕ Aggiungi Giocatore</button>
             </div>
 
-            <div class="setup-options">
-                <label>🎯 Round <input type="number" id="roundCount" value="6" min="2" max="15"></label>
-                <label>⏱️ Timer <input type="number" id="timerSeconds" value="15" min="8" max="30"></label>
-            </div>
-
             <div class="btn-center">
-                <button class="btn" id="startGameBtn">🚀 Inizia Duel</button>
+                <button class="btn" id="startGameBtn">🚀 Avvia</button>
             </div>
         </div>
 
         <!-- GAME -->
         <div id="gameScreen" class="screen">
-            <div class="game-header">
-                <div class="round-badge">Round <span id="currentRound">1</span>/<span id="totalRounds">6</span></div>
-                <div class="turn-badge" id="turnBadge">🎯 Turno di: Nome</div>
-            </div>
-
-            <div class="scores" id="scoreBoard"></div>
-
             <div class="video-container" id="videoContainer">
                 <div class="loading">⏳ Caricamento video...</div>
                 <iframe id="videoPlayer" src="" allowfullscreen></iframe>
@@ -529,21 +403,11 @@
                 <strong>🎬</strong> Caricamento in corso...
             </div>
 
-            <div class="question-section">
-                <div class="label">🤔 Quale anime viene mostrato in questo video?</div>
-                <div class="options-grid" id="optionsContainer"></div>
-            </div>
+            <div class="scores" id="scoreBoard"></div>
 
-            <div class="powerups" id="powerupArea">
-                <button class="powerup-btn" id="powerupSkip" disabled>⏭️ Salta (0)</button>
-                <button class="powerup-btn" id="powerupDouble" disabled>⚡ x2 Punti (0)</button>
-                <button class="powerup-btn" id="powerupHint" disabled>💡 Suggerimento (0)</button>
-            </div>
-
-            <div id="feedbackArea"></div>
-
-            <div class="btn-center">
-                <button class="btn btn-secondary" id="nextTurnBtn" disabled>⏩ Prossimo Turno</button>
+            <div class="controls">
+                <button class="btn btn-secondary" id="nextVideoBtn">⏭️ Prossimo Video</button>
+                <button class="btn btn-secondary" id="endGameBtn">🏁 Termina Partita</button>
             </div>
         </div>
 
@@ -560,44 +424,15 @@
     <script>
         (function() {
             // ============================================================
-            //  DATABASE DI ANIME PER LE RISPOSTE
-            // ============================================================
-            const ANIME_LIST = [
-                'Naruto', 'One Piece', 'Dragon Ball', 'Attack on Titan', 
-                'My Hero Academia', 'Demon Slayer', 'Fullmetal Alchemist',
-                'Sword Art Online', 'Tokyo Ghoul', 'Death Note',
-                'Hunter x Hunter', 'Bleach', 'Jujutsu Kaisen', 
-                'Chainsaw Man', 'Mob Psycho 100', 'One Punch Man',
-                'Evangelion', 'Cowboy Bebop', 'Samurai Champloo',
-                'Steins;Gate', 'Code Geass', 'Fairy Tail', 
-                'Black Clover', 'Boruto', 'Dr. Stone', 
-                'Fire Force', 'The Promised Neverland', 'Vinland Saga',
-                'Berserk', 'Gintama', 'Haikyuu!!', 'Kuroko no Basket'
-            ];
-
-            // ============================================================
-            //  STATO DEL GIOCO
+            //  STATO
             // ============================================================
             const state = {
                 players: [],
                 currentPlayerIndex: 0,
-                round: 0,
-                totalRounds: 6,
-                timerSeconds: 15,
-                answered: false,
-                timerInterval: null,
-                timeLeft: 15,
-                gameOver: false,
-                waitingForNext: false,
                 currentVideoId: null,
-                currentCorrectAnime: null,
                 usedVideos: [],
-                powerups: {
-                    skip: 1,
-                    double: 1,
-                    hint: 1
-                },
-                powerupUsed: false,
+                videos: [],
+                gameOver: false,
                 apiKey: ''
             };
 
@@ -612,21 +447,12 @@
             const addPlayerBtn = $('addPlayerBtn');
             const startGameBtn = $('startGameBtn');
             const apiKeyInput = $('apiKeyInput');
-            const roundCount = $('roundCount');
-            const timerSeconds = $('timerSeconds');
-            const currentRound = $('currentRound');
-            const totalRounds = $('totalRounds');
-            const turnBadge = $('turnBadge');
-            const scoreBoard = $('scoreBoard');
             const videoContainer = $('videoContainer');
             const videoPlayer = $('videoPlayer');
             const videoInfo = $('videoInfo');
-            const optionsContainer = $('optionsContainer');
-            const powerupSkip = $('powerupSkip');
-            const powerupDouble = $('powerupDouble');
-            const powerupHint = $('powerupHint');
-            const feedbackArea = $('feedbackArea');
-            const nextTurnBtn = $('nextTurnBtn');
+            const scoreBoard = $('scoreBoard');
+            const nextVideoBtn = $('nextVideoBtn');
+            const endGameBtn = $('endGameBtn');
             const resultGrid = $('resultGrid');
             const restartBtn = $('restartBtn');
 
@@ -643,12 +469,6 @@
 
             function randomItem(arr) {
                 return arr[Math.floor(Math.random() * arr.length)];
-            }
-
-            function getRandomAnime(exclude = []) {
-                const available = ANIME_LIST.filter(a => !exclude.includes(a));
-                if (available.length === 0) return randomItem(ANIME_LIST);
-                return randomItem(available);
             }
 
             // ============================================================
@@ -670,6 +490,7 @@
                     inp.addEventListener('input', (e) => {
                         const idx = parseInt(e.target.dataset.idx);
                         state.players[idx].name = e.target.value.trim() || `Giocatore ${idx+1}`;
+                        updateScoreBoard();
                     });
                 });
                 playerInputs.querySelectorAll('.remove-btn').forEach(btn => {
@@ -685,16 +506,16 @@
 
             function initSetup() {
                 state.players = [
-                    { name: 'Naruto', points: 0, streak: 0, correct: 0, wrong: 0 },
-                    { name: 'Luffy', points: 0, streak: 0, correct: 0, wrong: 0 },
-                    { name: 'Goku', points: 0, streak: 0, correct: 0, wrong: 0 }
+                    { name: 'Naruto', points: 0 },
+                    { name: 'Luffy', points: 0 },
+                    { name: 'Goku', points: 0 }
                 ];
                 renderPlayerInputs();
             }
 
             addPlayerBtn.addEventListener('click', () => {
                 if (state.players.length < 6) {
-                    state.players.push({ name: `Giocatore ${state.players.length+1}`, points: 0, streak: 0, correct: 0, wrong: 0 });
+                    state.players.push({ name: `Giocatore ${state.players.length+1}`, points: 0 });
                     renderPlayerInputs();
                 } else {
                     alert('Massimo 6 giocatori!');
@@ -709,12 +530,11 @@
                     'mobshow anime quiz',
                     'mobshow indovina anime',
                     'mobshow anime challenge',
-                    'mobshow indovinello anime',
                     'mobshow anime game'
                 ];
                 const query = randomItem(queries);
                 const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=50&key=${apiKey}`;
-                
+
                 try {
                     const response = await fetch(url);
                     const data = await response.json();
@@ -739,7 +559,7 @@
             }
 
             // ============================================================
-            //  AVVIO PARTITA
+            //  AVVIO
             // ============================================================
             startGameBtn.addEventListener('click', async () => {
                 const apiKey = apiKeyInput.value.trim();
@@ -757,23 +577,10 @@
                     }
                 });
 
-                state.totalRounds = parseInt(roundCount.value) || 6;
-                if (state.totalRounds < 2) state.totalRounds = 2;
-                if (state.totalRounds > 15) state.totalRounds = 15;
-                
-                state.timerSeconds = parseInt(timerSeconds.value) || 15;
-                if (state.timerSeconds < 5) state.timerSeconds = 5;
-                if (state.timerSeconds > 30) state.timerSeconds = 30;
-
                 // Reset
-                state.players.forEach(p => { p.points = 0; p.streak = 0; p.correct = 0; p.wrong = 0; });
-                state.round = 0;
-                state.currentPlayerIndex = 0;
-                state.gameOver = false;
-                state.answered = false;
-                state.waitingForNext = false;
+                state.players.forEach(p => { p.points = 0; });
                 state.usedVideos = [];
-                state.powerups = { skip: 1, double: 1, hint: 1 };
+                state.gameOver = false;
 
                 // Carica video
                 try {
@@ -783,304 +590,105 @@
                         return;
                     }
                     state.videos = videos;
-                    
+
                     setupScreen.classList.remove('active');
                     gameScreen.classList.add('active');
                     resultScreen.classList.remove('active');
-                    
-                    nextTurn();
+
+                    loadVideo();
+                    updateScoreBoard();
                 } catch (error) {
                     alert(`Errore nel caricare i video: ${error.message}`);
                 }
             });
 
             // ============================================================
-            //  GESTIONE TURNO
+            //  CARICA VIDEO
             // ============================================================
-            function nextTurn() {
+            function loadVideo() {
                 if (state.gameOver) return;
-                if (state.round >= state.totalRounds) {
-                    endGame();
-                    return;
-                }
 
-                const player = state.players[state.currentPlayerIndex];
-                state.answered = false;
-                state.waitingForNext = false;
-                state.powerupUsed = false;
-
-                // Prendi un video casuale
                 let video = getRandomVideo(state.videos, state.usedVideos);
                 if (!video) {
-                    // Se abbiamo usato tutti i video, resetta
                     state.usedVideos = [];
                     video = getRandomVideo(state.videos, state.usedVideos);
                     if (!video) {
-                        endGame();
+                        alert('Nessun video disponibile!');
                         return;
                     }
                 }
+
                 state.currentVideoId = extractVideoId(video);
                 state.usedVideos.push(state.currentVideoId);
 
-                // Determina l'anime corretto (simulato dal titolo del video)
-                const title = video.snippet.title.toLowerCase();
-                let correctAnime = null;
-                for (const anime of ANIME_LIST) {
-                    if (title.includes(anime.toLowerCase())) {
-                        correctAnime = anime;
-                        break;
-                    }
-                }
-                if (!correctAnime) {
-                    // Se non trovato, prendi uno casuale
-                    correctAnime = randomItem(ANIME_LIST);
-                }
-                state.currentCorrectAnime = correctAnime;
-
-                // Aggiorna UI
-                updateScoreBoard();
-                updateTurnBadge(player);
-                currentRound.textContent = state.round + 1;
-                totalRounds.textContent = state.totalRounds;
-
-                // Carica video
                 videoPlayer.src = `https://www.youtube.com/embed/${state.currentVideoId}?autoplay=1&rel=0`;
                 videoPlayer.style.display = 'block';
                 document.querySelector('.video-container .loading').style.display = 'none';
                 videoInfo.innerHTML = `<strong>🎬</strong> ${video.snippet.title.substring(0, 100)}...`;
-
-                // Genera opzioni (4 opzioni: 1 corretta + 3 casuali)
-                const options = [correctAnime];
-                const usedAnime = [correctAnime];
-                while (options.length < 4) {
-                    const rand = getRandomAnime(usedAnime);
-                    if (!usedAnime.includes(rand)) {
-                        options.push(rand);
-                        usedAnime.push(rand);
-                    }
-                }
-                shuffle(options);
-
-                optionsContainer.innerHTML = '';
-                const letters = ['A', 'B', 'C', 'D'];
-                options.forEach((opt, i) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'option-btn';
-                    btn.dataset.idx = i;
-                    btn.dataset.anime = opt;
-                    btn.innerHTML = `<span class="letter">${letters[i]}</span> ${opt}`;
-                    btn.addEventListener('click', () => handleAnswer(opt));
-                    optionsContainer.appendChild(btn);
-                });
-
-                // Power-ups
-                updatePowerups();
-
-                // Timer
-                startTimer();
-
-                // Abilita opzioni
-                optionsContainer.querySelectorAll('.option-btn').forEach(b => b.disabled = false);
-                nextTurnBtn.disabled = true;
-                feedbackArea.innerHTML = '';
             }
 
-            function updateTurnBadge(player) {
-                turnBadge.textContent = `🎯 Turno di: ${player.name}`;
-            }
-
+            // ============================================================
+            //  SCOREBOARD
+            // ============================================================
             function updateScoreBoard() {
                 scoreBoard.innerHTML = '';
                 state.players.forEach((p, idx) => {
                     const chip = document.createElement('div');
-                    chip.className = 'score-chip' + (idx === state.currentPlayerIndex && !state.gameOver ? ' active' : '');
-                    const streakText = p.streak > 1 ? `<span class="streak">🔥x${p.streak}</span>` : '';
+                    chip.className = 'score-chip';
                     chip.innerHTML = `
                         <span class="name">${p.name}</span>
                         <span class="pts">${p.points}</span>
-                        ${streakText}
+                        <div class="score-controls">
+                            <button class="minus-btn" data-idx="${idx}">−</button>
+                            <input type="number" class="points-input" data-idx="${idx}" value="1" min="1" max="100">
+                            <button class="plus-btn" data-idx="${idx}">+</button>
+                        </div>
                     `;
                     scoreBoard.appendChild(chip);
                 });
-            }
 
-            function updatePowerups() {
-                powerupSkip.textContent = `⏭️ Salta (${state.powerups.skip})`;
-                powerupSkip.disabled = state.powerups.skip <= 0 || state.answered;
-                powerupDouble.textContent = `⚡ x2 Punti (${state.powerups.double})`;
-                powerupDouble.disabled = state.powerups.double <= 0 || state.answered;
-                powerupHint.textContent = `💡 Suggerimento (${state.powerups.hint})`;
-                powerupHint.disabled = state.powerups.hint <= 0 || state.answered;
-            }
-
-            // ============================================================
-            //  TIMER
-            // ============================================================
-            function startTimer() {
-                clearInterval(state.timerInterval);
-                state.timeLeft = state.timerSeconds;
-                state.timerInterval = setInterval(() => {
-                    state.timeLeft -= 0.1;
-                    if (state.timeLeft <= 0) {
-                        clearInterval(state.timerInterval);
-                        if (!state.answered) {
-                            handleTimeout();
-                        }
-                    }
-                }, 100);
-            }
-
-            function stopTimer() {
-                clearInterval(state.timerInterval);
-            }
-
-            function handleTimeout() {
-                if (state.answered) return;
-                state.answered = true;
-                const player = state.players[state.currentPlayerIndex];
-                player.wrong += 1;
-                player.streak = 0;
-                
-                optionsContainer.querySelectorAll('.option-btn').forEach(b => {
-                    b.disabled = true;
-                    if (b.dataset.anime === state.currentCorrectAnime) {
-                        b.classList.add('correct');
-                    }
-                });
-                
-                updateScoreBoard();
-                showFeedback(`⏰ Tempo scaduto! Era ${state.currentCorrectAnime}`, 'wrong');
-                enableNextTurn();
-            }
-
-            // ============================================================
-            //  GESTIONE RISPOSTA
-            // ============================================================
-            let powerupMultiplier = 1;
-
-            function handleAnswer(selected) {
-                if (state.answered) return;
-                state.answered = true;
-                stopTimer();
-
-                const player = state.players[state.currentPlayerIndex];
-                const correct = selected === state.currentCorrectAnime;
-
-                // Disabilita opzioni
-                optionsContainer.querySelectorAll('.option-btn').forEach(b => {
-                    b.disabled = true;
-                    if (b.dataset.anime === state.currentCorrectAnime) {
-                        b.classList.add('correct');
-                    }
-                    if (b.dataset.anime === selected && !correct) {
-                        b.classList.add('wrong');
-                    }
+                // Eventi per i pulsanti
+                scoreBoard.querySelectorAll('.plus-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.target.dataset.idx);
+                        const input = scoreBoard.querySelector(`.points-input[data-idx="${idx}"]`);
+                        const val = parseInt(input.value) || 1;
+                        state.players[idx].points += val;
+                        updateScoreBoard();
+                    });
                 });
 
-                let points = 0;
-                if (correct) {
-                    points = 10 + Math.floor(state.timerSeconds - state.timeLeft);
-                    points = Math.min(points, 25);
-                    points = Math.floor(points * powerupMultiplier);
-                    player.points += points;
-                    player.correct += 1;
-                    player.streak += 1;
-                    
-                    if (player.streak >= 3) {
-                        const bonus = player.streak * 2;
-                        player.points += bonus;
-                        showFeedback(`🔥 Streak x${player.streak}! +${bonus} bonus!`, 'good');
-                    } else {
-                        showFeedback(`✅ Corretto! +${points} punti`, 'good');
-                    }
-                } else {
-                    player.wrong += 1;
-                    player.streak = 0;
-                    showFeedback(`❌ Sbagliato! Era ${state.currentCorrectAnime}`, 'wrong');
-                }
-
-                powerupMultiplier = 1;
-                updateScoreBoard();
-                enableNextTurn();
-            }
-
-            function showFeedback(msg, type) {
-                feedbackArea.innerHTML = `<div class="feedback ${type}">${msg}</div>`;
-            }
-
-            function enableNextTurn() {
-                state.waitingForNext = true;
-                nextTurnBtn.disabled = false;
-            }
-
-            // ============================================================
-            //  POWER-UPS
-            // ============================================================
-            powerupSkip.addEventListener('click', () => {
-                if (state.answered || state.powerups.skip <= 0) return;
-                state.powerups.skip--;
-                state.answered = true;
-                stopTimer();
-                
-                // Mostra risposta corretta
-                optionsContainer.querySelectorAll('.option-btn').forEach(b => {
-                    b.disabled = true;
-                    if (b.dataset.anime === state.currentCorrectAnime) {
-                        b.classList.add('correct');
-                    }
+                scoreBoard.querySelectorAll('.minus-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.target.dataset.idx);
+                        const input = scoreBoard.querySelector(`.points-input[data-idx="${idx}"]`);
+                        const val = parseInt(input.value) || 1;
+                        state.players[idx].points = Math.max(0, state.players[idx].points - val);
+                        updateScoreBoard();
+                    });
                 });
-                
-                const player = state.players[state.currentPlayerIndex];
-                player.streak += 1; // Mantiene streak
-                showFeedback(`⏭️ Salta! Risposta: ${state.currentCorrectAnime} (0 punti)`, 'info');
-                updatePowerups();
-                updateScoreBoard();
-                enableNextTurn();
-            });
 
-            powerupDouble.addEventListener('click', () => {
-                if (state.answered || state.powerups.double <= 0) return;
-                state.powerups.double--;
-                powerupMultiplier = 2;
-                showFeedback('⚡ Power-up x2 attivato!', 'info');
-                updatePowerups();
-            });
-
-            powerupHint.addEventListener('click', () => {
-                if (state.answered || state.powerups.hint <= 0) return;
-                state.powerups.hint--;
-                
-                // Rivela una lettera dell'anime corretto
-                const anime = state.currentCorrectAnime;
-                const hint = anime.charAt(0) + '...' + anime.charAt(anime.length - 1);
-                showFeedback(`💡 Suggerimento: inizia con "${anime.charAt(0)}" e finisce con "${anime.charAt(anime.length - 1)}"`, 'info');
-                updatePowerups();
-            });
+                scoreBoard.querySelectorAll('.points-input').forEach(inp => {
+                    inp.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.dataset.idx);
+                        const val = parseInt(e.target.value);
+                        if (isNaN(val) || val < 1) e.target.value = 1;
+                    });
+                });
+            }
 
             // ============================================================
-            //  PROSSIMO TURNO
+            //  CONTROLLI
             // ============================================================
-            nextTurnBtn.addEventListener('click', () => {
-                if (!state.waitingForNext) return;
-                state.currentPlayerIndex++;
-                if (state.currentPlayerIndex >= state.players.length) {
-                    state.currentPlayerIndex = 0;
-                    state.round++;
-                    if (state.round >= state.totalRounds) {
-                        endGame();
-                        return;
-                    }
-                }
-                nextTurn();
-            });
+            nextVideoBtn.addEventListener('click', loadVideo);
+
+            endGameBtn.addEventListener('click', endGame);
 
             // ============================================================
             //  FINE PARTITA
             // ============================================================
             function endGame() {
                 state.gameOver = true;
-                stopTimer();
                 gameScreen.classList.remove('active');
                 resultScreen.classList.add('active');
 
@@ -1092,8 +700,6 @@
                     card.innerHTML = `
                         <div class="r-name">${idx === 0 ? '🏆 ' : ''}${p.name}</div>
                         <div class="r-pts">${p.points} pts</div>
-                        <div class="r-stats">✅ ${p.correct} corrette • ❌ ${p.wrong} sbagliate</div>
-                        ${p.streak > 2 ? `<div class="r-stats">🔥 Max streak: ${p.streak}</div>` : ''}
                     `;
                     resultGrid.appendChild(card);
                 });
@@ -1107,21 +713,13 @@
                 setupScreen.classList.add('active');
                 initSetup();
                 state.gameOver = false;
-                state.round = 0;
-                state.currentPlayerIndex = 0;
-                state.answered = false;
-                state.waitingForNext = false;
                 state.usedVideos = [];
-                stopTimer();
             });
 
             // ============================================================
             //  INIT
             // ============================================================
             initSetup();
-            roundCount.value = 6;
-            timerSeconds.value = 15;
-
         })();
     </script>
 </body>
