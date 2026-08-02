@@ -315,7 +315,7 @@
     </div>
 
     <div class="player-wrapper">
-        <video id="audioPlayer" preload="metadata"></video>
+        <video id="audioPlayer" preload="auto"></video>
 
         <div class="audio-visual" id="audioVisual">🔊</div>
         <div class="now-playing" id="nowPlaying">🎶 Ascolta l'opening...</div>
@@ -354,7 +354,6 @@
     let isPlaying = false;
     let questionsQueue = [];
     let isLoading = false;
-    let isSeeking = false;
 
     const audio = document.getElementById('audioPlayer');
     let currentAudioUrl = null;
@@ -469,6 +468,7 @@
                 let videoLink = null;
                 for (const entry of theme.animethemeentries) {
                     if (entry.videos && entry.videos.nodes && entry.videos.nodes.length > 0) {
+                        // 🔽 FORZO la risoluzione più bassa in assoluto
                         const sorted = entry.videos.nodes.sort((a, b) => (a.resolution || 0) - (b.resolution || 0));
                         videoLink = sorted[0].link;
                         break;
@@ -537,7 +537,7 @@
         loadQuestion();
     }
 
-    // ---------- CARICA DOMANDA ----------
+    // ---------- CARICA DOMANDA (con gestione buffering) ----------
     function loadQuestion() {
         if (currentQuestion >= questionsQueue.length) {
             feedbackDiv.innerHTML = `🎉 Complimenti! Hai completato il quiz. Punteggio: ${score}/${questionsQueue.length}`;
@@ -560,13 +560,13 @@
         currentOptions = q.options;
         currentAudioUrl = q.anime.videoUrl;
         isAnswered = false;
-        isSeeking = false;
 
         updateScoreAndCounter();
         feedbackDiv.innerHTML = '';
         nextBtn.disabled = true;
 
-        audio.preload = 'metadata';
+        // Imposta il player con preload auto
+        audio.preload = 'auto';
         audio.src = currentAudioUrl;
         audio.load();
         audio.currentTime = 0;
@@ -582,35 +582,26 @@
         audioVisual.textContent = '⏳';
         nowPlaying.textContent = '🎵 Caricamento audio...';
 
-        // --- GESTIONE BUFFERING MIGLIORATA ---
+        // --- GESTIONE BUFFERING ---
         let bufferingTimeout = null;
-        let lastTimeBeforeBuffering = 0;
 
         audio.onwaiting = () => {
-            if (isSeeking) return;
-            // Salva il tempo corrente prima del buffering
-            if (!audio.paused) {
-                lastTimeBeforeBuffering = audio.currentTime;
-            }
             audioVisual.className = 'audio-visual buffering';
             audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '⏳ Buffering...';
+            nowPlaying.textContent = '⏳ Buffering in corso...';
             clearTimeout(bufferingTimeout);
             bufferingTimeout = setTimeout(() => {
-                // Se il buffering dura troppo, ricarica ma mantieni la posizione
-                if (!audio.paused && !isSeeking) {
-                    const savedTime = audio.currentTime || lastTimeBeforeBuffering;
+                if (!audio.paused) {
                     audio.pause();
                     audio.load();
-                    audio.currentTime = savedTime;
                     audio.play().catch(() => {});
                 }
-            }, 8000);
+            }, 5000);
         };
 
-        audio.oncanplay = () => {
+        audio.oncanplaythrough = () => {
             clearTimeout(bufferingTimeout);
-            if (!audio.paused && !isSeeking) {
+            if (!audio.paused) {
                 audioVisual.className = 'audio-visual playing';
                 audioVisual.textContent = '🔊';
                 nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -623,7 +614,7 @@
 
         audio.onloadedmetadata = () => {
             clearTimeout(bufferingTimeout);
-            if (!audio.paused && !audio.seeking && !isSeeking) {
+            if (!audio.paused && !audio.seeking) {
                 audioVisual.className = 'audio-visual playing';
                 audioVisual.textContent = '🔊';
                 nowPlaying.textContent = '🎵 Ascolta l\'opening...';
@@ -635,31 +626,6 @@
         };
 
         audio.ontimeupdate = () => {
-            if (audio.duration && !isSeeking) {
-                const percent = (audio.currentTime / audio.duration) * 100;
-                progressBar.value = percent;
-                timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-            }
-        };
-
-        audio.onseeking = () => {
-            isSeeking = true;
-            audioVisual.className = 'audio-visual buffering';
-            audioVisual.textContent = '⏳';
-            nowPlaying.textContent = '⏳ Caricamento...';
-        };
-
-        audio.onseeked = () => {
-            isSeeking = false;
-            if (!audio.paused) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            } else {
-                audioVisual.className = 'audio-visual';
-                audioVisual.textContent = '▶️';
-                nowPlaying.textContent = '🎵 Pronto per la riproduzione';
-            }
             if (audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
                 progressBar.value = percent;
@@ -669,11 +635,9 @@
 
         audio.onplay = () => {
             isPlaying = true;
-            if (!isSeeking) {
-                audioVisual.className = 'audio-visual playing';
-                audioVisual.textContent = '🔊';
-                nowPlaying.textContent = '🎵 Ascolta l\'opening...';
-            }
+            audioVisual.className = 'audio-visual playing';
+            audioVisual.textContent = '🔊';
+            nowPlaying.textContent = '🎵 Ascolta l\'opening...';
             playPauseBtn.textContent = '⏸️ Pausa';
         };
 
@@ -721,14 +685,7 @@
     }
 
     function seekBy(seconds) {
-        if (!audio.duration) return;
-        let newTime = audio.currentTime + seconds;
-        newTime = Math.max(0, Math.min(audio.duration, newTime));
-        if (audio.fastSeek) {
-            audio.fastSeek(newTime);
-        } else {
-            audio.currentTime = newTime;
-        }
+        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + seconds));
     }
 
     // ---------- RENDER OPZIONI ----------
@@ -852,11 +809,7 @@
     progressBar.addEventListener('input', (e) => {
         if (audio.duration) {
             const time = (e.target.value / 100) * audio.duration;
-            if (audio.fastSeek) {
-                audio.fastSeek(time);
-            } else {
-                audio.currentTime = time;
-            }
+            audio.currentTime = time;
         }
     });
 
