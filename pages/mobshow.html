@@ -183,9 +183,9 @@
             width: 100%;
             height: 100%;
             border: none;
+            pointer-events: auto;
         }
 
-        /* OVERLAY che cattura i tasti ma lascia passare il click */
         .video-overlay {
             position: absolute;
             top: 0;
@@ -194,15 +194,6 @@
             height: 100%;
             z-index: 10;
             background: transparent;
-            pointer-events: none;
-        }
-
-        .video-overlay.active {
-            pointer-events: auto;
-        }
-
-        /* Quando l'overlay è attivo, passa i click al video */
-        .video-overlay.pass-through {
             pointer-events: none;
         }
 
@@ -409,13 +400,13 @@
                 <kbd>Shift</kbd> + <kbd>+</kbd> = +5 punti &nbsp;|&nbsp; 
                 <kbd>N</kbd> = prossimo video &nbsp;|&nbsp; 
                 <kbd>E</kbd> = termina partita &nbsp;|&nbsp; 
-                <kbd>Spazio</kbd> = play/pausa
+                <kbd>Spazio</kbd> <kbd>←</kbd> <kbd>→</kbd> = controlli video
             </div>
 
             <div class="video-container" id="videoContainer">
                 <div class="loading">⏳ Caricamento video...</div>
                 <iframe id="videoPlayer" src="" allowfullscreen></iframe>
-                <div class="video-overlay active pass-through" id="videoOverlay"></div>
+                <div class="video-overlay" id="videoOverlay"></div>
             </div>
 
             <div class="video-info" id="videoInfo">
@@ -639,8 +630,8 @@
                 document.querySelector('.video-container .loading').style.display = 'none';
                 videoInfo.innerHTML = `<strong>🎬</strong> ${video.snippet.title.substring(0, 100)}...`;
                 
-                // Attiva overlay con pass-through per i click
-                videoOverlay.className = 'video-overlay active pass-through';
+                // Overlay inattivo per far passare i click al video
+                videoOverlay.style.pointerEvents = 'none';
             }
 
             // ============================================================
@@ -705,11 +696,15 @@
 
                 const key = e.key;
 
-                // SPAZIO = play/pausa (lo lasciamo passare al video)
-                if (key === ' ' || key === 'Space') {
-                    // Non facciamo nulla, lasciamo che il player lo gestisca
+                // 🔹 TASTI CHE VANNO AL PLAYER (NON INTERCETTATI)
+                // Spazio, Freccia Destra, Freccia Sinistra
+                if (key === ' ' || key === 'Space' || 
+                    key === 'ArrowRight' || key === 'ArrowLeft') {
+                    // Non facciamo nulla, lasciamo che il player li gestisca
                     return;
                 }
+
+                // 🔹 TASTI INTERCETTATI DAL GIOCO
 
                 // Numeri 1-6 per selezionare giocatore
                 if (key >= '1' && key <= '6') {
