@@ -186,7 +186,7 @@
             pointer-events: auto;
         }
 
-        /* OVERLAY TRASPARENTE PER CATTURARE GLI EVENTI */
+        /* OVERLAY CHE FA PASSARE SOLO SPAZIO, FRECCE E CLICK */
         .video-overlay {
             position: absolute;
             top: 0;
@@ -195,11 +195,6 @@
             height: 100%;
             z-index: 10;
             background: transparent;
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .video-overlay.active {
             pointer-events: auto;
         }
 
@@ -405,7 +400,8 @@
                 <kbd>+</kbd> / <kbd>-</kbd> = +1/-1 punto &nbsp;|&nbsp; 
                 <kbd>Shift</kbd> + <kbd>+</kbd> = +5 punti &nbsp;|&nbsp; 
                 <kbd>N</kbd> = prossimo video &nbsp;|&nbsp; 
-                <kbd>E</kbd> = termina partita
+                <kbd>E</kbd> = termina partita &nbsp;|&nbsp; 
+                <kbd>Spazio</kbd> <kbd>←</kbd> <kbd>→</kbd> = controlli video
             </div>
 
             <div class="video-container" id="videoContainer">
@@ -634,9 +630,6 @@
                 videoPlayer.style.display = 'block';
                 document.querySelector('.video-container .loading').style.display = 'none';
                 videoInfo.innerHTML = `<strong>🎬</strong> ${video.snippet.title.substring(0, 100)}...`;
-                
-                // Attiva overlay per catturare i click
-                videoOverlay.classList.add('active');
             }
 
             // ============================================================
@@ -690,9 +683,10 @@
             }
 
             // ============================================================
-            //  SCORCIATOIE DA TASTIERA - SOLUZIONE DEFINITIVA
+            //  SCORCIATOIE DA TASTIERA
+            //  - Spazio, Freccia Destra, Freccia Sinistra: passano al video
+            //  - Tutti gli altri: intercettati dal gioco
             // ============================================================
-            // Usiamo keydown + keyup combinati per bypassare il player
             document.addEventListener('keydown', (e) => {
                 // Se stiamo scrivendo in un input, lascia fare
                 if (e.target.tagName === 'INPUT') return;
@@ -701,6 +695,15 @@
                 if (!gameScreen.classList.contains('active') || state.gameOver) return;
 
                 const key = e.key;
+
+                // 🔹 TASTI CHE VANNO AL PLAYER (NON INTERCETTATI)
+                if (key === ' ' || key === 'Space' || 
+                    key === 'ArrowRight' || key === 'ArrowLeft') {
+                    // Non facciamo nulla, lasciamo che il player li gestisca
+                    return;
+                }
+
+                // 🔹 TASTI INTERCETTATI DAL GIOCO
 
                 // Numeri 1-6 per selezionare giocatore
                 if (key >= '1' && key <= '6') {
@@ -757,6 +760,14 @@
                     return;
                 }
             }, true);
+
+            // ============================================================
+            //  GESTIONE CLICK SULL'OVERLAY - LI FA PASSARE AL VIDEO
+            // ============================================================
+            videoOverlay.addEventListener('click', (e) => {
+                // Il click passa attraverso l'overlay al video
+                // Non facciamo nulla, lasciamo che l'evento arrivi al iframe
+            });
 
             // ============================================================
             //  CONTROLLI
