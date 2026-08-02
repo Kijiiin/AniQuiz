@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Detective · Casuale</title>
+    <title>Anime Detective · Con Retry</title>
     <style>
         * {
             margin: 0;
@@ -255,6 +255,12 @@
             background: #3a2a1a;
             color: #d8a05a;
         }
+        .retry-info {
+            color: #d8a05a;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 4px;
+        }
         @media (max-width: 550px) {
             .game-wrapper { padding: 14px; }
             .options-grid { gap: 8px; }
@@ -301,6 +307,7 @@
                     <span class="value" id="episodesValue">-</span>
                 </div>
             </div>
+            <div class="retry-info" id="retryInfo"></div>
         </div>
 
         <div class="options-grid" id="optionsContainer">
@@ -334,7 +341,8 @@
                 isAnswered: false,
                 isGameOver: false,
                 isLoading: false,
-                round: 0
+                round: 0,
+                retryCount: 0
             };
 
             // DOM
@@ -351,12 +359,13 @@
             const errorsDisplay = document.getElementById('errorsDisplay');
             const resetBtn = document.getElementById('resetBtn');
             const skipBtn = document.getElementById('skipBtn');
+            const retryInfo = document.getElementById('retryInfo');
 
             // ----- CACHE PER ANIME CASUALI -----
             let animeCache = [];
-            let cachePage = 1;
-            let totalPages = 1;
             let isFetchingCache = false;
+            const MAX_RETRIES = 5;
+            const INITIAL_DELAY = 1000;
 
             // ----- FUNZIONI DI UTILITY -----
             function shuffleArray(arr) {
@@ -371,9 +380,9 @@
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
 
-            // ----- RATE LIMIT (3 richieste/sec) -----
+            // ----- RATE LIMIT CON RETRY E BACKOFF -----
             let lastRequestTime = 0;
-            async function rateLimitedFetch(url) {
+            async function rateLimitedFetch(url, retryCount = 0) {
                 const now = Date.now();
                 const waitTime = Math.max(0, 333 - (now - lastRequestTime));
                 if (waitTime > 0) await sleep(waitTime);
@@ -381,38 +390,95 @@
                 
                 try {
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    // Se è 429 (Too Many Requests), aspetta e riprova
+                    if (response.status === 429) {
+                        const retryAfter = parseInt(response.headers.get('Retry-After')) || 2;
+                        const delay = retryAfter * 1000;
+                        state.retryCount++;
+                        retryInfo.textContent = `⏳ Rate limit (429). Attendo ${retryAfter}s... (tentativo ${state.retryCount})`;
+                        
+                        if (state.retryCount < MAX_RETRIES) {
+                            await sleep(delay);
+                            return rateLimitedFetch(url, retryCount + 1);
+                        } else {
+                            throw new Error('Troppi tentativi (429)');
+                        }
+                    }
+                    
+                    // Se è 504 (Gateway Timeout), riprova con backoff
+                    if (response.status === 504) {
+                        state.retryCount++;
+                        const delay = Math.min(INITIAL_DELAY * Math.pow(2, retryCount), 8000);
+                        retryInfo.textContent = `⏳ Timeout (504). Ritento tra ${delay/1000}s... (tentativo ${state.retryCount})`;
+                        
+                        if (state.retryCount < MAX_RETRIES) {
+                            await sleep(delay);
+                            return rateLimitedFetch(url, retryCount + 1);
+                        } else {
+                            throw new Error('Troppi tentativi (504)');
+                        }
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    retryInfo.textContent = '';
+                    state.retryCount = 0;
                     return await response.json();
+                    
                 } catch (error) {
-                    console.error('API Error:', error);
+                    if (error.message.includes('HTTP 504') || error.message.includes('HTTP 429') || error.message.includes('Troppi tentativi')) {
+                        throw error;
+                    }
+                    // Altri errori, riprova con backoff
+                    if (retryCount < MAX_RETRIES) {
+                        const delay = Math.min(INITIAL_DELAY * Math.pow(2, retryCount), 8000);
+                        retryInfo.textContent = `⏳ Errore. Ritento tra ${delay/1000}s... (tentativo ${retryCount + 1})`;
+                        await sleep(delay);
+                        return rateLimitedFetch(url, retryCount + 1);
+                    }
                     throw error;
                 }
             }
 
             // ----- RIEMPIE LA CACHE CON ANIME CASUALI -----
             async function fetchRandomAnimeBatch() {
-                if (isFetchingCache) return;
+                if (isFetchingCache) {
+                    // Aspetta che la cache sia pronta
+                    let waitCycles = 0;
+                    while (isFetchingCache && waitCycles < 30) {
+                        await sleep(200);
+                        waitCycles++;
+                    }
+                    return;
+                }
                 isFetchingCache = true;
+                state.retryCount = 0;
                 
                 try {
                     // Scegli una pagina casuale (fino a 100 pagine di anime)
-                    const randomPage = Math.floor(Math.random() * 100) + 1;
+                    const randomPage = Math.floor(Math.random() * 80) + 1;
                     const url = `${API_BASE}?page=${randomPage}&limit=25&order_by=start_date&sort=desc`;
                     
+                    retryInfo.textContent = `📡 Caricamento pagina ${randomPage}...`;
                     const data = await rateLimitedFetch(url);
                     const results = data.data || [];
                     
                     if (results.length === 0) {
                         // Fallback: pagina 1
+                        retryInfo.textContent = `📡 Fallback: pagina 1...`;
                         const fallbackData = await rateLimitedFetch(`${API_BASE}?page=1&limit=25`);
                         const fallbackResults = fallbackData.data || [];
+                        const currentYear = new Date().getFullYear();
                         animeCache = fallbackResults.filter(a => 
                             a.title && 
                             a.year && 
-                            a.year <= new Date().getFullYear() &&
+                            a.year <= currentYear &&
                             a.genres && a.genres.length > 0 &&
-                            a.score &&
-                            a.episodes &&
+                            a.score !== null &&
+                            a.episodes !== null &&
                             a.episodes > 0
                         );
                     } else {
@@ -423,15 +489,17 @@
                             a.year && 
                             a.year <= currentYear &&
                             a.genres && a.genres.length > 0 &&
-                            a.score &&
-                            a.episodes &&
+                            a.score !== null &&
+                            a.episodes !== null &&
                             a.episodes > 0
                         );
                     }
                     
                     // Se la cache è vuota, prova con un'altra pagina
                     if (animeCache.length < 10) {
-                        const backupData = await rateLimitedFetch(`${API_BASE}?page=${Math.floor(Math.random() * 50) + 1}&limit=25`);
+                        retryInfo.textContent = `📡 Pochi anime validi, provo un'altra pagina...`;
+                        const backupPage = Math.floor(Math.random() * 50) + 1;
+                        const backupData = await rateLimitedFetch(`${API_BASE}?page=${backupPage}&limit=25`);
                         const backupResults = backupData.data || [];
                         const currentYear = new Date().getFullYear();
                         const backupFiltered = backupResults.filter(a => 
@@ -439,8 +507,8 @@
                             a.year && 
                             a.year <= currentYear &&
                             a.genres && a.genres.length > 0 &&
-                            a.score &&
-                            a.episodes &&
+                            a.score !== null &&
+                            a.episodes !== null &&
                             a.episodes > 0
                         );
                         animeCache = [...animeCache, ...backupFiltered];
@@ -448,6 +516,7 @@
                     
                     // Se ancora vuota, usa popolari come fallback
                     if (animeCache.length === 0) {
+                        retryInfo.textContent = `📡 Fallback: anime popolari...`;
                         const popData = await rateLimitedFetch(`${API_BASE}?order_by=popularity&sort=desc&limit=50`);
                         const popResults = popData.data || [];
                         const currentYear = new Date().getFullYear();
@@ -456,31 +525,36 @@
                             a.year && 
                             a.year <= currentYear &&
                             a.genres && a.genres.length > 0 &&
-                            a.score &&
-                            a.episodes &&
+                            a.score !== null &&
+                            a.episodes !== null &&
                             a.episodes > 0
                         );
                     }
                     
+                    retryInfo.textContent = `✅ ${animeCache.length} anime in cache`;
+                    
                 } catch (error) {
                     console.error('Errore fetch cache:', error);
-                    // Fallback: popolari
-                    try {
-                        const popData = await rateLimitedFetch(`${API_BASE}?order_by=popularity&sort=desc&limit=50`);
-                        const popResults = popData.data || [];
-                        const currentYear = new Date().getFullYear();
-                        animeCache = popResults.filter(a => 
-                            a.title && 
-                            a.year && 
-                            a.year <= currentYear &&
-                            a.genres && a.genres.length > 0 &&
-                            a.score &&
-                            a.episodes &&
-                            a.episodes > 0
-                        );
-                    } catch (e) {
-                        console.error('Fallback fallito:', e);
-                        animeCache = [];
+                    retryInfo.textContent = `⚠️ Errore: ${error.message}`;
+                    // Se la cache è vuota, prova con popolari come ultima risorsa
+                    if (animeCache.length === 0) {
+                        try {
+                            const popData = await rateLimitedFetch(`${API_BASE}?order_by=popularity&sort=desc&limit=50`);
+                            const popResults = popData.data || [];
+                            const currentYear = new Date().getFullYear();
+                            animeCache = popResults.filter(a => 
+                                a.title && 
+                                a.year && 
+                                a.year <= currentYear &&
+                                a.genres && a.genres.length > 0 &&
+                                a.score !== null &&
+                                a.episodes !== null &&
+                                a.episodes > 0
+                            );
+                        } catch (e) {
+                            console.error('Fallback fallito:', e);
+                            animeCache = [];
+                        }
                     }
                 }
                 
@@ -490,7 +564,6 @@
             // ----- OTTIENE ANIME CASUALI DALLA CACHE -----
             function getRandomAnimeFromCache(count = 1) {
                 if (animeCache.length === 0) return [];
-                
                 const shuffled = shuffleArray([...animeCache]);
                 return shuffled.slice(0, Math.min(count, shuffled.length));
             }
@@ -498,7 +571,6 @@
             // ----- OTTIENE OPZIONI AGGIUNTIVE (distrattori) -----
             function getDistractors(targetId, count = 3) {
                 if (animeCache.length === 0) return [];
-                
                 const filtered = animeCache.filter(a => a.mal_id !== targetId);
                 const shuffled = shuffleArray(filtered);
                 return shuffled.slice(0, count);
@@ -529,7 +601,7 @@
                     if (animeCache.length === 0) {
                         await fetchRandomAnimeBatch();
                         if (animeCache.length === 0) {
-                            throw new Error('Nessun anime disponibile');
+                            throw new Error('Nessun anime disponibile. Riprova più tardi.');
                         }
                     }
                     
@@ -538,12 +610,6 @@
                     if (!target) throw new Error('Nessun target disponibile');
                     
                     let distractors = getDistractors(target.mal_id, 3);
-                    while (distractors.length < 3) {
-                        // Prova a ricaricare la cache
-                        await fetchRandomAnimeBatch();
-                        distractors = getDistractors(target.mal_id, 3);
-                        if (distractors.length === 0) break;
-                    }
                     
                     // Assicurati di avere 4 opzioni totali
                     let options = [target, ...distractors];
@@ -552,7 +618,14 @@
                         if (extra.length > 0 && !options.some(o => o.mal_id === extra[0].mal_id)) {
                             options.push(extra[0]);
                         } else {
-                            break;
+                            // Se non troviamo abbastanza distrattori, ricarica la cache
+                            await fetchRandomAnimeBatch();
+                            const newExtra = getRandomAnimeFromCache(1);
+                            if (newExtra.length > 0 && !options.some(o => o.mal_id === newExtra[0].mal_id)) {
+                                options.push(newExtra[0]);
+                            } else {
+                                break;
+                            }
                         }
                     }
                     options = shuffleArray(options).slice(0, 4);
@@ -578,8 +651,8 @@
                     
                 } catch (error) {
                     console.error('Errore newRound:', error);
-                    setMessage('⚠️ Errore nel caricamento. Riprova.', false);
-                    loadingIndicator.textContent = '❌ Errore di connessione. Riprova.';
+                    setMessage(`⚠️ ${error.message}`, false);
+                    loadingIndicator.textContent = `❌ ${error.message}`;
                     
                     // Prova a ricaricare la cache
                     await fetchRandomAnimeBatch();
@@ -592,17 +665,10 @@
 
             // ----- MOSTRA INDIZI -----
             function displayClues(anime) {
-                // Anno
                 yearValue.textContent = anime.year || 'N/D';
-                
-                // Generi
                 const genres = anime.genres ? anime.genres.map(g => g.name).join(', ') : 'N/D';
                 genreValue.textContent = genres;
-                
-                // Voto
                 scoreValue.textContent = anime.score ? `${anime.score}/10` : 'N/D';
-                
-                // Episodi
                 episodesValue.textContent = anime.episodes || 'N/D';
             }
 
@@ -634,7 +700,6 @@
                 state.isAnswered = true;
                 optionsBtns.forEach(btn => btn.disabled = true);
                 
-                // Evidenzia risposta
                 optionsBtns.forEach((btn, i) => {
                     const id = parseInt(btn.dataset.id);
                     if (id === state.targetAnime.mal_id) {
@@ -656,7 +721,6 @@
                 
                 updateUI();
                 
-                // Dopo 2 secondi, nuovo round automatico
                 setTimeout(() => {
                     if (!state.isGameOver) {
                         newRound();
@@ -671,7 +735,6 @@
                 state.score = Math.max(0, state.score - 1);
                 setMessage(`⏭️ Saltato! Era "${state.targetAnime.title}". -1 punto`, false);
                 
-                // Rivela risposta
                 optionsBtns.forEach((btn, i) => {
                     const id = parseInt(btn.dataset.id);
                     if (id === state.targetAnime.mal_id) {
@@ -714,7 +777,6 @@
 
             // ----- INIZIALIZZA -----
             (async function init() {
-                // Pre-carica la cache
                 await fetchRandomAnimeBatch();
                 await newRound();
             })();
