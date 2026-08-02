@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Detective · Casuale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 20%, #0f0a1a, #06030a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .game-wrapper {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(14, 10, 30, 0.92);
+            backdrop-filter: blur(4px);
+            border-radius: 56px;
+            padding: 26px 22px 32px;
+            border: 2px solid #4a7ab5;
+            box-shadow: 0 20px 50px #000000aa, 0 0 0 3px #1a3a6a inset;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #7ab8f5, #4a8fd8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px #4a8fd866;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .scoreboard {
+            background: #0a0618;
+            border-radius: 60px;
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid #4a7ab5;
+            box-shadow: inset 0 2px 10px #00000088;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+        }
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            color: #c8dfff;
+            background: #120e22;
+            padding: 4px 16px 4px 12px;
+            border-radius: 40px;
+            border: 1px solid #4a7ab5;
+            font-size: 1rem;
+        }
+        .score-item .num {
+            background: #06040e;
+            padding: 0 14px;
+            border-radius: 30px;
+            color: #7ab8f5;
+            min-width: 28px;
+            text-align: center;
+        }
+        .clues-area {
+            background: #0a0618;
+            border-radius: 48px;
+            padding: 20px 18px 18px;
+            border: 1px solid #4a7ab5;
+            box-shadow: inset 0 -6px 0 #05030a, 0 10px 30px #00000077;
+            margin-bottom: 16px;
+            min-height: 200px;
+        }
+        .clue-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .clue-item {
+            background: #120e22;
+            border: 1px solid #2a3a5a;
+            border-radius: 30px;
+            padding: 12px 16px;
+            color: #d8e8ff;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            opacity: 0;
+            animation: fadeIn 0.4s ease forwards;
+        }
+        .clue-item:nth-child(1) { animation-delay: 0.1s; }
+        .clue-item:nth-child(2) { animation-delay: 0.3s; }
+        .clue-item:nth-child(3) { animation-delay: 0.5s; }
+        .clue-item:nth-child(4) { animation-delay: 0.7s; }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        .clue-item .icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .clue-item .label {
+            font-weight: 600;
+            color: #7ab8f5;
+            min-width: 70px;
+        }
+        .clue-item .value {
+            color: #e8f0ff;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 14px 0 12px;
+        }
+        .option-btn {
+            background: #120e22;
+            border: 2px solid #2a3a5a;
+            border-radius: 40px;
+            padding: 16px 10px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #d8e8ff;
+            box-shadow: 0 6px 0 #05030a, 0 6px 16px #00000055;
+            cursor: pointer;
+            transition: all 0.08s linear;
+            text-align: center;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #05030a;
+        }
+        .option-btn:disabled {
+            opacity: 0.4;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #05030a;
+            pointer-events: none;
+        }
+        .option-btn.correct {
+            background: #1a3a2a;
+            border-color: #5ad87a;
+            color: #b0ffc0;
+            box-shadow: 0 0 30px #5ad87a44;
+        }
+        .option-btn.wrong {
+            background: #3a1a1a;
+            border-color: #d85a5a;
+            color: #ffb0b0;
+            box-shadow: 0 0 30px #d85a5a44;
+        }
+        .message-box {
+            background: #0a0618;
+            border-radius: 50px;
+            padding: 14px 18px;
+            margin: 10px 0 12px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #c8dfff;
+            border: 1px solid #4a7ab5;
+            box-shadow: inset 0 2px 10px #00000077;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .message-box span {
+            background: #120e22;
+            padding: 4px 16px;
+            border-radius: 40px;
+            border: 1px solid #4a7ab5;
+        }
+        .reset-area {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .reset-btn {
+            background: #120e22;
+            border: 1px solid #4a7ab5;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #c8dfff;
+            box-shadow: 0 6px 0 #05030a;
+            cursor: pointer;
+            transition: 0.06s linear;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .reset-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #05030a;
+        }
+        .reset-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #05030a;
+        }
+        .loading {
+            text-align: center;
+            color: #7ab8f5;
+            font-size: 1.2rem;
+            padding: 30px 0;
+        }
+        .spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            font-size: 2rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .badge-aired {
+            background: #1a3a2a;
+            color: #5ad87a;
+        }
+        .badge-upcoming {
+            background: #3a2a1a;
+            color: #d8a05a;
+        }
+        @media (max-width: 550px) {
+            .game-wrapper { padding: 14px; }
+            .options-grid { gap: 8px; }
+            .option-btn { font-size: 0.9rem; padding: 12px 8px; min-height: 46px; }
+            h1 { font-size: 1.8rem; }
+            .clue-item { font-size: 0.9rem; padding: 10px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <h1>
+            <span>🕵️</span> ANIME DETECTIVE <span>🕵️</span>
+        </h1>
+        <div class="scoreboard">
+            <div class="score-item">⭐ Punteggio <span class="num" id="scoreDisplay">0</span></div>
+            <div class="score-item">🎯 Indovinati <span class="num" id="correctDisplay">0</span></div>
+            <div class="score-item">❌ Errori <span class="num" id="errorsDisplay">0</span></div>
+        </div>
+
+        <div class="clues-area" id="cluesArea">
+            <div class="loading" id="loadingIndicator">
+                <span class="spinner">🌀</span> Caricamento anime casuale...
+            </div>
+            <div class="clue-container" id="clueContainer" style="display:none;">
+                <div class="clue-item" id="clue1">
+                    <span class="icon">📅</span>
+                    <span class="label">Anno:</span>
+                    <span class="value" id="yearValue">-</span>
+                </div>
+                <div class="clue-item" id="clue2">
+                    <span class="icon">🎭</span>
+                    <span class="label">Generi:</span>
+                    <span class="value" id="genreValue">-</span>
+                </div>
+                <div class="clue-item" id="clue3">
+                    <span class="icon">⭐</span>
+                    <span class="label">Voto:</span>
+                    <span class="value" id="scoreValue">-</span>
+                </div>
+                <div class="clue-item" id="clue4">
+                    <span class="icon">📺</span>
+                    <span class="label">Episodi:</span>
+                    <span class="value" id="episodesValue">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="options-grid" id="optionsContainer">
+            <button class="option-btn" data-index="0">-</button>
+            <button class="option-btn" data-index="1">-</button>
+            <button class="option-btn" data-index="2">-</button>
+            <button class="option-btn" data-index="3">-</button>
+        </div>
+
+        <div class="message-box" id="messageBox">
+            <span>💬</span> Caricamento in corso...
+        </div>
+
+        <div class="reset-area">
+            <button class="reset-btn" id="resetBtn">🔄 Nuovo round</button>
+            <button class="reset-btn" id="skipBtn">⏭️ Salta</button>
+        </div>
+    </div>
+    <script>
+        (function() {
+            // ----- API JIKAN -----
+            const API_BASE = 'https://api.jikan.moe/v4/anime';
+
+            // ----- STATO -----
+            let state = {
+                targetAnime: null,
+                options: [],
+                score: 0,
+                correctCount: 0,
+                errors: 0,
+                isAnswered: false,
+                isGameOver: false,
+                isLoading: false,
+                round: 0
+            };
+
+            // DOM
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const clueContainer = document.getElementById('clueContainer');
+            const yearValue = document.getElementById('yearValue');
+            const genreValue = document.getElementById('genreValue');
+            const scoreValue = document.getElementById('scoreValue');
+            const episodesValue = document.getElementById('episodesValue');
+            const optionsBtns = document.querySelectorAll('.option-btn');
+            const messageBox = document.getElementById('messageBox');
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            const correctDisplay = document.getElementById('correctDisplay');
+            const errorsDisplay = document.getElementById('errorsDisplay');
+            const resetBtn = document.getElementById('resetBtn');
+            const skipBtn = document.getElementById('skipBtn');
+
+            // ----- CACHE PER ANIME CASUALI -----
+            let animeCache = [];
+            let cachePage = 1;
+            let totalPages = 1;
+            let isFetchingCache = false;
+
+            // ----- FUNZIONI DI UTILITY -----
+            function shuffleArray(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            // ----- RATE LIMIT (3 richieste/sec) -----
+            let lastRequestTime = 0;
+            async function rateLimitedFetch(url) {
+                const now = Date.now();
+                const waitTime = Math.max(0, 333 - (now - lastRequestTime));
+                if (waitTime > 0) await sleep(waitTime);
+                lastRequestTime = Date.now();
+                
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error('API Error:', error);
+                    throw error;
+                }
+            }
+
+            // ----- RIEMPIE LA CACHE CON ANIME CASUALI -----
+            async function fetchRandomAnimeBatch() {
+                if (isFetchingCache) return;
+                isFetchingCache = true;
+                
+                try {
+                    // Scegli una pagina casuale (fino a 100 pagine di anime)
+                    const randomPage = Math.floor(Math.random() * 100) + 1;
+                    const url = `${API_BASE}?page=${randomPage}&limit=25&order_by=start_date&sort=desc`;
+                    
+                    const data = await rateLimitedFetch(url);
+                    const results = data.data || [];
+                    
+                    if (results.length === 0) {
+                        // Fallback: pagina 1
+                        const fallbackData = await rateLimitedFetch(`${API_BASE}?page=1&limit=25`);
+                        const fallbackResults = fallbackData.data || [];
+                        animeCache = fallbackResults.filter(a => 
+                            a.title && 
+                            a.year && 
+                            a.year <= new Date().getFullYear() &&
+                            a.genres && a.genres.length > 0 &&
+                            a.score &&
+                            a.episodes &&
+                            a.episodes > 0
+                        );
+                    } else {
+                        // Filtra solo anime già usciti (anno <= corrente)
+                        const currentYear = new Date().getFullYear();
+                        animeCache = results.filter(a => 
+                            a.title && 
+                            a.year && 
+                            a.year <= currentYear &&
+                            a.genres && a.genres.length > 0 &&
+                            a.score &&
+                            a.episodes &&
+                            a.episodes > 0
+                        );
+                    }
+                    
+                    // Se la cache è vuota, prova con un'altra pagina
+                    if (animeCache.length < 10) {
+                        const backupData = await rateLimitedFetch(`${API_BASE}?page=${Math.floor(Math.random() * 50) + 1}&limit=25`);
+                        const backupResults = backupData.data || [];
+                        const currentYear = new Date().getFullYear();
+                        const backupFiltered = backupResults.filter(a => 
+                            a.title && 
+                            a.year && 
+                            a.year <= currentYear &&
+                            a.genres && a.genres.length > 0 &&
+                            a.score &&
+                            a.episodes &&
+                            a.episodes > 0
+                        );
+                        animeCache = [...animeCache, ...backupFiltered];
+                    }
+                    
+                    // Se ancora vuota, usa popolari come fallback
+                    if (animeCache.length === 0) {
+                        const popData = await rateLimitedFetch(`${API_BASE}?order_by=popularity&sort=desc&limit=50`);
+                        const popResults = popData.data || [];
+                        const currentYear = new Date().getFullYear();
+                        animeCache = popResults.filter(a => 
+                            a.title && 
+                            a.year && 
+                            a.year <= currentYear &&
+                            a.genres && a.genres.length > 0 &&
+                            a.score &&
+                            a.episodes &&
+                            a.episodes > 0
+                        );
+                    }
+                    
+                } catch (error) {
+                    console.error('Errore fetch cache:', error);
+                    // Fallback: popolari
+                    try {
+                        const popData = await rateLimitedFetch(`${API_BASE}?order_by=popularity&sort=desc&limit=50`);
+                        const popResults = popData.data || [];
+                        const currentYear = new Date().getFullYear();
+                        animeCache = popResults.filter(a => 
+                            a.title && 
+                            a.year && 
+                            a.year <= currentYear &&
+                            a.genres && a.genres.length > 0 &&
+                            a.score &&
+                            a.episodes &&
+                            a.episodes > 0
+                        );
+                    } catch (e) {
+                        console.error('Fallback fallito:', e);
+                        animeCache = [];
+                    }
+                }
+                
+                isFetchingCache = false;
+            }
+
+            // ----- OTTIENE ANIME CASUALI DALLA CACHE -----
+            function getRandomAnimeFromCache(count = 1) {
+                if (animeCache.length === 0) return [];
+                
+                const shuffled = shuffleArray([...animeCache]);
+                return shuffled.slice(0, Math.min(count, shuffled.length));
+            }
+
+            // ----- OTTIENE OPZIONI AGGIUNTIVE (distrattori) -----
+            function getDistractors(targetId, count = 3) {
+                if (animeCache.length === 0) return [];
+                
+                const filtered = animeCache.filter(a => a.mal_id !== targetId);
+                const shuffled = shuffleArray(filtered);
+                return shuffled.slice(0, count);
+            }
+
+            // ----- NUOVO ROUND -----
+            async function newRound() {
+                if (state.isLoading) return;
+                
+                state.isLoading = true;
+                state.isAnswered = false;
+                state.isGameOver = false;
+                resetBtn.disabled = true;
+                skipBtn.disabled = true;
+                optionsBtns.forEach(btn => btn.disabled = true);
+                
+                loadingIndicator.style.display = 'block';
+                clueContainer.style.display = 'none';
+                setMessage('🔄 Caricamento anime casuale...', true);
+                
+                try {
+                    // Se la cache è vuota o quasi, ricarica
+                    if (animeCache.length < 20) {
+                        await fetchRandomAnimeBatch();
+                    }
+                    
+                    // Se ancora vuota, ricarica
+                    if (animeCache.length === 0) {
+                        await fetchRandomAnimeBatch();
+                        if (animeCache.length === 0) {
+                            throw new Error('Nessun anime disponibile');
+                        }
+                    }
+                    
+                    // Prendi 1 target + 3 distrattori dalla cache
+                    const target = getRandomAnimeFromCache(1)[0];
+                    if (!target) throw new Error('Nessun target disponibile');
+                    
+                    let distractors = getDistractors(target.mal_id, 3);
+                    while (distractors.length < 3) {
+                        // Prova a ricaricare la cache
+                        await fetchRandomAnimeBatch();
+                        distractors = getDistractors(target.mal_id, 3);
+                        if (distractors.length === 0) break;
+                    }
+                    
+                    // Assicurati di avere 4 opzioni totali
+                    let options = [target, ...distractors];
+                    while (options.length < 4) {
+                        const extra = getRandomAnimeFromCache(1);
+                        if (extra.length > 0 && !options.some(o => o.mal_id === extra[0].mal_id)) {
+                            options.push(extra[0]);
+                        } else {
+                            break;
+                        }
+                    }
+                    options = shuffleArray(options).slice(0, 4);
+                    
+                    // Salva stato
+                    state.targetAnime = target;
+                    state.options = options;
+                    state.round++;
+                    
+                    // Mostra indizi
+                    displayClues(target);
+                    
+                    // Mostra opzioni
+                    displayOptions(options, target.mal_id);
+                    
+                    // Aggiorna UI
+                    updateUI();
+                    setMessage(`🔍 Round ${state.round}: Quale anime è?`, true);
+                    
+                    loadingIndicator.style.display = 'none';
+                    clueContainer.style.display = 'block';
+                    optionsBtns.forEach(btn => btn.disabled = false);
+                    
+                } catch (error) {
+                    console.error('Errore newRound:', error);
+                    setMessage('⚠️ Errore nel caricamento. Riprova.', false);
+                    loadingIndicator.textContent = '❌ Errore di connessione. Riprova.';
+                    
+                    // Prova a ricaricare la cache
+                    await fetchRandomAnimeBatch();
+                }
+                
+                state.isLoading = false;
+                resetBtn.disabled = false;
+                skipBtn.disabled = false;
+            }
+
+            // ----- MOSTRA INDIZI -----
+            function displayClues(anime) {
+                // Anno
+                yearValue.textContent = anime.year || 'N/D';
+                
+                // Generi
+                const genres = anime.genres ? anime.genres.map(g => g.name).join(', ') : 'N/D';
+                genreValue.textContent = genres;
+                
+                // Voto
+                scoreValue.textContent = anime.score ? `${anime.score}/10` : 'N/D';
+                
+                // Episodi
+                episodesValue.textContent = anime.episodes || 'N/D';
+            }
+
+            // ----- MOSTRA OPZIONI -----
+            function displayOptions(options, targetId) {
+                optionsBtns.forEach((btn, i) => {
+                    if (i < options.length) {
+                        btn.textContent = options[i].title;
+                        btn.dataset.id = options[i].mal_id;
+                        btn.className = 'option-btn';
+                        btn.disabled = false;
+                    } else {
+                        btn.textContent = '-';
+                        btn.dataset.id = '';
+                        btn.className = 'option-btn';
+                        btn.disabled = true;
+                    }
+                });
+            }
+
+            // ----- GESTISCI CLICK SU OPZIONE -----
+            async function handleOptionClick(index) {
+                if (state.isAnswered || state.isLoading) return;
+                if (index >= state.options.length) return;
+                
+                const selected = state.options[index];
+                const isCorrect = selected.mal_id === state.targetAnime.mal_id;
+                
+                state.isAnswered = true;
+                optionsBtns.forEach(btn => btn.disabled = true);
+                
+                // Evidenzia risposta
+                optionsBtns.forEach((btn, i) => {
+                    const id = parseInt(btn.dataset.id);
+                    if (id === state.targetAnime.mal_id) {
+                        btn.classList.add('correct');
+                    } else if (i === index && !isCorrect) {
+                        btn.classList.add('wrong');
+                    }
+                });
+                
+                if (isCorrect) {
+                    state.score += 10;
+                    state.correctCount++;
+                    setMessage(`✅ Esatto! Era "${state.targetAnime.title}". +10 punti!`, true);
+                } else {
+                    state.errors++;
+                    state.score = Math.max(0, state.score - 3);
+                    setMessage(`❌ Sbagliato! Era "${state.targetAnime.title}". -3 punti`, false);
+                }
+                
+                updateUI();
+                
+                // Dopo 2 secondi, nuovo round automatico
+                setTimeout(() => {
+                    if (!state.isGameOver) {
+                        newRound();
+                    }
+                }, 2500);
+            }
+
+            // ----- SALTA ROUND -----
+            function skipRound() {
+                if (state.isLoading || state.isAnswered) return;
+                state.errors++;
+                state.score = Math.max(0, state.score - 1);
+                setMessage(`⏭️ Saltato! Era "${state.targetAnime.title}". -1 punto`, false);
+                
+                // Rivela risposta
+                optionsBtns.forEach((btn, i) => {
+                    const id = parseInt(btn.dataset.id);
+                    if (id === state.targetAnime.mal_id) {
+                        btn.classList.add('correct');
+                    }
+                    btn.disabled = true;
+                });
+                state.isAnswered = true;
+                updateUI();
+                
+                setTimeout(() => {
+                    if (!state.isGameOver) {
+                        newRound();
+                    }
+                }, 2000);
+            }
+
+            // ----- AGGIORNA UI -----
+            function updateUI() {
+                scoreDisplay.textContent = state.score;
+                correctDisplay.textContent = state.correctCount;
+                errorsDisplay.textContent = state.errors;
+            }
+
+            // ----- SET MESSAGE -----
+            function setMessage(msg, isGood = true) {
+                messageBox.innerHTML = `<span>${isGood ? '💡' : '⚠️'}</span> ${msg}`;
+            }
+
+            // ----- EVENTI -----
+            optionsBtns.forEach((btn, i) => {
+                btn.addEventListener('click', () => handleOptionClick(i));
+            });
+
+            resetBtn.addEventListener('click', () => {
+                newRound();
+            });
+
+            skipBtn.addEventListener('click', skipRound);
+
+            // ----- INIZIALIZZA -----
+            (async function init() {
+                // Pre-carica la cache
+                await fetchRandomAnimeBatch();
+                await newRound();
+            })();
+        })();
+    </script>
+</body>
+</html>
