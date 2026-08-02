@@ -674,10 +674,12 @@
             }
 
             // ============================================================
-            //  SCORCIATOIE DA TASTIERA
+            //  SCORCIATOIE DA TASTIERA (cattura a livello di documento)
             // ============================================================
+            // Cattura gli eventi keydown a livello di documento
+            // e previene il comportamento predefinito solo per i tasti che ci interessano
             document.addEventListener('keydown', (e) => {
-                // Ignora se stiamo scrivendo in un input
+                // Se stiamo scrivendo in un input, lascia fare
                 if (e.target.tagName === 'INPUT') return;
 
                 // Se la partita non è iniziata o è finita
@@ -692,6 +694,7 @@
                         state.selectedPlayerIndex = idx;
                         updateScoreBoard();
                         e.preventDefault();
+                        e.stopPropagation();
                     }
                     return;
                 }
@@ -699,6 +702,7 @@
                 // + e - per punti
                 if (key === '+' || key === '=') {
                     e.preventDefault();
+                    e.stopPropagation();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points += 5;
@@ -711,6 +715,7 @@
 
                 if (key === '-' || key === '_') {
                     e.preventDefault();
+                    e.stopPropagation();
                     const player = state.players[state.selectedPlayerIndex];
                     if (e.shiftKey) {
                         player.points = Math.max(0, player.points - 5);
@@ -724,6 +729,7 @@
                 // N = prossimo video
                 if (key === 'n' || key === 'N') {
                     e.preventDefault();
+                    e.stopPropagation();
                     loadVideo();
                     return;
                 }
@@ -731,10 +737,11 @@
                 // E = termina partita
                 if (key === 'e' || key === 'E') {
                     e.preventDefault();
+                    e.stopPropagation();
                     endGame();
                     return;
                 }
-            });
+            }, true); // <-- IMPORTANTE: useCapture = true per catturare prima che arrivi al player
 
             // ============================================================
             //  CONTROLLI
