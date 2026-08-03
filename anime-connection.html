@@ -44,7 +44,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: none;
             font-weight: 900;
         }
 
@@ -84,8 +83,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
 
         .btn-mode:hover {
@@ -93,10 +90,6 @@
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
             border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-mode:active {
-            transform: translateY(-2px);
         }
 
         .btn-mode .sub {
@@ -132,6 +125,8 @@
             margin-bottom: 25px;
             font-size: 1.1rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .round-info span {
@@ -167,11 +162,6 @@
             align-items: center;
             border: 1px solid rgba(255, 255, 255, 0.08);
             transition: all 0.3s;
-        }
-
-        .anime-card:hover {
-            background: rgba(255, 255, 255, 0.09);
-            border-color: rgba(255, 255, 255, 0.15);
         }
 
         .anime-card .loading {
@@ -210,8 +200,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.1); opacity: 1; }
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
         }
 
         .question {
@@ -280,7 +277,6 @@
         .option-btn.correct {
             background: rgba(107, 203, 119, 0.2);
             border-color: #6bcb77;
-            animation: correctFlash 0.5s ease;
         }
 
         .option-btn.correct .letter {
@@ -291,7 +287,6 @@
         .option-btn.wrong {
             background: rgba(255, 107, 107, 0.2);
             border-color: #ff6b6b;
-            animation: wrongFlash 0.5s ease;
         }
 
         .option-btn.wrong .letter {
@@ -319,21 +314,15 @@
             transform: none;
         }
 
-        @keyframes correctFlash {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes wrongFlash {
-            0% { transform: scale(1); }
-            50% { transform: scale(0.97); }
-            100% { transform: scale(1); }
-        }
-
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Result */
@@ -364,10 +353,6 @@
             color: #ccc;
             line-height: 1.6;
             margin-top: 5px;
-        }
-
-        .result .explanation strong {
-            color: #ffd93d;
         }
 
         .result .explanation .detail {
@@ -401,10 +386,6 @@
         .btn-continue:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 30px rgba(77, 150, 255, 0.4);
-        }
-
-        .btn-continue:active {
-            transform: translateY(-1px);
         }
 
         /* Final */
@@ -463,7 +444,6 @@
             transform: translateY(-3px);
         }
 
-        /* Error / Loading */
         .error-message {
             color: #ff6b6b;
             text-align: center;
@@ -485,7 +465,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Responsive */
@@ -524,12 +506,6 @@
 
             .round-info {
                 font-size: 0.95rem;
-                flex-wrap: wrap;
-                gap: 5px;
-            }
-
-            .anime-card .anime-title {
-                font-size: 1.1rem;
             }
         }
 
@@ -547,25 +523,6 @@
                 padding: 12px 14px;
             }
         }
-
-        /* Scrollbar personalizzata */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
     </style>
 </head>
 <body>
@@ -576,7 +533,7 @@
             <p>🔗 Trova le connessioni nascoste tra due anime!</p>
         </header>
 
-        <!-- MENU PRINCIPALE -->
+        <!-- MENU -->
         <div id="menu" class="menu">
             <h2>📋 Scegli la modalità</h2>
             <button onclick="startGame('certe')" class="btn-mode">
@@ -591,7 +548,7 @@
             </button>
         </div>
 
-        <!-- SCHERMATA DI GIOCO -->
+        <!-- GIOCO -->
         <div id="game" class="game hidden">
             <div class="round-info">
                 <span>🎯 Round: <strong id="roundDisplay">1</strong>/10</span>
@@ -620,9 +577,7 @@
                 <h3 id="questionText">Qual è la connessione?</h3>
             </div>
 
-            <div class="options" id="optionsContainer">
-                <!-- Le opzioni vengono generate da JS -->
-            </div>
+            <div class="options" id="optionsContainer"></div>
 
             <div id="resultContainer" class="result hidden">
                 <div class="result-title" id="resultTitle">✅ Corretto!</div>
@@ -636,7 +591,7 @@
             </div>
         </div>
 
-        <!-- SCHERMATA FINALE -->
+        <!-- FINALE -->
         <div id="final" class="final hidden">
             <h2>🏆 Partita Terminata!</h2>
             <div class="final-score">
@@ -651,12 +606,11 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - JavaScript completo
+        // ANIME CONNECTION - OTTIMIZZATO
         // ============================================================
 
-        // ---------- STATO DEL GIOCO ----------
         const state = {
-            mode: 'certe', // 'certe' | 'creative'
+            mode: 'certe',
             round: 0,
             maxRounds: 10,
             score: 0,
@@ -666,11 +620,11 @@
             options: [],
             correctIndex: -1,
             answered: false,
-            usedAnimeIds: new Set(),
-            loading: false
+            loading: false,
+            usedAnimeIds: []
         };
 
-        // ---------- RIFERIMENTI DOM ----------
+        // DOM refs
         const menu = document.getElementById('menu');
         const game = document.getElementById('game');
         const final = document.getElementById('final');
@@ -678,7 +632,6 @@
         const scoreDisplay = document.getElementById('scoreDisplay');
         const modeDisplay = document.getElementById('modeDisplay');
         const modeLabel = document.getElementById('modeLabel');
-        const questionText = document.getElementById('questionText');
         const animeACard = document.getElementById('animeA');
         const animeBCard = document.getElementById('animeB');
         const optionsContainer = document.getElementById('optionsContainer');
@@ -689,59 +642,55 @@
         const finalScore = document.getElementById('finalScore');
         const finalMessage = document.getElementById('finalMessage');
 
-        // ---------- API ANILIST ----------
+        // ---------- API ANILIST (UNA SOLA RICHIESTA) ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        async function queryAnilist(query, variables = {}) {
-            try {
-                const response = await fetch(ANILIST_API, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ query, variables })
-                });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (data.errors) throw new Error(data.errors[0].message);
-                return data.data;
-            } catch (error) {
-                console.error('Errore API AniList:', error);
-                throw error;
-            }
-        }
-
-        // ---------- QUERY PER PESCARE ANIME CASUALI ----------
-        function getRandomAnimeQuery() {
+        // Query per pescare 2 anime contemporaneamente
+        function getTwoAnimeQuery() {
             return `
-                query ($id: Int) {
-                    Page(page: 1, perPage: 1) {
-                        media(id: $id, type: ANIME, format: TV, status: FINISHED) {
-                            id
-                            title { romaji english }
-                            format
-                            episodes
-                            duration
-                            status
-                            startDate { year }
-                            averageScore
-                            genres
-                            studios(isMain: true) { nodes { name } }
-                            staff(perPage: 5) {
-                                nodes {
-                                    id
-                                    name { full }
-                                    primaryOccupations
+                query ($id1: Int, $id2: Int) {
+                    a: Media(id: $id1, type: ANIME, format: TV, status: FINISHED) {
+                        id
+                        title { romaji english }
+                        episodes
+                        duration
+                        startDate { year }
+                        averageScore
+                        genres
+                        studios(isMain: true) { nodes { name } }
+                        staff(perPage: 5) {
+                            nodes {
+                                name { full }
+                                primaryOccupations
+                            }
+                        }
+                        characters(perPage: 2) {
+                            nodes {
+                                voiceActors(language: JAPANESE, perPage: 1) {
+                                    nodes { name { full } }
                                 }
                             }
-                            characters(perPage: 3) {
-                                nodes {
-                                    id
-                                    name { full }
-                                    voiceActors(language: JAPANESE, perPage: 1) {
-                                        nodes { id name { full } }
-                                    }
+                        }
+                    }
+                    b: Media(id: $id2, type: ANIME, format: TV, status: FINISHED) {
+                        id
+                        title { romaji english }
+                        episodes
+                        duration
+                        startDate { year }
+                        averageScore
+                        genres
+                        studios(isMain: true) { nodes { name } }
+                        staff(perPage: 5) {
+                            nodes {
+                                name { full }
+                                primaryOccupations
+                            }
+                        }
+                        characters(perPage: 2) {
+                            nodes {
+                                voiceActors(language: JAPANESE, perPage: 1) {
+                                    nodes { name { full } }
                                 }
                             }
                         }
@@ -750,41 +699,88 @@
             `;
         }
 
-        // Ottiene un anime casuale (salta quelli già usati)
-        async function fetchRandomAnime() {
-            const maxAttempts = 50;
+        async function fetchTwoAnime() {
+            const maxAttempts = 30;
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 try {
-                    const randomId = Math.floor(Math.random() * 30000) + 1;
-                    const data = await queryAnilist(getRandomAnimeQuery(), { id: randomId });
-                    const media = data?.Page?.media?.[0];
-                    if (!media) continue;
+                    // Genera due ID casuali
+                    const id1 = Math.floor(Math.random() * 25000) + 1;
+                    const id2 = Math.floor(Math.random() * 25000) + 1;
 
-                    // Salta se già usato o se mancano dati essenziali
-                    if (state.usedAnimeIds.has(media.id)) continue;
-                    if (!media.title?.romaji && !media.title?.english) continue;
-                    if (!media.studios?.nodes?.length && !media.staff?.nodes?.length) continue;
+                    // Evita che siano uguali
+                    if (id1 === id2) continue;
 
-                    return parseAnimeData(media);
-                } catch (e) {
-                    console.warn('Tentativo fallito:', e);
-                    continue;
+                    // Evita ID già usati
+                    if (state.usedAnimeIds.includes(id1) || state.usedAnimeIds.includes(id2)) continue;
+
+                    const response = await fetch(ANILIST_API, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            query: getTwoAnimeQuery(),
+                            variables: { id1, id2 }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        console.warn(`HTTP ${response.status}, tentativo ${attempt + 1}`);
+                        continue;
+                    }
+
+                    const data = await response.json();
+
+                    if (data.errors) {
+                        console.warn('API errors:', data.errors);
+                        continue;
+                    }
+
+                    const animeA = data.data?.a;
+                    const animeB = data.data?.b;
+
+                    if (!animeA || !animeB) continue;
+                    if (!animeA.title?.romaji && !animeA.title?.english) continue;
+                    if (!animeB.title?.romaji && !animeB.title?.english) continue;
+
+                    // Parserizza i dati
+                    const parsedA = parseAnime(animeA);
+                    const parsedB = parseAnime(animeB);
+
+                    // Controlla che abbiano almeno un campo in comune per la connessione
+                    const hasConnection = checkHasConnection(parsedA, parsedB, state.mode);
+                    if (!hasConnection) continue;
+
+                    state.usedAnimeIds.push(animeA.id);
+                    state.usedAnimeIds.push(animeB.id);
+
+                    return { animeA: parsedA, animeB: parsedB };
+
+                } catch (error) {
+                    console.warn('Tentativo fallito:', error.message);
+                    // Aspetta prima di riprovare
+                    await sleep(300);
                 }
             }
-            throw new Error('Impossibile trovare un anime valido');
+            throw new Error('Impossibile trovare due anime validi dopo 30 tentativi');
         }
 
-        // Parser dei dati Anime
-        function parseAnimeData(media) {
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ---------- PARSER ----------
+        function parseAnime(media) {
             const title = media.title?.romaji || media.title?.english || 'Sconosciuto';
             const studio = media.studios?.nodes?.[0]?.name || null;
             const year = media.startDate?.year || null;
+            const decade = year ? `${Math.floor(year / 10) * 10}s` : null;
             const genres = media.genres || [];
             const episodes = media.episodes || null;
             const duration = media.duration || null;
             const score = media.averageScore ? media.averageScore / 10 : null;
 
-            // Staff: cerca autore (mangaka) e compositore
             let author = null;
             let composer = null;
             const staff = media.staff?.nodes || [];
@@ -798,264 +794,197 @@
                 }
             }
 
-            // Doppiatori (seiyuu)
             const seiyuu = [];
-            const characters = media.characters?.nodes || [];
-            for (const ch of characters) {
+            const chars = media.characters?.nodes || [];
+            for (const ch of chars) {
                 const vas = ch.voiceActors?.nodes || [];
                 for (const va of vas) {
                     if (va.name?.full) seiyuu.push(va.name.full);
                 }
             }
-            const uniqueSeiyuu = [...new Set(seiyuu)];
 
             return {
                 id: media.id,
-                title: title,
-                studio: studio,
-                year: year,
-                decade: year ? `${Math.floor(year / 10) * 10}s` : null,
-                genres: genres,
-                episodes: episodes,
-                duration: duration,
-                score: score,
-                author: author,
-                composer: composer,
-                seiyuu: uniqueSeiyuu.slice(0, 3),
-                raw: media
+                title,
+                studio,
+                year,
+                decade,
+                genres,
+                episodes,
+                duration,
+                score,
+                author,
+                composer,
+                seiyuu: [...new Set(seiyuu)].slice(0, 3)
             };
         }
 
-        // ---------- TROVA CONNESSIONI ----------
-        function findConnection(animeA, animeB, mode) {
+        // ---------- VERIFICA CONNESSIONE ----------
+        function checkHasConnection(a, b, mode) {
+            if (mode === 'certe') {
+                if (a.studio && b.studio && a.studio === b.studio) return true;
+                if (a.author && b.author && a.author === b.author) return true;
+                if (a.composer && b.composer && a.composer === b.composer) return true;
+                const commonSeiyuu = a.seiyuu.filter(s => b.seiyuu.includes(s));
+                if (commonSeiyuu.length > 0) return true;
+                return false;
+            }
+
+            if (mode === 'creative') {
+                const commonGenres = a.genres.filter(g => b.genres.includes(g));
+                if (commonGenres.length > 0 && a.decade && b.decade && a.decade === b.decade) return true;
+                if (a.studio && b.studio && a.studio === b.studio && commonGenres.length > 0) return true;
+                if (a.studio && b.studio && a.studio === b.studio && a.decade && b.decade && a.decade === b.decade)
+                return true;
+                if (commonGenres.length >= 2 && a.score && b.score && a.score > 7 && b.score > 7) return true;
+                if (a.episodes && b.episodes && Math.abs(a.episodes - b.episodes) <= 5) return true;
+                return false;
+            }
+
+            return false;
+        }
+
+        // ---------- TROVA CONNESSIONE ----------
+        function findConnection(a, b, mode) {
             const connections = [];
 
-            // ---- MODALITÀ CERTE ----
             if (mode === 'certe') {
-                // Studio
-                if (animeA.studio && animeB.studio && animeA.studio === animeB.studio) {
+                if (a.studio && b.studio && a.studio === b.studio) {
                     connections.push({
                         type: 'studio',
-                        label: `Stesso studio: ${animeA.studio}`,
-                        description: `Entrambi sono prodotti da **${animeA.studio}**`,
-                        value: animeA.studio,
+                        label: `Stesso studio: ${a.studio}`,
+                        description: `Entrambi sono prodotti da **${a.studio}**`,
                         priority: 10
                     });
                 }
-
-                // Autore
-                if (animeA.author && animeB.author && animeA.author === animeB.author) {
+                if (a.author && b.author && a.author === b.author) {
                     connections.push({
                         type: 'author',
-                        label: `Stesso autore: ${animeA.author}`,
-                        description: `Entrambi sono scritti da **${animeA.author}**`,
-                        value: animeA.author,
+                        label: `Stesso autore: ${a.author}`,
+                        description: `Entrambi sono scritti da **${a.author}**`,
                         priority: 9
                     });
                 }
-
-                // Compositore
-                if (animeA.composer && animeB.composer && animeA.composer === animeB.composer) {
+                if (a.composer && b.composer && a.composer === b.composer) {
                     connections.push({
                         type: 'composer',
-                        label: `Stesso compositore: ${animeA.composer}`,
-                        description: `La musica di entrambi è composta da **${animeA.composer}**`,
-                        value: animeA.composer,
+                        label: `Stesso compositore: ${a.composer}`,
+                        description: `La musica di entrambi è composta da **${a.composer}**`,
                         priority: 8
                     });
                 }
-
-                // Doppiatore (seiyuu) in comune
-                const commonSeiyuu = animeA.seiyuu.filter(s => animeB.seiyuu.includes(s));
+                const commonSeiyuu = a.seiyuu.filter(s => b.seiyuu.includes(s));
                 if (commonSeiyuu.length > 0) {
                     connections.push({
                         type: 'seiyuu',
                         label: `Stesso doppiatore: ${commonSeiyuu[0]}`,
                         description: `Entrambi hanno **${commonSeiyuu[0]}** come doppiatore`,
-                        value: commonSeiyuu[0],
                         priority: 7
                     });
                 }
             }
 
-            // ---- MODALITÀ CREATIVE (dinamiche) ----
             if (mode === 'creative') {
-                // Combinazioni di campi
-                const combos = [];
+                const commonGenres = a.genres.filter(g => b.genres.includes(g));
 
-                // Genere + Decade
-                const commonGenres = animeA.genres.filter(g => animeB.genres.includes(g));
-                if (commonGenres.length > 0 && animeA.decade && animeB.decade && animeA.decade === animeB.decade) {
-                    combos.push({
+                if (commonGenres.length > 0 && a.decade && b.decade && a.decade === b.decade) {
+                    connections.push({
                         type: 'genre_decade',
-                        label: `${commonGenres[0]} degli anni ${animeA.decade}`,
-                        description: `Entrambi sono **${commonGenres[0]}** degli anni **${animeA.decade}**`,
-                        value: `${commonGenres[0]} + ${animeA.decade}`,
+                        label: `${commonGenres[0]} degli anni ${a.decade}`,
+                        description: `Entrambi sono **${commonGenres[0]}** degli anni **${a.decade}**`,
                         priority: 6
                     });
                 }
-
-                // Studio + Genere
-                if (animeA.studio && animeB.studio && animeA.studio === animeB.studio && commonGenres.length > 0) {
-                    combos.push({
+                if (a.studio && b.studio && a.studio === b.studio && commonGenres.length > 0) {
+                    connections.push({
                         type: 'studio_genre',
-                        label: `${animeA.studio} + ${commonGenres[0]}`,
-                        description: `Entrambi sono **${commonGenres[0]}** prodotti da **${animeA.studio}**`,
-                        value: `${animeA.studio} + ${commonGenres[0]}`,
+                        label: `${a.studio} + ${commonGenres[0]}`,
+                        description: `Entrambi sono **${commonGenres[0]}** prodotti da **${a.studio}**`,
                         priority: 6
                     });
                 }
-
-                // Studio + Decade
-                if (animeA.studio && animeB.studio && animeA.studio === animeB.studio &&
-                    animeA.decade && animeB.decade && animeA.decade === animeB.decade) {
-                    combos.push({
+                if (a.studio && b.studio && a.studio === b.studio && a.decade && b.decade && a.decade === b.decade) {
+                    connections.push({
                         type: 'studio_decade',
-                        label: `${animeA.studio} degli anni ${animeA.decade}`,
-                        description: `Entrambi sono prodotti da **${animeA.studio}** negli anni **${animeA.decade}**`,
-                        value: `${animeA.studio} + ${animeA.decade}`,
+                        label: `${a.studio} degli anni ${a.decade}`,
+                        description: `Entrambi sono prodotti da **${a.studio}** negli anni **${a.decade}**`,
                         priority: 5
                     });
                 }
-
-                // Target (inferito dal genere + score) - più di 2 generi in comune e score alto
-                if (commonGenres.length >= 2 && animeA.score && animeB.score && animeA.score > 7 && animeB.score > 7) {
-                    combos.push({
+                if (commonGenres.length >= 2 && a.score && b.score && a.score > 7 && b.score > 7) {
+                    connections.push({
                         type: 'high_score_genre',
                         label: `${commonGenres.slice(0, 2).join(' + ')} con punteggio > 7`,
                         description: `Entrambi hanno i generi **${commonGenres.slice(0, 2).join('** e **')}** con punteggio superiore a 7`,
-                        value: `${commonGenres.slice(0, 2).join('+')} + highscore`,
                         priority: 4
                     });
                 }
-
-                // Episodi simili (differenza <= 5)
-                if (animeA.episodes && animeB.episodes && Math.abs(animeA.episodes - animeB.episodes) <= 5) {
-                    combos.push({
+                if (a.episodes && b.episodes && Math.abs(a.episodes - b.episodes) <= 5) {
+                    connections.push({
                         type: 'similar_episodes',
-                        label: `~${animeA.episodes} episodi`,
-                        description: `Entrambi hanno circa **${animeA.episodes}** episodi (${animeB.episodes})`,
-                        value: `${animeA.episodes} episodi`,
+                        label: `~${a.episodes} episodi`,
+                        description: `Entrambi hanno circa **${a.episodes}** episodi (${b.episodes})`,
                         priority: 3
                     });
                 }
-
-                // Stesso numero di generi
-                if (animeA.genres.length === animeB.genres.length && animeA.genres.length >= 2) {
-                    combos.push({
-                        type: 'same_genre_count',
-                        label: `${animeA.genres.length} generi (${animeA.genres.slice(0, 3).join(', ')})`,
-                        description: `Entrambi hanno **${animeA.genres.length}** generi (${animeA.genres.slice(0, 3).join(', ')})`,
-                        value: `${animeA.genres.length} generi`,
-                        priority: 2
-                    });
-                }
-
-                // Prendi la combo con priorità più alta
-                if (combos.length > 0) {
-                    combos.sort((a, b) => b.priority - a.priority);
-                    connections.push(combos[0]);
-                }
             }
 
-            // Ordina per priorità e prendi la migliore
             connections.sort((a, b) => b.priority - a.priority);
             return connections.length > 0 ? connections[0] : null;
         }
 
         // ---------- GENERA OPZIONI FALSE ----------
-        function generateFalseOptions(animeA, animeB, correctConnection, mode) {
+        function generateFalseOptions(a, b, correctConn, mode) {
             const falseOptions = [];
-            const usedLabels = new Set([correctConnection.label]);
+            const usedLabels = new Set([correctConn.label]);
 
-            // Pool di possibili false connessioni
             const pool = [];
 
-            // False basate sugli stessi anime
             if (mode === 'certe') {
-                // Studio sbagliato (prendi uno studio casuale)
-                if (animeA.studio && !usedLabels.has(`Stesso studio: ${animeA.studio}`) && !usedLabels.has(`Stesso studio: ${animeB.studio}`)) {
-                    pool.push({
-                        label: `Stesso studio: ${animeA.studio}`,
-                        description: `Entrambi sono prodotti da **${animeA.studio}**`,
-                        fake: true
-                    });
+                if (a.studio && !usedLabels.has(`Stesso studio: ${a.studio}`)) {
+                    pool.push({ label: `Stesso studio: ${a.studio}`, description: `Entrambi sono prodotti da **${a.studio}**` });
                 }
-                // Autore sbagliato
-                if (animeA.author && !usedLabels.has(`Stesso autore: ${animeA.author}`) && !usedLabels.has(`Stesso autore: ${animeB.author}`)) {
-                    pool.push({
-                        label: `Stesso autore: ${animeA.author}`,
-                        description: `Entrambi sono scritti da **${animeA.author}**`,
-                        fake: true
-                    });
+                if (a.author && !usedLabels.has(`Stesso autore: ${a.author}`)) {
+                    pool.push({ label: `Stesso autore: ${a.author}`, description: `Entrambi sono scritti da **${a.author}**` });
                 }
-                // Compositore sbagliato
-                if (animeA.composer && !usedLabels.has(`Stesso compositore: ${animeA.composer}`) && !usedLabels.has(`Stesso compositore: ${animeB.composer}`)) {
-                    pool.push({
-                        label: `Stesso compositore: ${animeA.composer}`,
-                        description: `La musica di entrambi è composta da **${animeA.composer}**`,
-                        fake: true
-                    });
+                if (a.composer && !usedLabels.has(`Stesso compositore: ${a.composer}`)) {
+                    pool.push({ label: `Stesso compositore: ${a.composer}`,
+                    description: `La musica di entrambi è composta da **${a.composer}**` });
                 }
-                // Doppiatore sbagliato
-                if (animeA.seiyuu.length > 0 && !usedLabels.has(`Stesso doppiatore: ${animeA.seiyuu[0]}`) && !usedLabels.has(`Stesso doppiatore: ${animeB.seiyuu[0]}`)) {
-                    pool.push({
-                        label: `Stesso doppiatore: ${animeA.seiyuu[0]}`,
-                        description: `Entrambi hanno **${animeA.seiyuu[0]}** come doppiatore`,
-                        fake: true
-                    });
+                if (a.seiyuu.length > 0 && !usedLabels.has(`Stesso doppiatore: ${a.seiyuu[0]}`)) {
+                    pool.push({ label: `Stesso doppiatore: ${a.seiyuu[0]}`,
+                    description: `Entrambi hanno **${a.seiyuu[0]}** come doppiatore` });
                 }
             }
 
             if (mode === 'creative') {
-                // Genere + Decade (sbagliata)
-                const commonGenres = animeA.genres.filter(g => animeB.genres.includes(g));
-                if (commonGenres.length > 0 && animeA.decade) {
-                    const fakeLabel = `${commonGenres[0]} degli anni ${animeA.decade}`;
-                    if (!usedLabels.has(fakeLabel)) {
-                        pool.push({
-                            label: fakeLabel,
-                            description: `Entrambi sono **${commonGenres[0]}** degli anni **${animeA.decade}**`,
-                            fake: true
-                        });
+                const commonGenres = a.genres.filter(g => b.genres.includes(g));
+                if (commonGenres.length > 0 && a.decade) {
+                    const label = `${commonGenres[0]} degli anni ${a.decade}`;
+                    if (!usedLabels.has(label)) {
+                        pool.push({ label, description: `Entrambi sono **${commonGenres[0]}** degli anni **${a.decade}**` });
                     }
                 }
-                // Studio + Genere (sbagliata)
-                if (animeA.studio && commonGenres.length > 0) {
-                    const fakeLabel = `${animeA.studio} + ${commonGenres[0]}`;
-                    if (!usedLabels.has(fakeLabel)) {
-                        pool.push({
-                            label: fakeLabel,
-                            description: `Entrambi sono **${commonGenres[0]}** prodotti da **${animeA.studio}**`,
-                            fake: true
-                        });
+                if (a.studio && commonGenres.length > 0) {
+                    const label = `${a.studio} + ${commonGenres[0]}`;
+                    if (!usedLabels.has(label)) {
+                        pool.push({ label, description: `Entrambi sono **${commonGenres[0]}** prodotti da **${a.studio}**` });
                     }
                 }
-                // Studio + Decade (sbagliata)
-                if (animeA.studio && animeA.decade) {
-                    const fakeLabel = `${animeA.studio} degli anni ${animeA.decade}`;
-                    if (!usedLabels.has(fakeLabel)) {
-                        pool.push({
-                            label: fakeLabel,
-                            description: `Entrambi sono prodotti da **${animeA.studio}** negli anni **${animeA.decade}**`,
-                            fake: true
-                        });
+                if (a.studio && a.decade) {
+                    const label = `${a.studio} degli anni ${a.decade}`;
+                    if (!usedLabels.has(label)) {
+                        pool.push({ label, description: `Entrambi sono prodotti da **${a.studio}** negli anni **${a.decade}**` });
                     }
                 }
-                // Episodi simili (sbagliata)
-                if (animeA.episodes) {
-                    const fakeLabel = `~${animeA.episodes} episodi`;
-                    if (!usedLabels.has(fakeLabel)) {
-                        pool.push({
-                            label: fakeLabel,
-                            description: `Entrambi hanno circa **${animeA.episodes}** episodi`,
-                            fake: true
-                        });
+                if (a.episodes) {
+                    const label = `~${a.episodes} episodi`;
+                    if (!usedLabels.has(label)) {
+                        pool.push({ label, description: `Entrambi hanno circa **${a.episodes}** episodi` });
                     }
                 }
             }
 
-            // Mescola e prendi fino a 3 false
             shuffleArray(pool);
             for (const item of pool) {
                 if (falseOptions.length >= 3) break;
@@ -1065,20 +994,17 @@
                 }
             }
 
-            // Se non ci sono abbastanza false, aggiungi placeholder
             while (falseOptions.length < 3) {
-                const placeholder = `Connessione ${falseOptions.length + 1}`;
+                const label = `Connessione ${falseOptions.length + 1}`;
                 falseOptions.push({
-                    label: placeholder,
-                    description: `**${placeholder}** (placeholder)`,
-                    fake: true
+                    label: label,
+                    description: `**${label}** (placeholder)`
                 });
             }
 
             return falseOptions;
         }
 
-        // ---------- UTILITY ----------
         function shuffleArray(arr) {
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1087,16 +1013,12 @@
             return arr;
         }
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        // ---------- LOGICA DI GIOCO ----------
+        // ---------- GIOCO ----------
         async function startGame(mode) {
             state.mode = mode;
             state.round = 0;
             state.score = 0;
-            state.usedAnimeIds = new Set();
+            state.usedAnimeIds = [];
 
             menu.classList.add('hidden');
             game.classList.remove('hidden');
@@ -1117,28 +1039,20 @@
             state.answered = false;
             state.loading = true;
 
-            // Aggiorna UI
             roundDisplay.textContent = state.round + 1;
             scoreDisplay.textContent = state.score;
             resultContainer.classList.add('hidden');
             continueBtn.classList.add('hidden');
             optionsContainer.innerHTML = '';
-            animeACard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento...</p></div>`;
-            animeBCard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento...</p></div>`;
+            animeACard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento anime...</p></div>`;
+            animeBCard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento anime...</p></div>`;
 
             try {
-                // Pesca 2 anime
-                const [animeA, animeB] = await Promise.all([
-                    fetchRandomAnime(),
-                    fetchRandomAnime()
-                ]);
+                const { animeA, animeB } = await fetchTwoAnime();
 
                 state.animeA = animeA;
                 state.animeB = animeB;
-                state.usedAnimeIds.add(animeA.id);
-                state.usedAnimeIds.add(animeB.id);
 
-                // Trova connessione
                 const connection = findConnection(animeA, animeB, state.mode);
                 if (!connection) {
                     // Se non trova connessioni, ricarica
@@ -1148,34 +1062,28 @@
 
                 state.connection = connection;
 
-                // Mostra anime
                 renderAnimeCard(animeACard, animeA);
                 renderAnimeCard(animeBCard, animeB);
 
-                // Genera opzioni
                 const falseOptions = generateFalseOptions(animeA, animeB, connection, state.mode);
-                const allOptions = [{
-                    label: connection.label,
-                    description: connection.description,
-                    correct: true
-                }, ...falseOptions];
+                const allOptions = [
+                    { label: connection.label, description: connection.description, correct: true },
+                    ...falseOptions.map(o => ({ ...o, correct: false }))
+                ];
 
                 shuffleArray(allOptions);
                 state.options = allOptions;
                 state.correctIndex = allOptions.findIndex(o => o.correct === true);
 
-                // Mostra opzioni
                 renderOptions(allOptions);
-
                 state.loading = false;
 
             } catch (error) {
-                console.error('Errore durante il caricamento del round:', error);
-                animeACard.innerHTML = `<div class="error-message">❌ Errore nel caricamento</div>`;
-                animeBCard.innerHTML = `<div class="error-message">❌ Errore nel caricamento</div>`;
+                console.error('Errore:', error);
+                animeACard.innerHTML = `<div class="error-message">❌ ${error.message || 'Errore nel caricamento'}</div>`;
+                animeBCard.innerHTML = `<div class="error-message">❌ Riprovo...</div>`;
                 state.loading = false;
-                // Riprova dopo 1 secondo
-                setTimeout(() => loadRound(), 1000);
+                setTimeout(() => loadRound(), 1500);
             }
         }
 
@@ -1213,21 +1121,17 @@
             const isCorrect = index === state.correctIndex;
             const buttons = optionsContainer.querySelectorAll('.option-btn');
 
-            // Disabilita tutti i bottoni
             buttons.forEach(btn => btn.classList.add('disabled'));
 
-            // Evidenzia la scelta
             if (isCorrect) {
                 buttons[index].classList.add('correct');
                 state.score++;
                 scoreDisplay.textContent = state.score;
             } else {
                 buttons[index].classList.add('wrong');
-                // Mostra quella corretta
                 buttons[state.correctIndex].classList.add('reveal-correct');
             }
 
-            // Mostra risultato
             const correctOpt = state.options[state.correctIndex];
             resultTitle.textContent = isCorrect ? '✅ Corretto! 🎉' : '❌ Sbagliato!';
             resultTitle.className = `result-title ${isCorrect ? 'correct' : 'wrong'}`;
@@ -1237,21 +1141,10 @@
                 <p style="margin-top:8px;font-size:0.9rem;color:#888;">
                     ${state.mode === 'certe' ? '📌 Connessione certa basata su dati ufficiali' : '🎨 Connessione creativa basata su metadati'}
                 </p>
-                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">
-                    <span class="detail">${state.animeA.title}</span>
-                    <span class="detail">🔗</span>
-                    <span class="detail">${state.animeB.title}</span>
-                </div>
             `;
 
             resultContainer.classList.remove('hidden');
-
-            // Mostra bottone continua
-            if (state.round < state.maxRounds - 1) {
-                continueBtn.textContent = '➡️ Prossimo Round';
-            } else {
-                continueBtn.textContent = '🏆 Vedi Risultato Finale';
-            }
+            continueBtn.textContent = state.round < state.maxRounds - 1 ? '➡️ Prossimo Round' : '🏆 Vedi Risultato Finale';
             continueBtn.classList.remove('hidden');
         }
 
@@ -1265,12 +1158,12 @@
             final.classList.remove('hidden');
             finalScore.textContent = state.score;
 
-            const percentage = (state.score / state.maxRounds) * 100;
+            const pct = (state.score / state.maxRounds) * 100;
             let msg = '';
-            if (percentage === 100) msg = '🌟 PERFETTO! Sei un vero maestro delle connessioni!';
-            else if (percentage >= 80) msg = '🎉 Ottimo lavoro! Conosci bene il mondo degli anime!';
-            else if (percentage >= 60) msg = '👏 Buon punteggio! Continua ad allenarti!';
-            else if (percentage >= 40) msg = '📚 Non male! Rivedi qualche anime e riprova!';
+            if (pct === 100) msg = '🌟 PERFETTO! Sei un vero maestro!';
+            else if (pct >= 80) msg = '🎉 Ottimo lavoro! Conosci bene gli anime!';
+            else if (pct >= 60) msg = '👏 Buon punteggio! Continua così!';
+            else if (pct >= 40) msg = '📚 Non male! Rivedi qualche anime!';
             else msg = '💪 Dai, riprova! Ogni partita è un\'occasione per imparare!';
             finalMessage.textContent = msg;
         }
@@ -1278,14 +1171,10 @@
         function resetGame() {
             final.classList.add('hidden');
             menu.classList.remove('hidden');
-            state.usedAnimeIds = new Set();
+            state.usedAnimeIds = [];
             state.round = 0;
             state.score = 0;
         }
-
-        // ---------- INIT ----------
-        console.log('🎌 Anime Connection loaded!');
-        console.log('🔗 Gioca e trova le connessioni nascoste!');
     </script>
 
 </body>
