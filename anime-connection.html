@@ -173,10 +173,6 @@
             color: #fff;
         }
 
-        .anime-card .anime-details {
-            display: none;
-        }
-
         .connection-symbol {
             font-size: 2.5rem;
             display: flex;
@@ -584,7 +580,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - SOLO TITOLI (NASCONDE I DETTAGLI)
+        // ANIME CONNECTION - OPZIONI FALSE REALI
         // ============================================================
 
         const state = {
@@ -981,112 +977,134 @@
             return connections.length > 0 ? connections[0] : null;
         }
 
-        // ---------- GENERA OPZIONI FALSE (SOLO DESCRIZIONI UTILI) ----------
+        // ---------- GENERA OPZIONI FALSE (SOLO CONNESSIONI REALI) ----------
         function generateFalseOptions(a, b, correctConn, mode) {
             const falseOptions = [];
             const usedLabels = new Set([correctConn.label]);
 
-            const pool = [];
+            // Raccogli tutte le possibili connessioni da altri anime nella cache
+            const possibleConnections = [];
 
-            if (mode === 'certe') {
-                // Prendi dati da altri anime nella cache per creare false plausibili
-                const otherAnime = state.animeCache.filter(an =>
-                    an.id !== a.id && an.id !== b.id &&
-                    (an.studio || an.author || an.composer)
-                );
+            const otherAnime = state.animeCache.filter(an =>
+                an.id !== a.id && an.id !== b.id &&
+                (an.studio || an.author || an.composer || an.genres.length > 0 || an.decade)
+            );
 
-                for (const an of otherAnime) {
-                    if (falseOptions.length >= 3) break;
-                    if (an.studio && !usedLabels.has(`Stesso studio: ${an.studio}`)) {
+            for (const an of otherAnime) {
+                // Per modalità certe
+                if (mode === 'certe') {
+                    if (an.studio) {
                         const label = `Stesso studio di animazione`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `Entrambi sono prodotti da **${an.studio}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi sono prodotti da **${an.studio}**`,
+                                type: 'studio'
+                            });
                             usedLabels.add(label);
                         }
                     }
-                    if (an.author && !usedLabels.has(`Stesso autore: ${an.author}`)) {
+                    if (an.author) {
                         const label = `Stesso autore/mangaka`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `Entrambi sono scritti da **${an.author}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi sono scritti da **${an.author}**`,
+                                type: 'author'
+                            });
                             usedLabels.add(label);
                         }
                     }
-                    if (an.composer && !usedLabels.has(`Stesso compositore: ${an.composer}`)) {
+                    if (an.composer) {
                         const label = `Stesso compositore musicale`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `La musica di entrambi è composta da **${an.composer}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `La musica di entrambi è composta da **${an.composer}**`,
+                                type: 'composer'
+                            });
                             usedLabels.add(label);
                         }
                     }
                 }
-            }
 
-            if (mode === 'creative') {
-                const otherAnime = state.animeCache.filter(an =>
-                    an.id !== a.id && an.id !== b.id &&
-                    (an.genres.length > 0 || an.studio || an.decade)
-                );
-
-                for (const an of otherAnime) {
-                    if (falseOptions.length >= 3) break;
-
+                // Per modalità creative
+                if (mode === 'creative') {
                     const genres = an.genres.slice(0, 2);
                     if (genres.length > 0 && an.decade) {
                         const label = `${genres[0]} degli anni ${an.decade}`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `Entrambi sono **${genres[0]}** degli anni **${an.decade}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi sono **${genres[0]}** degli anni **${an.decade}**`,
+                                type: 'genre_decade'
+                            });
                             usedLabels.add(label);
                         }
                     }
                     if (an.studio && genres.length > 0) {
                         const label = `${genres[0]} prodotto da ${an.studio}`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `Entrambi sono **${genres[0]}** prodotti da **${an.studio}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi sono **${genres[0]}** prodotti da **${an.studio}**`,
+                                type: 'studio_genre'
+                            });
                             usedLabels.add(label);
                         }
                     }
                     if (an.studio && an.decade) {
                         const label = `Anime di ${an.studio} degli anni ${an.decade}`;
                         if (!usedLabels.has(label)) {
-                            pool.push({ label: label, description: `Entrambi sono prodotti da **${an.studio}** negli anni **${an.decade}**` });
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi sono prodotti da **${an.studio}** negli anni **${an.decade}**`,
+                                type: 'studio_decade'
+                            });
+                            usedLabels.add(label);
+                        }
+                    }
+                    if (an.episodes) {
+                        const label = `Numero di episodi simile`;
+                        if (!usedLabels.has(label)) {
+                            possibleConnections.push({
+                                label: label,
+                                description: `Entrambi hanno circa **${an.episodes}** episodi`,
+                                type: 'similar_episodes'
+                            });
                             usedLabels.add(label);
                         }
                     }
                 }
             }
 
-            shuffleArray(pool);
-            for (const item of pool) {
+            // Shuffle e prendi le prime 3
+            shuffleArray(possibleConnections);
+            for (const conn of possibleConnections) {
                 if (falseOptions.length >= 3) break;
-                if (!usedLabels.has(item.label)) {
-                    falseOptions.push(item);
-                    usedLabels.add(item.label);
+                // Verifica che non sia la connessione corretta
+                if (conn.label !== correctConn.label) {
+                    falseOptions.push(conn);
                 }
             }
 
-            // Se non ci sono abbastanza opzioni false, aggiungi descrizioni generiche
-            const genericLabels = [
-                'Stesso genere principale',
-                'Stessa epoca di pubblicazione',
-                'Stesso numero di episodi',
-                'Stesso target demografico',
-                'Stessa casa di produzione'
+            // Se non ci sono abbastanza opzioni, aggiungi placeholder ma con descrizioni sensate
+            const fallbackLabels = [
+                { label: 'Stesso genere principale', desc: 'Entrambi condividono lo stesso genere principale' },
+                { label: 'Stessa epoca di pubblicazione', desc: 'Entrambi sono della stessa epoca' },
+                { label: 'Stessa casa di produzione', desc: 'Entrambi sono prodotti dalla stessa casa' },
+                { label: 'Stesso target demografico', desc: 'Entrambi sono rivolti allo stesso pubblico' },
+                { label: 'Stessa durata episodi', desc: 'Entrambi hanno episodi della stessa durata' }
             ];
 
             while (falseOptions.length < 3) {
-                const label = genericLabels[falseOptions.length % genericLabels.length];
-                if (!usedLabels.has(label)) {
+                const fb = fallbackLabels[falseOptions.length % fallbackLabels.length];
+                if (!usedLabels.has(fb.label)) {
                     falseOptions.push({
-                        label: label,
-                        description: `**${label}** (non è la risposta corretta)`
+                        label: fb.label,
+                        description: `**${fb.desc}** (non è la risposta corretta)`
                     });
-                    usedLabels.add(label);
-                } else {
-                    // Se sono tutti usati, aggiungi un placeholder
-                    falseOptions.push({
-                        label: `Un'altra connessione`,
-                        description: `**Un'altra connessione** (non è la risposta corretta)`
-                    });
+                    usedLabels.add(fb.label);
                 }
             }
 
@@ -1184,7 +1202,7 @@
 
                 state.connection = connection;
 
-                // Mostra SOLO i titoli, niente dettagli
+                // Mostra SOLO i titoli
                 animeACard.innerHTML = `<div class="anime-title">${pair.animeA.title}</div>`;
                 animeBCard.innerHTML = `<div class="anime-title">${pair.animeB.title}</div>`;
 
