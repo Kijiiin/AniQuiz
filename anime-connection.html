@@ -153,7 +153,7 @@
             border-radius: 15px;
             padding: 20px;
             text-align: center;
-            min-height: 180px;
+            min-height: 120px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -168,24 +168,13 @@
         }
 
         .anime-card .anime-title {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-bottom: 8px;
             color: #fff;
         }
 
         .anime-card .anime-details {
-            font-size: 0.85rem;
-            color: #aaa;
-            line-height: 1.6;
-        }
-
-        .anime-card .anime-details span {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 10px;
-            border-radius: 12px;
-            margin: 2px 3px;
+            display: none;
         }
 
         .connection-symbol {
@@ -550,21 +539,21 @@
                 <div class="anime-card" id="animeA">
                     <div class="loading">
                         <div class="loading-spinner"></div>
-                        <p>Caricamento anime...</p>
+                        <p>Caricamento...</p>
                     </div>
                 </div>
                 <div class="connection-symbol">🔗</div>
                 <div class="anime-card" id="animeB">
                     <div class="loading">
                         <div class="loading-spinner"></div>
-                        <p>Caricamento anime...</p>
+                        <p>Caricamento...</p>
                     </div>
                 </div>
             </div>
 
             <div class="question">
                 <div id="modeLabel" class="mode-label">🔍</div>
-                <h3 id="questionText">Qual è la connessione?</h3>
+                <h3 id="questionText">Qual è la connessione tra questi due anime?</h3>
             </div>
 
             <div class="options" id="optionsContainer"></div>
@@ -595,7 +584,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - VERSIONE DEFINITIVA FUNZIONANTE
+        // ANIME CONNECTION - SOLO TITOLI (NASCONDE I DETTAGLI)
         // ============================================================
 
         const state = {
@@ -634,7 +623,7 @@
 
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY GRAFICA CORRETTA ----------
+        // ---------- QUERY ----------
         function getPageQuery(page) {
             return `
             query ($page: Int) {
@@ -676,9 +665,8 @@
             `;
         }
 
-        // ---------- FETCH PAGINA (con range corretto 1-100) ----------
+        // ---------- FETCH PAGINA ----------
         async function fetchRandomAnimePage() {
-            // Massimo page: 100 (100 * 50 = 5000 entry = limite API)
             const randomPage = Math.floor(Math.random() * 100) + 1;
 
             try {
@@ -713,7 +701,6 @@
                     throw new Error('Pagina vuota');
                 }
 
-                // Filtra NOT_YET_RELEASED
                 const filtered = mediaList.filter(m => {
                     if (m.status === 'NOT_YET_RELEASED') return false;
                     if (!m.title?.romaji && !m.title?.english) return false;
@@ -721,7 +708,7 @@
                 });
 
                 if (filtered.length === 0) {
-                    throw new Error('Nessun anime valido dopo il filtro');
+                    throw new Error('Nessun anime valido');
                 }
 
                 const parsed = filtered.map(m => parseAnime(m));
@@ -735,7 +722,6 @@
                     throw new Error('Nessun anime con dati utili');
                 }
 
-                // Shuffle per varietà
                 for (let i = valid.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [valid[i], valid[j]] = [valid[j], valid[i]];
@@ -819,7 +805,6 @@
                 }
             }
 
-            // Fallback: pagina 1
             try {
                 console.log('🔄 Tentativo fallback...');
                 const response = await fetch(ANILIST_API, {
@@ -924,7 +909,7 @@
                 if (a.studio && b.studio && a.studio === b.studio) {
                     connections.push({
                         type: 'studio',
-                        label: `Stesso studio: ${a.studio}`,
+                        label: `Stesso studio di animazione`,
                         description: `Entrambi sono prodotti da **${a.studio}**`,
                         priority: 10
                     });
@@ -932,7 +917,7 @@
                 if (a.author && b.author && a.author === b.author) {
                     connections.push({
                         type: 'author',
-                        label: `Stesso autore: ${a.author}`,
+                        label: `Stesso autore/mangaka`,
                         description: `Entrambi sono scritti da **${a.author}**`,
                         priority: 9
                     });
@@ -940,7 +925,7 @@
                 if (a.composer && b.composer && a.composer === b.composer) {
                     connections.push({
                         type: 'composer',
-                        label: `Stesso compositore: ${a.composer}`,
+                        label: `Stesso compositore musicale`,
                         description: `La musica di entrambi è composta da **${a.composer}**`,
                         priority: 8
                     });
@@ -961,7 +946,7 @@
                 if (a.studio && b.studio && a.studio === b.studio && commonGenres.length > 0) {
                     connections.push({
                         type: 'studio_genre',
-                        label: `${a.studio} + ${commonGenres[0]}`,
+                        label: `${commonGenres[0]} prodotto da ${a.studio}`,
                         description: `Entrambi sono **${commonGenres[0]}** prodotti da **${a.studio}**`,
                         priority: 6
                     });
@@ -969,7 +954,7 @@
                 if (a.studio && b.studio && a.studio === b.studio && a.decade && b.decade && a.decade === b.decade) {
                     connections.push({
                         type: 'studio_decade',
-                        label: `${a.studio} degli anni ${a.decade}`,
+                        label: `Anime di ${a.studio} degli anni ${a.decade}`,
                         description: `Entrambi sono prodotti da **${a.studio}** negli anni **${a.decade}**`,
                         priority: 5
                     });
@@ -977,7 +962,7 @@
                 if (commonGenres.length >= 2 && a.score && b.score && a.score > 7 && b.score > 7) {
                     connections.push({
                         type: 'high_score_genre',
-                        label: `${commonGenres.slice(0, 2).join(' + ')} con punteggio > 7`,
+                        label: `${commonGenres.slice(0, 2).join(' e ')} con alto punteggio`,
                         description: `Entrambi hanno i generi **${commonGenres.slice(0, 2).join('** e **')}** con punteggio superiore a 7`,
                         priority: 4
                     });
@@ -985,7 +970,7 @@
                 if (a.episodes && b.episodes && Math.abs(a.episodes - b.episodes) <= 5) {
                     connections.push({
                         type: 'similar_episodes',
-                        label: `~${a.episodes} episodi`,
+                        label: `Numero di episodi simile`,
                         description: `Entrambi hanno circa **${a.episodes}** episodi (${b.episodes})`,
                         priority: 3
                     });
@@ -996,7 +981,7 @@
             return connections.length > 0 ? connections[0] : null;
         }
 
-        // ---------- GENERA OPZIONI FALSE ----------
+        // ---------- GENERA OPZIONI FALSE (SOLO DESCRIZIONI UTILI) ----------
         function generateFalseOptions(a, b, correctConn, mode) {
             const falseOptions = [];
             const usedLabels = new Set([correctConn.label]);
@@ -1004,42 +989,68 @@
             const pool = [];
 
             if (mode === 'certe') {
-                if (a.studio && !usedLabels.has(`Stesso studio: ${a.studio}`)) {
-                    pool.push({ label: `Stesso studio: ${a.studio}`, description: `Entrambi sono prodotti da **${a.studio}**` });
-                }
-                if (a.author && !usedLabels.has(`Stesso autore: ${a.author}`)) {
-                    pool.push({ label: `Stesso autore: ${a.author}`, description: `Entrambi sono scritti da **${a.author}**` });
-                }
-                if (a.composer && !usedLabels.has(`Stesso compositore: ${a.composer}`)) {
-                    pool.push({ label: `Stesso compositore: ${a.composer}`,
-                    description: `La musica di entrambi è composta da **${a.composer}**` });
+                // Prendi dati da altri anime nella cache per creare false plausibili
+                const otherAnime = state.animeCache.filter(an =>
+                    an.id !== a.id && an.id !== b.id &&
+                    (an.studio || an.author || an.composer)
+                );
+
+                for (const an of otherAnime) {
+                    if (falseOptions.length >= 3) break;
+                    if (an.studio && !usedLabels.has(`Stesso studio: ${an.studio}`)) {
+                        const label = `Stesso studio di animazione`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `Entrambi sono prodotti da **${an.studio}**` });
+                            usedLabels.add(label);
+                        }
+                    }
+                    if (an.author && !usedLabels.has(`Stesso autore: ${an.author}`)) {
+                        const label = `Stesso autore/mangaka`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `Entrambi sono scritti da **${an.author}**` });
+                            usedLabels.add(label);
+                        }
+                    }
+                    if (an.composer && !usedLabels.has(`Stesso compositore: ${an.composer}`)) {
+                        const label = `Stesso compositore musicale`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `La musica di entrambi è composta da **${an.composer}**` });
+                            usedLabels.add(label);
+                        }
+                    }
                 }
             }
 
             if (mode === 'creative') {
-                const commonGenres = a.genres.filter(g => b.genres.includes(g));
-                if (commonGenres.length > 0 && a.decade) {
-                    const label = `${commonGenres[0]} degli anni ${a.decade}`;
-                    if (!usedLabels.has(label)) {
-                        pool.push({ label, description: `Entrambi sono **${commonGenres[0]}** degli anni **${a.decade}**` });
+                const otherAnime = state.animeCache.filter(an =>
+                    an.id !== a.id && an.id !== b.id &&
+                    (an.genres.length > 0 || an.studio || an.decade)
+                );
+
+                for (const an of otherAnime) {
+                    if (falseOptions.length >= 3) break;
+
+                    const genres = an.genres.slice(0, 2);
+                    if (genres.length > 0 && an.decade) {
+                        const label = `${genres[0]} degli anni ${an.decade}`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `Entrambi sono **${genres[0]}** degli anni **${an.decade}**` });
+                            usedLabels.add(label);
+                        }
                     }
-                }
-                if (a.studio && commonGenres.length > 0) {
-                    const label = `${a.studio} + ${commonGenres[0]}`;
-                    if (!usedLabels.has(label)) {
-                        pool.push({ label, description: `Entrambi sono **${commonGenres[0]}** prodotti da **${a.studio}**` });
+                    if (an.studio && genres.length > 0) {
+                        const label = `${genres[0]} prodotto da ${an.studio}`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `Entrambi sono **${genres[0]}** prodotti da **${an.studio}**` });
+                            usedLabels.add(label);
+                        }
                     }
-                }
-                if (a.studio && a.decade) {
-                    const label = `${a.studio} degli anni ${a.decade}`;
-                    if (!usedLabels.has(label)) {
-                        pool.push({ label, description: `Entrambi sono prodotti da **${a.studio}** negli anni **${a.decade}**` });
-                    }
-                }
-                if (a.episodes) {
-                    const label = `~${a.episodes} episodi`;
-                    if (!usedLabels.has(label)) {
-                        pool.push({ label, description: `Entrambi hanno circa **${a.episodes}** episodi` });
+                    if (an.studio && an.decade) {
+                        const label = `Anime di ${an.studio} degli anni ${an.decade}`;
+                        if (!usedLabels.has(label)) {
+                            pool.push({ label: label, description: `Entrambi sono prodotti da **${an.studio}** negli anni **${an.decade}**` });
+                            usedLabels.add(label);
+                        }
                     }
                 }
             }
@@ -1053,12 +1064,30 @@
                 }
             }
 
+            // Se non ci sono abbastanza opzioni false, aggiungi descrizioni generiche
+            const genericLabels = [
+                'Stesso genere principale',
+                'Stessa epoca di pubblicazione',
+                'Stesso numero di episodi',
+                'Stesso target demografico',
+                'Stessa casa di produzione'
+            ];
+
             while (falseOptions.length < 3) {
-                const label = `Connessione ${falseOptions.length + 1}`;
-                falseOptions.push({
-                    label: label,
-                    description: `**${label}** (placeholder)`
-                });
+                const label = genericLabels[falseOptions.length % genericLabels.length];
+                if (!usedLabels.has(label)) {
+                    falseOptions.push({
+                        label: label,
+                        description: `**${label}** (non è la risposta corretta)`
+                    });
+                    usedLabels.add(label);
+                } else {
+                    // Se sono tutti usati, aggiungi un placeholder
+                    falseOptions.push({
+                        label: `Un'altra connessione`,
+                        description: `**Un'altra connessione** (non è la risposta corretta)`
+                    });
+                }
             }
 
             return falseOptions;
@@ -1117,13 +1146,13 @@
             animeACard.innerHTML = `
                 <div class="loading">
                     <div class="loading-spinner"></div>
-                    <p>Caricando anime...</p>
+                    <p>Caricando...</p>
                 </div>
             `;
             animeBCard.innerHTML = `
                 <div class="loading">
                     <div class="loading-spinner"></div>
-                    <p>Caricando anime...</p>
+                    <p>Caricando...</p>
                 </div>
             `;
 
@@ -1155,8 +1184,9 @@
 
                 state.connection = connection;
 
-                renderAnimeCard(animeACard, pair.animeA);
-                renderAnimeCard(animeBCard, pair.animeB);
+                // Mostra SOLO i titoli, niente dettagli
+                animeACard.innerHTML = `<div class="anime-title">${pair.animeA.title}</div>`;
+                animeBCard.innerHTML = `<div class="anime-title">${pair.animeB.title}</div>`;
 
                 const falseOptions = generateFalseOptions(pair.animeA, pair.animeB, connection, state.mode);
                 const allOptions = [
@@ -1179,29 +1209,6 @@
                 state.loading = false;
                 setTimeout(() => loadRound(), 1500);
             }
-        }
-
-        function renderAnimeCard(card, anime) {
-            const genresStr = anime.genres.slice(0, 3).map(g => `<span>${g}</span>`).join(' ');
-            const statusMap = {
-                'FINISHED': '✅ Completato',
-                'RELEASING': '🔄 In corso',
-                'CANCELLED': '❌ Cancellato',
-                'HIATUS': '⏸️ In pausa'
-            };
-            const statusText = anime.status ? statusMap[anime.status] || anime.status : '';
-
-            card.innerHTML = `
-                <div class="anime-title">${anime.title}</div>
-                <div class="anime-details">
-                    ${anime.studio ? `<span>🏢 ${anime.studio}</span>` : ''}
-                    ${anime.year ? `<span>📅 ${anime.year}</span>` : ''}
-                    ${anime.episodes ? `<span>📺 ${anime.episodes} ep</span>` : ''}
-                    ${anime.score ? `<span>⭐ ${anime.score.toFixed(1)}</span>` : ''}
-                    ${statusText ? `<span>${statusText}</span>` : ''}
-                    ${genresStr ? `<div style="margin-top:8px;">${genresStr}</div>` : ''}
-                </div>
-            `;
         }
 
         function renderOptions(options) {
