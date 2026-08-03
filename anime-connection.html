@@ -595,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - VERSIONE FUNZIONANTE CON QUERY TESTATA
+        // ANIME CONNECTION - QUERY CORRETTA (voiceActors -> voiceActor)
         // ============================================================
 
         const state = {
@@ -632,10 +632,9 @@
         const finalScore = document.getElementById('finalScore');
         const finalMessage = document.getElementById('finalMessage');
 
-        // ---------- API ANILIST ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY GRAFICA CORRETTA (TESTATA) ----------
+        // ---------- QUERY GRAFICA CORRETTA ----------
         function getPageQuery(page) {
             return `
             query ($page: Int) {
@@ -671,13 +670,14 @@
                       primaryOccupations
                     }
                   }
-                  characters(perPage: 2) {
+                  characters(perPage: 3) {
                     nodes {
-                      voiceActors(language: JAPANESE, perPage: 1) {
-                        nodes {
-                          name {
-                            full
-                          }
+                      name {
+                        full
+                      }
+                      voiceActor(language: JAPANESE) {
+                        name {
+                          full
                         }
                       }
                     }
@@ -690,7 +690,6 @@
 
         // ---------- FETCH PAGINA ----------
         async function fetchRandomAnimePage() {
-            // Pagina casuale tra 1 e 200
             const randomPage = Math.floor(Math.random() * 200) + 1;
 
             try {
@@ -709,7 +708,7 @@
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Response error:', response.status, errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -738,7 +737,6 @@
 
                 const parsed = filtered.map(m => parseAnime(m));
 
-                // Filtra quelli senza dati utili per le connessioni
                 const valid = parsed.filter(a =>
                     a.title !== 'Sconosciuto' &&
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
@@ -748,18 +746,15 @@
                     throw new Error('Nessun anime con dati utili');
                 }
 
-                // Shuffle per varietà
+                // Shuffle
                 for (let i = valid.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [valid[i], valid[j]] = [valid[j], valid[i]];
                 }
 
-                console.log(`✅ Caricati ${valid.length} anime validi dalla pagina ${randomPage}`);
+                console.log(`✅ Caricati ${valid.length} anime dalla pagina ${randomPage}`);
 
-                return {
-                    anime: valid,
-                    page: randomPage
-                };
+                return { anime: valid, page: randomPage };
 
             } catch (error) {
                 console.error('Errore fetch pagina:', error.message);
@@ -795,9 +790,9 @@
             const seiyuu = [];
             const chars = media.characters?.nodes || [];
             for (const ch of chars) {
-                const vas = ch.voiceActors?.nodes || [];
-                for (const va of vas) {
-                    if (va.name?.full) seiyuu.push(va.name.full);
+                const va = ch.voiceActor;
+                if (va?.name?.full) {
+                    seiyuu.push(va.name.full);
                 }
             }
 
@@ -845,7 +840,7 @@
                 }
             }
 
-            // Fallback: pagina 1 con query hardcoded
+            // Fallback
             try {
                 console.log('🔄 Tentativo fallback...');
                 const response = await fetch(ANILIST_API, {
@@ -916,14 +911,12 @@
                 return null;
             }
 
-            // Shuffle
             const shuffled = [...available];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
-            // Cerca coppia con connessione (massimo 30 tentativi)
             for (let i = 0; i < Math.min(shuffled.length - 1, 30); i++) {
                 for (let j = i + 1; j < Math.min(i + 15, shuffled.length); j++) {
                     const a = shuffled[i];
@@ -936,7 +929,6 @@
                 }
             }
 
-            // Se nessuna connessione, prendi i primi 2
             if (shuffled.length >= 2) {
                 const a = shuffled[0];
                 const b = shuffled[1];
