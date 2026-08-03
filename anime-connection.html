@@ -595,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - VERSIONE FUNZIONANTE
+        // ANIME CONNECTION - VERSIONE FUNZIONANTE CON QUERY TESTATA
         // ============================================================
 
         const state = {
@@ -635,63 +635,63 @@
         // ---------- API ANILIST ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY SEMPLICE (SENZA sort) ----------
+        // ---------- QUERY GRAFICA CORRETTA (TESTATA) ----------
         function getPageQuery(page) {
             return `
-                query ($page: Int) {
-                    Page(page: $page, perPage: 50) {
-                        pageInfo {
-                            total
-                            lastPage
-                        }
-                        media(type: ANIME, format: TV) {
-                            id
-                            title {
-                                romaji
-                                english
-                            }
-                            episodes
-                            duration
-                            startDate {
-                                year
-                            }
-                            averageScore
-                            genres
-                            status
-                            studios(isMain: true) {
-                                nodes {
-                                    name
-                                }
-                            }
-                            staff(perPage: 5) {
-                                nodes {
-                                    name {
-                                        full
-                                    }
-                                    primaryOccupations
-                                }
-                            }
-                            characters(perPage: 2) {
-                                nodes {
-                                    voiceActors(language: JAPANESE, perPage: 1) {
-                                        nodes {
-                                            name {
-                                                full
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            query ($page: Int) {
+              Page(page: $page, perPage: 50) {
+                pageInfo {
+                  total
+                  lastPage
                 }
+                media(type: ANIME, format: TV) {
+                  id
+                  title {
+                    romaji
+                    english
+                  }
+                  episodes
+                  duration
+                  startDate {
+                    year
+                  }
+                  averageScore
+                  genres
+                  status
+                  studios(isMain: true) {
+                    nodes {
+                      name
+                    }
+                  }
+                  staff(perPage: 5) {
+                    nodes {
+                      name {
+                        full
+                      }
+                      primaryOccupations
+                    }
+                  }
+                  characters(perPage: 2) {
+                    nodes {
+                      voiceActors(language: JAPANESE, perPage: 1) {
+                        nodes {
+                          name {
+                            full
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
             `;
         }
 
         // ---------- FETCH PAGINA ----------
         async function fetchRandomAnimePage() {
-            // Pagina casuale tra 1 e 300
-            const randomPage = Math.floor(Math.random() * 300) + 1;
+            // Pagina casuale tra 1 e 200
+            const randomPage = Math.floor(Math.random() * 200) + 1;
 
             try {
                 const response = await fetch(ANILIST_API, {
@@ -707,12 +707,15 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('Response error:', response.status, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
                 }
 
                 const data = await response.json();
 
                 if (data.errors) {
+                    console.error('GraphQL errors:', data.errors);
                     throw new Error(data.errors[0].message);
                 }
 
@@ -722,22 +725,28 @@
                     throw new Error('Pagina vuota');
                 }
 
-                // Filtra manualmente gli anime NOT_YET_RELEASED
-                const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED');
+                // Filtra NOT_YET_RELEASED e quelli senza titolo
+                const filtered = mediaList.filter(m => {
+                    if (m.status === 'NOT_YET_RELEASED') return false;
+                    if (!m.title?.romaji && !m.title?.english) return false;
+                    return true;
+                });
 
                 if (filtered.length === 0) {
-                    throw new Error('Nessun anime valido');
+                    throw new Error('Nessun anime valido dopo il filtro');
                 }
 
                 const parsed = filtered.map(m => parseAnime(m));
 
-                // Filtra anime senza dati utili
+                // Filtra quelli senza dati utili per le connessioni
                 const valid = parsed.filter(a =>
                     a.title !== 'Sconosciuto' &&
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
                 );
 
-                console.log(`✅ Caricati ${valid.length} anime validi dalla pagina ${randomPage}`);
+                if (valid.length === 0) {
+                    throw new Error('Nessun anime con dati utili');
+                }
 
                 // Shuffle per varietà
                 for (let i = valid.length - 1; i > 0; i--) {
@@ -745,14 +754,15 @@
                     [valid[i], valid[j]] = [valid[j], valid[i]];
                 }
 
+                console.log(`✅ Caricati ${valid.length} anime validi dalla pagina ${randomPage}`);
+
                 return {
                     anime: valid,
-                    page: randomPage,
-                    total: filtered.length
+                    page: randomPage
                 };
 
             } catch (error) {
-                console.error('Errore fetch pagina:', error);
+                console.error('Errore fetch pagina:', error.message);
                 throw error;
             }
         }
@@ -831,12 +841,13 @@
 
                 } catch (error) {
                     console.warn(`Tentativo ${attempt + 1} fallito:`, error.message);
-                    await new Promise(r => setTimeout(r, 500 + attempt * 300));
+                    await new Promise(r => setTimeout(r, 1000 + attempt * 500));
                 }
             }
 
-            // Fallback: pagina 1
+            // Fallback: pagina 1 con query hardcoded
             try {
+                console.log('🔄 Tentativo fallback...');
                 const response = await fetch(ANILIST_API, {
                     method: 'POST',
                     headers: {
@@ -850,7 +861,7 @@
                 });
                 const data = await response.json();
                 const mediaList = data.data?.Page?.media || [];
-                const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED');
+                const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED' && (m.title?.romaji || m.title?.english));
                 state.animeCache = filtered.map(m => parseAnime(m)).filter(a =>
                     a.title !== 'Sconosciuto' &&
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
@@ -912,7 +923,7 @@
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
-            // Cerca coppia con connessione
+            // Cerca coppia con connessione (massimo 30 tentativi)
             for (let i = 0; i < Math.min(shuffled.length - 1, 30); i++) {
                 for (let j = i + 1; j < Math.min(i + 15, shuffled.length); j++) {
                     const a = shuffled[i];
