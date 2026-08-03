@@ -529,7 +529,7 @@
             <h2>📋 Scegli la modalità</h2>
             <button onclick="startGame('certe')" class="btn-mode">
                 🔒 Connessioni Certe
-                <span class="sub">Studio, Autore, Compositore, Doppiatore</span>
+                <span class="sub">Studio, Autore, Compositore</span>
                 <span class="badge">🎯 Precisione 100%</span>
             </button>
             <button onclick="startGame('creative')" class="btn-mode">
@@ -595,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - QUERY CORRETTA (voiceActors -> voiceActor)
+        // ANIME CONNECTION - SENZA DOPPIATORI (FUNZIONANTE)
         // ============================================================
 
         const state = {
@@ -634,7 +634,7 @@
 
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY GRAFICA CORRETTA ----------
+        // ---------- QUERY GRAFICA CORRETTA (SENZA PERSONAGGI) ----------
         function getPageQuery(page) {
             return `
             query ($page: Int) {
@@ -668,18 +668,6 @@
                         full
                       }
                       primaryOccupations
-                    }
-                  }
-                  characters(perPage: 3) {
-                    nodes {
-                      name {
-                        full
-                      }
-                      voiceActor(language: JAPANESE) {
-                        name {
-                          full
-                        }
-                      }
                     }
                   }
                 }
@@ -724,7 +712,7 @@
                     throw new Error('Pagina vuota');
                 }
 
-                // Filtra NOT_YET_RELEASED e quelli senza titolo
+                // Filtra NOT_YET_RELEASED
                 const filtered = mediaList.filter(m => {
                     if (m.status === 'NOT_YET_RELEASED') return false;
                     if (!m.title?.romaji && !m.title?.english) return false;
@@ -739,7 +727,7 @@
 
                 const valid = parsed.filter(a =>
                     a.title !== 'Sconosciuto' &&
-                    (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+                    (a.studio || a.author || a.composer || a.genres.length > 0)
                 );
 
                 if (valid.length === 0) {
@@ -787,15 +775,6 @@
                 }
             }
 
-            const seiyuu = [];
-            const chars = media.characters?.nodes || [];
-            for (const ch of chars) {
-                const va = ch.voiceActor;
-                if (va?.name?.full) {
-                    seiyuu.push(va.name.full);
-                }
-            }
-
             return {
                 id: media.id,
                 title,
@@ -808,7 +787,6 @@
                 score,
                 author,
                 composer,
-                seiyuu: [...new Set(seiyuu)].slice(0, 3),
                 status
             };
         }
@@ -859,7 +837,7 @@
                 const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED' && (m.title?.romaji || m.title?.english));
                 state.animeCache = filtered.map(m => parseAnime(m)).filter(a =>
                     a.title !== 'Sconosciuto' &&
-                    (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+                    (a.studio || a.author || a.composer || a.genres.length > 0)
                 );
                 console.log(`✅ Fallback: caricati ${state.animeCache.length} anime`);
             } catch (e) {
@@ -874,8 +852,6 @@
                 if (a.studio && b.studio && a.studio === b.studio) return true;
                 if (a.author && b.author && a.author === b.author) return true;
                 if (a.composer && b.composer && a.composer === b.composer) return true;
-                const commonSeiyuu = a.seiyuu.filter(s => b.seiyuu.includes(s));
-                if (commonSeiyuu.length > 0) return true;
                 return false;
             }
 
@@ -883,8 +859,7 @@
                 const commonGenres = a.genres.filter(g => b.genres.includes(g));
                 if (commonGenres.length > 0 && a.decade && b.decade && a.decade === b.decade) return true;
                 if (a.studio && b.studio && a.studio === b.studio && commonGenres.length > 0) return true;
-                if (a.studio && b.studio && a.studio === b.studio && a.decade && b.decade && a.decade === b.decade)
-                return true;
+                if (a.studio && b.studio && a.studio === b.studio && a.decade && b.decade && a.decade === b.decade) return true;
                 if (commonGenres.length >= 2 && a.score && b.score && a.score > 7 && b.score > 7) return true;
                 if (a.episodes && b.episodes && Math.abs(a.episodes - b.episodes) <= 5) return true;
                 return false;
@@ -897,13 +872,13 @@
         function getTwoRandomFromCache() {
             let available = state.animeCache.filter(a =>
                 !state.usedAnimeIds.includes(a.id) &&
-                (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+                (a.studio || a.author || a.composer || a.genres.length > 0)
             );
 
             if (available.length < 10) {
                 state.usedAnimeIds = [];
                 available = state.animeCache.filter(a =>
-                    (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+                    (a.studio || a.author || a.composer || a.genres.length > 0)
                 );
             }
 
@@ -967,15 +942,6 @@
                         label: `Stesso compositore: ${a.composer}`,
                         description: `La musica di entrambi è composta da **${a.composer}**`,
                         priority: 8
-                    });
-                }
-                const commonSeiyuu = a.seiyuu.filter(s => b.seiyuu.includes(s));
-                if (commonSeiyuu.length > 0) {
-                    connections.push({
-                        type: 'seiyuu',
-                        label: `Stesso doppiatore: ${commonSeiyuu[0]}`,
-                        description: `Entrambi hanno **${commonSeiyuu[0]}** come doppiatore`,
-                        priority: 7
                     });
                 }
             }
@@ -1046,10 +1012,6 @@
                 if (a.composer && !usedLabels.has(`Stesso compositore: ${a.composer}`)) {
                     pool.push({ label: `Stesso compositore: ${a.composer}`,
                     description: `La musica di entrambi è composta da **${a.composer}**` });
-                }
-                if (a.seiyuu.length > 0 && !usedLabels.has(`Stesso doppiatore: ${a.seiyuu[0]}`)) {
-                    pool.push({ label: `Stesso doppiatore: ${a.seiyuu[0]}`,
-                    description: `Entrambi hanno **${a.seiyuu[0]}** come doppiatore` });
                 }
             }
 
