@@ -466,12 +466,6 @@
             }
         }
 
-        .retry-info {
-            color: #ffd93d;
-            font-size: 0.85rem;
-            margin-top: 5px;
-        }
-
         .cache-info {
             color: #888;
             font-size: 0.8rem;
@@ -601,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - SENZA STATUS NOT_YET_RELEASED
+        // ANIME CONNECTION - QUERY SENZA FILTRI PROBLEMATICI
         // ============================================================
 
         const state = {
@@ -641,7 +635,7 @@
         // ---------- API ANILIST ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY CORRETTA - SENZA NOT_YET_RELEASED ----------
+        // ---------- QUERY SEMPLICE E FUNZIONANTE ----------
         function getPageQuery(page, sort) {
             return `
                 query ($page: Int) {
@@ -650,12 +644,7 @@
                             total
                             lastPage
                         }
-                        media(
-                            type: ANIME,
-                            format: TV,
-                            status_not: NOT_YET_RELEASED,
-                            sort: ${sort}
-                        ) {
+                        media(type: ANIME, format: TV, sort: ${sort}) {
                             id
                             title {
                                 romaji
@@ -701,10 +690,10 @@
 
         // ---------- FETCH PAGINA ----------
         async function fetchRandomAnimePage() {
-            // Diversi ordinamenti per varietà
             const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'START_DATE_DESC', 'START_DATE_ASC'];
             const randomSort = sorts[Math.floor(Math.random() * sorts.length)];
-            const randomPage = Math.floor(Math.random() * 500) + 1;
+            // Pagina casuale tra 1 e 200 (per evitare pagine vuote)
+            const randomPage = Math.floor(Math.random() * 200) + 1;
 
             try {
                 const response = await fetch(ANILIST_API, {
@@ -735,9 +724,16 @@
                     throw new Error('Pagina vuota');
                 }
 
-                const parsed = mediaList.map(m => parseAnime(m));
+                // Filtra manualmente gli anime NOT_YET_RELEASED
+                const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED');
+                
+                if (filtered.length === 0) {
+                    throw new Error('Nessun anime valido (tutti NOT_YET_RELEASED)');
+                }
 
-                // Filtra gli anime senza dati utili
+                const parsed = filtered.map(m => parseAnime(m));
+
+                // Filtra anime senza dati utili
                 const valid = parsed.filter(a =>
                     a.title !== 'Sconosciuto' &&
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
@@ -749,7 +745,7 @@
                     anime: valid,
                     page: randomPage,
                     sort: randomSort,
-                    total: mediaList.length
+                    total: filtered.length
                 };
 
             } catch (error) {
@@ -837,7 +833,7 @@
                 }
             }
 
-            // Fallback: pagina 1 con POPULARITY_DESC
+            // Fallback: pagina 1
             try {
                 const response = await fetch(ANILIST_API, {
                     method: 'POST',
@@ -852,7 +848,8 @@
                 });
                 const data = await response.json();
                 const mediaList = data.data?.Page?.media || [];
-                state.animeCache = mediaList.map(m => parseAnime(m)).filter(a =>
+                const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED');
+                state.animeCache = filtered.map(m => parseAnime(m)).filter(a =>
                     a.title !== 'Sconosciuto' &&
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
                 );
