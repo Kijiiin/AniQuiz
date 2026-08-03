@@ -595,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - QUERY SENZA FILTRI PROBLEMATICI
+        // ANIME CONNECTION - VERSIONE FUNZIONANTE
         // ============================================================
 
         const state = {
@@ -635,8 +635,8 @@
         // ---------- API ANILIST ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY SEMPLICE E FUNZIONANTE ----------
-        function getPageQuery(page, sort) {
+        // ---------- QUERY SEMPLICE (SENZA sort) ----------
+        function getPageQuery(page) {
             return `
                 query ($page: Int) {
                     Page(page: $page, perPage: 50) {
@@ -644,7 +644,7 @@
                             total
                             lastPage
                         }
-                        media(type: ANIME, format: TV, sort: ${sort}) {
+                        media(type: ANIME, format: TV) {
                             id
                             title {
                                 romaji
@@ -690,10 +690,8 @@
 
         // ---------- FETCH PAGINA ----------
         async function fetchRandomAnimePage() {
-            const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'START_DATE_DESC', 'START_DATE_ASC'];
-            const randomSort = sorts[Math.floor(Math.random() * sorts.length)];
-            // Pagina casuale tra 1 e 200 (per evitare pagine vuote)
-            const randomPage = Math.floor(Math.random() * 200) + 1;
+            // Pagina casuale tra 1 e 300
+            const randomPage = Math.floor(Math.random() * 300) + 1;
 
             try {
                 const response = await fetch(ANILIST_API, {
@@ -703,7 +701,7 @@
                         'Accept': 'application/json',
                     },
                     body: JSON.stringify({
-                        query: getPageQuery(randomPage, randomSort),
+                        query: getPageQuery(randomPage),
                         variables: { page: randomPage }
                     })
                 });
@@ -726,9 +724,9 @@
 
                 // Filtra manualmente gli anime NOT_YET_RELEASED
                 const filtered = mediaList.filter(m => m.status !== 'NOT_YET_RELEASED');
-                
+
                 if (filtered.length === 0) {
-                    throw new Error('Nessun anime valido (tutti NOT_YET_RELEASED)');
+                    throw new Error('Nessun anime valido');
                 }
 
                 const parsed = filtered.map(m => parseAnime(m));
@@ -739,12 +737,17 @@
                     (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
                 );
 
-                console.log(`✅ Caricati ${valid.length} anime validi dalla pagina ${randomPage} (${randomSort})`);
+                console.log(`✅ Caricati ${valid.length} anime validi dalla pagina ${randomPage}`);
+
+                // Shuffle per varietà
+                for (let i = valid.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [valid[i], valid[j]] = [valid[j], valid[i]];
+                }
 
                 return {
                     anime: valid,
                     page: randomPage,
-                    sort: randomSort,
                     total: filtered.length
                 };
 
@@ -817,7 +820,6 @@
                     const result = await fetchRandomAnimePage();
                     state.animeCache = result.anime;
 
-                    // Aggiorna info cache
                     const cacheInfo = document.querySelector('.cache-info');
                     if (cacheInfo) {
                         cacheInfo.textContent = `📚 ${state.animeCache.length} anime caricati`;
@@ -842,7 +844,7 @@
                         'Accept': 'application/json',
                     },
                     body: JSON.stringify({
-                        query: getPageQuery(1, 'POPULARITY_DESC'),
+                        query: getPageQuery(1),
                         variables: { page: 1 }
                     })
                 });
@@ -1119,7 +1121,6 @@
             modeDisplay.textContent = mode === 'certe' ? '🔒 Certe' : '🎨 Creative';
             modeLabel.textContent = mode === 'certe' ? '🔒 Connessione Certa' : '🎨 Connessione Creativa';
 
-            // Aggiungi info cache
             const roundInfo = document.querySelector('.round-info');
             if (!document.querySelector('.cache-info')) {
                 const cacheInfo = document.createElement('span');
