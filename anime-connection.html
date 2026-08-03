@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎌 Anime Connection</title>
     <style>
+        /* ===== CSS COMPLETO ===== */
         * {
             margin: 0;
             padding: 0;
@@ -57,7 +58,6 @@
             display: none !important;
         }
 
-        /* Menu */
         .menu {
             text-align: center;
             padding: 30px 20px;
@@ -111,7 +111,6 @@
             margin-top: 5px;
         }
 
-        /* Game */
         .game {
             animation: fadeIn 0.5s ease;
         }
@@ -325,7 +324,6 @@
             }
         }
 
-        /* Result */
         .result {
             margin-top: 20px;
             padding: 20px;
@@ -388,7 +386,6 @@
             box-shadow: 0 8px 30px rgba(77, 150, 255, 0.4);
         }
 
-        /* Final */
         .final {
             text-align: center;
             padding: 40px 20px;
@@ -470,40 +467,44 @@
             }
         }
 
-        /* Responsive */
+        .retry-info {
+            color: #ffd93d;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .cache-info {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
             }
-
             header h1 {
                 font-size: 2rem;
             }
-
             .anime-container {
                 flex-direction: column;
                 gap: 10px;
             }
-
             .connection-symbol {
                 transform: rotate(90deg);
                 padding: 5px 0;
             }
-
             .options {
                 grid-template-columns: 1fr;
             }
-
             .option-btn {
                 padding: 14px 16px;
                 font-size: 0.95rem;
             }
-
             .btn-mode {
                 font-size: 1.1rem;
                 padding: 20px;
             }
-
             .round-info {
                 font-size: 0.95rem;
             }
@@ -513,11 +514,9 @@
             header h1 {
                 font-size: 1.6rem;
             }
-
             .container {
                 padding: 10px;
             }
-
             .option-btn {
                 font-size: 0.85rem;
                 padding: 12px 14px;
@@ -533,7 +532,6 @@
             <p>🔗 Trova le connessioni nascoste tra due anime!</p>
         </header>
 
-        <!-- MENU -->
         <div id="menu" class="menu">
             <h2>📋 Scegli la modalità</h2>
             <button onclick="startGame('certe')" class="btn-mode">
@@ -548,7 +546,6 @@
             </button>
         </div>
 
-        <!-- GIOCO -->
         <div id="game" class="game hidden">
             <div class="round-info">
                 <span>🎯 Round: <strong id="roundDisplay">1</strong>/10</span>
@@ -560,14 +557,14 @@
                 <div class="anime-card" id="animeA">
                     <div class="loading">
                         <div class="loading-spinner"></div>
-                        <p>Caricamento...</p>
+                        <p>Caricamento anime...</p>
                     </div>
                 </div>
                 <div class="connection-symbol">🔗</div>
                 <div class="anime-card" id="animeB">
                     <div class="loading">
                         <div class="loading-spinner"></div>
-                        <p>Caricamento...</p>
+                        <p>Caricamento anime...</p>
                     </div>
                 </div>
             </div>
@@ -591,7 +588,6 @@
             </div>
         </div>
 
-        <!-- FINALE -->
         <div id="final" class="final hidden">
             <h2>🏆 Partita Terminata!</h2>
             <div class="final-score">
@@ -606,7 +602,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - OTTIMIZZATO
+        // ANIME CONNECTION - ULTRA GENERICO (PAGINE CASUALI 1-1000)
         // ============================================================
 
         const state = {
@@ -621,7 +617,10 @@
             correctIndex: -1,
             answered: false,
             loading: false,
-            usedAnimeIds: []
+            usedAnimeIds: [],
+            animeCache: [],
+            currentPage: 0,
+            totalPages: 1000
         };
 
         // DOM refs
@@ -642,55 +641,39 @@
         const finalScore = document.getElementById('finalScore');
         const finalMessage = document.getElementById('finalMessage');
 
-        // ---------- API ANILIST (UNA SOLA RICHIESTA) ----------
+        // ---------- API ANILIST ----------
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // Query per pescare 2 anime contemporaneamente
-        function getTwoAnimeQuery() {
+        // Query per prendere UNA PAGINA di anime (50 per volta)
+        // Ordinamento casuale per avere anime sempre diversi
+        function getPageQuery(page, sort) {
             return `
-                query ($id1: Int, $id2: Int) {
-                    a: Media(id: $id1, type: ANIME, format: TV, status: FINISHED) {
-                        id
-                        title { romaji english }
-                        episodes
-                        duration
-                        startDate { year }
-                        averageScore
-                        genres
-                        studios(isMain: true) { nodes { name } }
-                        staff(perPage: 5) {
-                            nodes {
-                                name { full }
-                                primaryOccupations
-                            }
+                query ($page: Int) {
+                    Page(page: $page, perPage: 50) {
+                        pageInfo {
+                            total
+                            lastPage
                         }
-                        characters(perPage: 2) {
-                            nodes {
-                                voiceActors(language: JAPANESE, perPage: 1) {
-                                    nodes { name { full } }
+                        media(type: ANIME, format: TV, status: FINISHED, sort: ${sort}) {
+                            id
+                            title { romaji english }
+                            episodes
+                            duration
+                            startDate { year }
+                            averageScore
+                            genres
+                            studios(isMain: true) { nodes { name } }
+                            staff(perPage: 5) {
+                                nodes {
+                                    name { full }
+                                    primaryOccupations
                                 }
                             }
-                        }
-                    }
-                    b: Media(id: $id2, type: ANIME, format: TV, status: FINISHED) {
-                        id
-                        title { romaji english }
-                        episodes
-                        duration
-                        startDate { year }
-                        averageScore
-                        genres
-                        studios(isMain: true) { nodes { name } }
-                        staff(perPage: 5) {
-                            nodes {
-                                name { full }
-                                primaryOccupations
-                            }
-                        }
-                        characters(perPage: 2) {
-                            nodes {
-                                voiceActors(language: JAPANESE, perPage: 1) {
-                                    nodes { name { full } }
+                            characters(perPage: 2) {
+                                nodes {
+                                    voiceActors(language: JAPANESE, perPage: 1) {
+                                        nodes { name { full } }
+                                    }
                                 }
                             }
                         }
@@ -699,75 +682,64 @@
             `;
         }
 
-        async function fetchTwoAnime() {
-            const maxAttempts = 30;
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                try {
-                    // Genera due ID casuali
-                    const id1 = Math.floor(Math.random() * 25000) + 1;
-                    const id2 = Math.floor(Math.random() * 25000) + 1;
+        // ---------- FETCH PAGINA CON PAGINA CASUALE ----------
+        async function fetchRandomAnimePage() {
+            // Genera una pagina casuale tra 1 e 1000
+            // Usiamo diversi criteri di ordinamento per varietà
+            const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'START_DATE_DESC', 'START_DATE_ASC'];
+            const randomSort = sorts[Math.floor(Math.random() * sorts.length)];
 
-                    // Evita che siano uguali
-                    if (id1 === id2) continue;
+            // Pagina casuale tra 1 e 800 (per evitare pagine vuote)
+            const randomPage = Math.floor(Math.random() * 800) + 1;
 
-                    // Evita ID già usati
-                    if (state.usedAnimeIds.includes(id1) || state.usedAnimeIds.includes(id2)) continue;
+            state.currentPage = randomPage;
 
-                    const response = await fetch(ANILIST_API, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            query: getTwoAnimeQuery(),
-                            variables: { id1, id2 }
-                        })
-                    });
+            try {
+                const response = await fetch(ANILIST_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: getPageQuery(randomPage, randomSort),
+                        variables: { page: randomPage }
+                    })
+                });
 
-                    if (!response.ok) {
-                        console.warn(`HTTP ${response.status}, tentativo ${attempt + 1}`);
-                        continue;
-                    }
-
-                    const data = await response.json();
-
-                    if (data.errors) {
-                        console.warn('API errors:', data.errors);
-                        continue;
-                    }
-
-                    const animeA = data.data?.a;
-                    const animeB = data.data?.b;
-
-                    if (!animeA || !animeB) continue;
-                    if (!animeA.title?.romaji && !animeA.title?.english) continue;
-                    if (!animeB.title?.romaji && !animeB.title?.english) continue;
-
-                    // Parserizza i dati
-                    const parsedA = parseAnime(animeA);
-                    const parsedB = parseAnime(animeB);
-
-                    // Controlla che abbiano almeno un campo in comune per la connessione
-                    const hasConnection = checkHasConnection(parsedA, parsedB, state.mode);
-                    if (!hasConnection) continue;
-
-                    state.usedAnimeIds.push(animeA.id);
-                    state.usedAnimeIds.push(animeB.id);
-
-                    return { animeA: parsedA, animeB: parsedB };
-
-                } catch (error) {
-                    console.warn('Tentativo fallito:', error.message);
-                    // Aspetta prima di riprovare
-                    await sleep(300);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
-            }
-            throw new Error('Impossibile trovare due anime validi dopo 30 tentativi');
-        }
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+                const data = await response.json();
+
+                if (data.errors) {
+                    throw new Error(data.errors[0].message);
+                }
+
+                const mediaList = data.data?.Page?.media || [];
+                const pageInfo = data.data?.Page?.pageInfo || {};
+
+                if (mediaList.length === 0) {
+                    throw new Error('Pagina vuota');
+                }
+
+                const parsed = mediaList.map(m => parseAnime(m));
+
+                console.log(`✅ Caricati ${parsed.length} anime dalla pagina ${randomPage} (ordinamento: ${randomSort})`);
+
+                return {
+                    anime: parsed,
+                    total: pageInfo.total || 0,
+                    lastPage: pageInfo.lastPage || 1,
+                    page: randomPage,
+                    sort: randomSort
+                };
+
+            } catch (error) {
+                console.error('Errore fetch pagina:', error);
+                throw error;
+            }
         }
 
         // ---------- PARSER ----------
@@ -817,6 +789,114 @@
                 composer,
                 seiyuu: [...new Set(seiyuu)].slice(0, 3)
             };
+        }
+
+        // ---------- CARICA CACHE DI ANIME ----------
+        async function loadAnimeCache() {
+            // Se abbiamo già una cache piena, usala
+            if (state.animeCache.length >= 30) {
+                return;
+            }
+
+            const maxAttempts = 10;
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                try {
+                    const result = await fetchRandomAnimePage();
+                    state.animeCache = result.anime;
+                    state.totalPages = result.lastPage || 1000;
+
+                    // Mostra info nella UI
+                    const cacheInfo = document.querySelector('.cache-info');
+                    if (cacheInfo) {
+                        cacheInfo.textContent = `📚 Cache: ${state.animeCache.length} anime dalla pagina ${result.page} (${result.sort})`;
+                    }
+
+                    if (state.animeCache.length >= 10) {
+                        return;
+                    }
+
+                } catch (error) {
+                    console.warn(`Tentativo ${attempt + 1} fallito:`, error.message);
+                    await sleep(500 + attempt * 300);
+                }
+            }
+
+            // Se proprio non funziona, usa una pagina fissa di fallback
+            console.warn('Usando pagina di fallback...');
+            try {
+                const fallbackPage = 1;
+                const response = await fetch(ANILIST_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: getPageQuery(fallbackPage, 'POPULARITY_DESC'),
+                        variables: { page: fallbackPage }
+                    })
+                });
+                const data = await response.json();
+                const mediaList = data.data?.Page?.media || [];
+                state.animeCache = mediaList.map(m => parseAnime(m));
+            } catch (e) {
+                console.error('Fallback fallito:', e);
+                state.animeCache = [];
+            }
+        }
+
+        // ---------- PRENDI 2 ANIME CASUALI DALLA CACHE ----------
+        function getTwoRandomFromCache() {
+            // Filtra gli anime già usati e quelli senza dati utili
+            let available = state.animeCache.filter(a =>
+                !state.usedAnimeIds.includes(a.id) &&
+                (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+            );
+
+            // Se non ce ne sono abbastanza, ricarica la cache
+            if (available.length < 10) {
+                state.usedAnimeIds = [];
+                available = state.animeCache.filter(a =>
+                    (a.studio || a.author || a.composer || a.seiyuu.length > 0 || a.genres.length > 0)
+                );
+            }
+
+            if (available.length < 2) {
+                return null;
+            }
+
+            // Shuffle
+            const shuffled = [...available];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            // Cerca una coppia che abbia una connessione
+            const maxSearch = Math.min(shuffled.length, 50);
+            for (let i = 0; i < maxSearch - 1; i++) {
+                for (let j = i + 1; j < Math.min(i + 15, maxSearch); j++) {
+                    const a = shuffled[i];
+                    const b = shuffled[j];
+
+                    if (checkHasConnection(a, b, state.mode)) {
+                        state.usedAnimeIds.push(a.id);
+                        state.usedAnimeIds.push(b.id);
+                        return { animeA: a, animeB: b };
+                    }
+                }
+            }
+
+            // Se nessuna coppia ha connessioni, prendi due a caso
+            if (shuffled.length >= 2) {
+                const a = shuffled[0];
+                const b = shuffled[1];
+                state.usedAnimeIds.push(a.id);
+                state.usedAnimeIds.push(b.id);
+                return { animeA: a, animeB: b };
+            }
+
+            return null;
         }
 
         // ---------- VERIFICA CONNESSIONE ----------
@@ -1013,12 +1093,17 @@
             return arr;
         }
 
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         // ---------- GIOCO ----------
         async function startGame(mode) {
             state.mode = mode;
             state.round = 0;
             state.score = 0;
             state.usedAnimeIds = [];
+            state.animeCache = [];
 
             menu.classList.add('hidden');
             game.classList.remove('hidden');
@@ -1027,6 +1112,16 @@
             modeDisplay.textContent = mode === 'certe' ? '🔒 Certe' : '🎨 Creative';
             modeLabel.textContent = mode === 'certe' ? '🔒 Connessione Certa' : '🎨 Connessione Creativa';
 
+            // Aggiungi info cache
+            const roundInfo = document.querySelector('.round-info');
+            if (!document.querySelector('.cache-info')) {
+                const cacheInfo = document.createElement('span');
+                cacheInfo.className = 'cache-info';
+                cacheInfo.textContent = '📚 Caricamento cache...';
+                roundInfo.appendChild(cacheInfo);
+            }
+
+            await loadAnimeCache();
             await loadRound();
         }
 
@@ -1044,28 +1139,55 @@
             resultContainer.classList.add('hidden');
             continueBtn.classList.add('hidden');
             optionsContainer.innerHTML = '';
-            animeACard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento anime...</p></div>`;
-            animeBCard.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Caricamento anime...</p></div>`;
+
+            animeACard.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Caricando anime...</p>
+                </div>
+            `;
+            animeBCard.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Caricando anime...</p>
+                </div>
+            `;
 
             try {
-                const { animeA, animeB } = await fetchTwoAnime();
+                // Se la cache è vuota o quasi, ricarica
+                if (state.animeCache.length < 15) {
+                    await loadAnimeCache();
+                }
 
-                state.animeA = animeA;
-                state.animeB = animeB;
+                // Prendi 2 anime dalla cache
+                let pair = getTwoRandomFromCache();
 
-                const connection = findConnection(animeA, animeB, state.mode);
+                // Se non trova coppie, ricarica la cache e riprova
+                if (!pair) {
+                    state.animeCache = [];
+                    await loadAnimeCache();
+                    pair = getTwoRandomFromCache();
+                }
+
+                if (!pair) {
+                    throw new Error('Impossibile trovare una coppia valida');
+                }
+
+                state.animeA = pair.animeA;
+                state.animeB = pair.animeB;
+
+                const connection = findConnection(pair.animeA, pair.animeB, state.mode);
                 if (!connection) {
-                    // Se non trova connessioni, ricarica
                     await loadRound();
                     return;
                 }
 
                 state.connection = connection;
 
-                renderAnimeCard(animeACard, animeA);
-                renderAnimeCard(animeBCard, animeB);
+                renderAnimeCard(animeACard, pair.animeA);
+                renderAnimeCard(animeBCard, pair.animeB);
 
-                const falseOptions = generateFalseOptions(animeA, animeB, connection, state.mode);
+                const falseOptions = generateFalseOptions(pair.animeA, pair.animeB, connection, state.mode);
                 const allOptions = [
                     { label: connection.label, description: connection.description, correct: true },
                     ...falseOptions.map(o => ({ ...o, correct: false }))
@@ -1080,7 +1202,8 @@
 
             } catch (error) {
                 console.error('Errore:', error);
-                animeACard.innerHTML = `<div class="error-message">❌ ${error.message || 'Errore nel caricamento'}</div>`;
+                animeACard.innerHTML =
+                `<div class="error-message">❌ ${error.message || 'Errore nel caricamento'}</div>`;
                 animeBCard.innerHTML = `<div class="error-message">❌ Riprovo...</div>`;
                 state.loading = false;
                 setTimeout(() => loadRound(), 1500);
@@ -1141,6 +1264,11 @@
                 <p style="margin-top:8px;font-size:0.9rem;color:#888;">
                     ${state.mode === 'certe' ? '📌 Connessione certa basata su dati ufficiali' : '🎨 Connessione creativa basata su metadati'}
                 </p>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">
+                    <span class="detail">${state.animeA.title}</span>
+                    <span class="detail">🔗</span>
+                    <span class="detail">${state.animeB.title}</span>
+                </div>
             `;
 
             resultContainer.classList.remove('hidden');
@@ -1174,6 +1302,7 @@
             state.usedAnimeIds = [];
             state.round = 0;
             state.score = 0;
+            state.animeCache = [];
         }
     </script>
 
