@@ -595,7 +595,7 @@
 
     <script>
         // ============================================================
-        // ANIME CONNECTION - SENZA DOPPIATORI (FUNZIONANTE)
+        // ANIME CONNECTION - VERSIONE DEFINITIVA FUNZIONANTE
         // ============================================================
 
         const state = {
@@ -634,7 +634,7 @@
 
         const ANILIST_API = 'https://graphql.anilist.co';
 
-        // ---------- QUERY GRAFICA CORRETTA (SENZA PERSONAGGI) ----------
+        // ---------- QUERY GRAFICA CORRETTA ----------
         function getPageQuery(page) {
             return `
             query ($page: Int) {
@@ -676,9 +676,10 @@
             `;
         }
 
-        // ---------- FETCH PAGINA ----------
+        // ---------- FETCH PAGINA (con range corretto 1-100) ----------
         async function fetchRandomAnimePage() {
-            const randomPage = Math.floor(Math.random() * 200) + 1;
+            // Massimo page: 100 (100 * 50 = 5000 entry = limite API)
+            const randomPage = Math.floor(Math.random() * 100) + 1;
 
             try {
                 const response = await fetch(ANILIST_API, {
@@ -734,7 +735,7 @@
                     throw new Error('Nessun anime con dati utili');
                 }
 
-                // Shuffle
+                // Shuffle per varietà
                 for (let i = valid.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [valid[i], valid[j]] = [valid[j], valid[i]];
@@ -818,7 +819,7 @@
                 }
             }
 
-            // Fallback
+            // Fallback: pagina 1
             try {
                 console.log('🔄 Tentativo fallback...');
                 const response = await fetch(ANILIST_API, {
