@@ -29,10 +29,17 @@
 
         .timer-area { display:flex; justify-content:space-between; align-items:center; background:#2d1b3d; padding:10px 20px; border-radius:60px; margin:12px 0 20px; color:#ffd966; font-weight:bold; flex-wrap:wrap; gap:8px; }
         .timer { font-size:2.2rem; background:#1f122b; padding:0 18px; border-radius:40px; color:#f7f0d9; letter-spacing:2px; }
-        .score-box { display:flex; gap:12px; flex-wrap:wrap; font-size:0.95rem; }
+        .score-box { display:flex; gap:12px; flex-wrap:wrap; font-size:0.95rem; align-items:center; }
         .score-box span { background:#1f122b; padding:4px 14px; border-radius:40px; color:#f7f0d9; }
         .score-box .team-a { background:#2a5c7a; }
         .score-box .team-b { background:#7a3a5a; }
+        .team-switch { display:flex; gap:8px; align-items:center; }
+        .team-switch .btn-small { padding:4px 12px; font-size:0.8rem; border:none; border-radius:40px; cursor:pointer; font-weight:bold; box-shadow:0 2px 0 #b3a68e; transition:0.08s; }
+        .team-switch .btn-small:active { transform:translateY(2px); box-shadow:none; }
+        .team-switch .btn-small:disabled { opacity:0.4; transform:translateY(2px); box-shadow:none; pointer-events:none; }
+        .btn-team-a { background:#2a5c7a; color:white; }
+        .btn-team-b { background:#7a3a5a; color:white; }
+        .my-team-label { background:#1f122b; padding:2px 14px; border-radius:40px; color:#ffd966; font-size:0.8rem; }
 
         .card { background:white; border-radius:32px; padding:28px 20px 22px; box-shadow:inset 0 -6px 0 #cfc3ab, 0 12px 24px rgba(0,0,0,0.2); margin-bottom:16px; text-align:center; }
         .main-word { font-size:3.8rem; font-weight:800; color:#1f122b; text-transform:uppercase; line-height:1.2; margin-bottom:12px; }
@@ -53,7 +60,6 @@
         .btn-danger { background:#c45a5a; color:white; box-shadow:0 4px 0 #8f3a3a; }
         .btn-foul { background:#d35400; color:white; box-shadow:0 4px 0 #8a3700; }
         .btn-gold { background:#ffb347; color:#1f122b; box-shadow:0 4px 0 #c47d2a; }
-        .btn-purple { background:#6c3a8a; color:white; box-shadow:0 4px 0 #3d1f4f; }
 
         .players-list { background:#f0ebe0; border-radius:30px; padding:12px 16px; margin:12px 0; display:flex; flex-wrap:wrap; gap:10px 20px; font-size:0.9rem; }
         .players-list .player { display:flex; align-items:center; gap:6px; }
@@ -74,6 +80,7 @@
             .score-box { font-size:0.8rem; gap:6px; }
             .btn { padding:10px 14px; font-size:0.9rem; min-width:70px; }
             .login input[type="text"] { font-size:0.9rem; padding:10px 14px; }
+            .team-switch .btn-small { font-size:0.7rem; padding:2px 8px; }
         }
     </style>
 </head>
@@ -103,11 +110,16 @@
         <div class="timer-area">
             <div class="timer" id="timerDisplay">⏱️ 60</div>
             <div class="score-box">
-                <span class="team-a">🔵 Squadra A: <span id="scoreA">0</span></span>
-                <span class="team-b">🔴 Squadra B: <span id="scoreB">0</span></span>
+                <span class="team-a">🔵 A: <span id="scoreA">0</span></span>
+                <span class="team-b">🔴 B: <span id="scoreB">0</span></span>
                 <span>✅ <span id="correctCount">0</span></span>
                 <span>⏭️ <span id="skipCount">0</span></span>
                 <span class="foul-badge">🚨 <span id="foulCount">0</span></span>
+                <div class="team-switch">
+                    <span class="my-team-label" id="myTeamLabel">A</span>
+                    <button class="btn-small btn-team-a" id="switchToA">🔵 A</button>
+                    <button class="btn-small btn-team-b" id="switchToB">🔴 B</button>
+                </div>
             </div>
         </div>
 
@@ -155,6 +167,7 @@
     let roomId = 'default';
     let gameState = null;
     let connected = false;
+    let myTeam = 'A'; // default
 
     // Elementi DOM
     const loginScreen = document.getElementById('loginScreen');
@@ -177,6 +190,9 @@
     const playersList = document.getElementById('playersList');
     const statusMessage = document.getElementById('statusMessage');
     const cardContainer = document.getElementById('cardContainer');
+    const myTeamLabel = document.getElementById('myTeamLabel');
+    const switchToA = document.getElementById('switchToA');
+    const switchToB = document.getElementById('switchToB');
 
     const correctBtn = document.getElementById('correctBtn');
     const skipBtn = document.getElementById('skipBtn');
@@ -193,6 +209,7 @@
         const team = document.querySelector('input[name="team"]:checked')?.value || 'A';
         myName = name;
         roomId = room;
+        myTeam = team;
 
         if (ws) {
             ws.close();
@@ -248,6 +265,7 @@
             case 'connected': {
                 myPlayerId = data.playerId;
                 connected = true;
+                myTeam = data.team || 'A';
                 loginScreen.style.display = 'none';
                 gameArea.style.display = 'block';
                 connectionStatus.textContent = `✅ Connesso come ${data.playerName} (team ${data.team})`;
@@ -256,6 +274,10 @@
             }
             case 'state': {
                 gameState = data.state;
+                // Aggiorna myTeam se il server ce lo dice (lo riceviamo da players)
+                if (gameState.players && gameState.players[myPlayerId]) {
+                    myTeam = gameState.players[myPlayerId].team || myTeam;
+                }
                 updateUI();
                 break;
             }
@@ -316,6 +338,11 @@
             scoreA.textContent = teamScores.A || 0;
             scoreB.textContent = teamScores.B || 0;
         }
+
+        // Team attuale del giocatore
+        myTeamLabel.textContent = myTeam;
+        switchToA.disabled = (myTeam === 'A');
+        switchToB.disabled = (myTeam === 'B');
 
         // Descrittore
         if (currentDescriber && players && players[currentDescriber]) {
@@ -398,12 +425,21 @@
         }));
     }
 
+    function changeTeam(newTeam) {
+        if (newTeam === myTeam) return;
+        sendAction('changeTeam', { team: newTeam });
+        // Non aggiorniamo myTeam subito, lo farà il server tramite state
+    }
+
     connectBtn.addEventListener('click', connect);
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && loginScreen.style.display !== 'none') {
             connect();
         }
     });
+
+    switchToA.addEventListener('click', () => changeTeam('A'));
+    switchToB.addEventListener('click', () => changeTeam('B'));
 
     correctBtn.addEventListener('click', () => sendAction('correct'));
     skipBtn.addEventListener('click', () => sendAction('skip'));
