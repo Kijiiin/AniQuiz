@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Taboo Multiplayer</title>
+    <title>Taboo Multiplayer con Squadre</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', system-ui, sans-serif; }
         body {
@@ -17,23 +17,30 @@
         }
         h1 { font-size:2.2rem; text-align:center; color:#2d1b3d; display:flex; align-items:center; justify-content:center; gap:12px; }
         h1 small { font-size:0.9rem; background:#e2d9c5; padding:4px 14px; border-radius:40px; color:#3d2c4a; }
-        .login { background:#eaddd0; padding:20px; border-radius:40px; margin:16px 0; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center; }
-        .login input { padding:12px 18px; border-radius:60px; border:2px solid #b3a68e; font-size:1rem; flex:1; min-width:150px; }
+        .login { background:#eaddd0; padding:20px; border-radius:40px; margin:16px 0; display:flex; flex-direction:column; gap:12px; }
+        .login .row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center; }
+        .login input[type="text"] { padding:12px 18px; border-radius:60px; border:2px solid #b3a68e; font-size:1rem; flex:1; min-width:150px; }
+        .login .team-select { display:flex; gap:16px; align-items:center; }
+        .login .team-select label { display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; }
+        .login .team-select input[type="radio"] { transform:scale(1.2); }
         .login button { padding:12px 28px; border:none; border-radius:60px; background:#5b8c5a; color:white; font-weight:700; cursor:pointer; box-shadow:0 4px 0 #2d5a2c; transition:0.08s; }
         .login button:active { transform:translateY(4px); box-shadow:none; }
-        .login .status { font-weight:500; color:#2d1b3d; }
+        .login .status { font-weight:500; color:#2d1b3d; text-align:center; }
 
         .timer-area { display:flex; justify-content:space-between; align-items:center; background:#2d1b3d; padding:10px 20px; border-radius:60px; margin:12px 0 20px; color:#ffd966; font-weight:bold; flex-wrap:wrap; gap:8px; }
         .timer { font-size:2.2rem; background:#1f122b; padding:0 18px; border-radius:40px; color:#f7f0d9; letter-spacing:2px; }
         .score-box { display:flex; gap:12px; flex-wrap:wrap; font-size:0.95rem; }
         .score-box span { background:#1f122b; padding:4px 14px; border-radius:40px; color:#f7f0d9; }
-        .foul-badge { background:#8b2e2e; color:#ffbaba; }
+        .score-box .team-a { background:#2a5c7a; }
+        .score-box .team-b { background:#7a3a5a; }
 
         .card { background:white; border-radius:32px; padding:28px 20px 22px; box-shadow:inset 0 -6px 0 #cfc3ab, 0 12px 24px rgba(0,0,0,0.2); margin-bottom:16px; text-align:center; }
         .main-word { font-size:3.8rem; font-weight:800; color:#1f122b; text-transform:uppercase; line-height:1.2; margin-bottom:12px; }
         .forbidden-label { font-size:0.8rem; text-transform:uppercase; letter-spacing:3px; color:#a0856b; margin-bottom:4px; }
         .forbidden-words { display:flex; flex-wrap:wrap; justify-content:center; gap:8px 14px; font-size:1.2rem; font-weight:600; color:#b33a3a; background:#fcf5e8; padding:10px; border-radius:60px; border:2px dashed #d6c5ae; }
         .forbidden-words span { background:#ffe9e0; padding:4px 16px; border-radius:40px; }
+        .card-hidden { color:#888; background:#f0f0f0; }
+        .card-hidden .main-word { color:#aaa; }
 
         .describer-info { background:#eaddd0; border-radius:40px; padding:8px 16px; margin:12px 0; text-align:center; font-size:0.95rem; color:#2d1b3d; }
         .describer-info strong { background:#2d1b3d; color:#ffd966; padding:2px 16px; border-radius:30px; }
@@ -47,13 +54,14 @@
         .btn-foul { background:#d35400; color:white; box-shadow:0 4px 0 #8a3700; }
         .btn-gold { background:#ffb347; color:#1f122b; box-shadow:0 4px 0 #c47d2a; }
         .btn-purple { background:#6c3a8a; color:white; box-shadow:0 4px 0 #3d1f4f; }
-        .btn-outline { background:transparent; box-shadow:inset 0 0 0 2px #1f122b; }
 
         .players-list { background:#f0ebe0; border-radius:30px; padding:12px 16px; margin:12px 0; display:flex; flex-wrap:wrap; gap:10px 20px; font-size:0.9rem; }
         .players-list .player { display:flex; align-items:center; gap:6px; }
         .players-list .player .name { font-weight:600; color:#1f122b; }
         .players-list .player .score { background:#2d1b3d; color:#ffd966; padding:0 10px; border-radius:30px; font-size:0.8rem; }
         .players-list .player.describer { background:#ffd966; padding:2px 12px; border-radius:30px; }
+        .players-list .player.team-A { border-left:4px solid #2a5c7a; padding-left:8px; }
+        .players-list .player.team-B { border-left:4px solid #7a3a5a; padding-left:8px; }
 
         .status { text-align:center; margin-top:16px; font-weight:500; color:#4d3e2f; }
         .reset-area { display:flex; justify-content:center; margin-top:12px; }
@@ -65,7 +73,7 @@
             .timer { font-size:1.8rem; }
             .score-box { font-size:0.8rem; gap:6px; }
             .btn { padding:10px 14px; font-size:0.9rem; min-width:70px; }
-            .login input { font-size:0.9rem; padding:10px 14px; }
+            .login input[type="text"] { font-size:0.9rem; padding:10px 14px; }
         }
     </style>
 </head>
@@ -76,24 +84,34 @@
 
     <!-- Schermata di login -->
     <div class="login" id="loginScreen">
-        <input type="text" id="playerNameInput" placeholder="Il tuo nome" value="Giocatore" />
-        <input type="text" id="roomInput" placeholder="Stanza (es. party)" value="default" />
-        <button id="connectBtn">🔗 Entra</button>
-        <span class="status" id="connectionStatus">⏳ Connessione...</span>
+        <div class="row">
+            <input type="text" id="playerNameInput" placeholder="Il tuo nome" value="Giocatore" />
+            <input type="text" id="roomInput" placeholder="Stanza (es. party)" value="default" />
+        </div>
+        <div class="row">
+            <div class="team-select">
+                <label><input type="radio" name="team" value="A" checked /> Squadra A</label>
+                <label><input type="radio" name="team" value="B" /> Squadra B</label>
+            </div>
+            <button id="connectBtn">🔗 Entra</button>
+        </div>
+        <div class="status" id="connectionStatus">⏳ Inserisci nome e stanza</div>
     </div>
 
-    <!-- Gioco (inizialmente nascosto) -->
+    <!-- Gioco -->
     <div id="gameArea" style="display:none;">
         <div class="timer-area">
             <div class="timer" id="timerDisplay">⏱️ 60</div>
             <div class="score-box">
+                <span class="team-a">🔵 Squadra A: <span id="scoreA">0</span></span>
+                <span class="team-b">🔴 Squadra B: <span id="scoreB">0</span></span>
                 <span>✅ <span id="correctCount">0</span></span>
                 <span>⏭️ <span id="skipCount">0</span></span>
                 <span class="foul-badge">🚨 <span id="foulCount">0</span></span>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="cardContainer">
             <div class="main-word" id="wordDisplay">🃏</div>
             <div class="forbidden-label">🚫 parole proibite</div>
             <div class="forbidden-words" id="forbiddenDisplay">
@@ -126,7 +144,7 @@
     // --------------------------------------------------------------
     //  CONFIGURAZIONE
     // --------------------------------------------------------------
-    const WS_URL = 'wss://taboo-aniquiz.onrender.com'; // SOSTITUISCI CON IL TUO URL
+    const WS_URL = 'wss://taboo-aniquiz.onrender.com'; // SOSTITUISCI
 
     // --------------------------------------------------------------
     //  STATO DEL CLIENT
@@ -145,8 +163,11 @@
     const roomInput = document.getElementById('roomInput');
     const connectBtn = document.getElementById('connectBtn');
     const connectionStatus = document.getElementById('connectionStatus');
+    const teamRadios = document.querySelectorAll('input[name="team"]');
 
     const timerDisplay = document.getElementById('timerDisplay');
+    const scoreA = document.getElementById('scoreA');
+    const scoreB = document.getElementById('scoreB');
     const correctCount = document.getElementById('correctCount');
     const skipCount = document.getElementById('skipCount');
     const foulCount = document.getElementById('foulCount');
@@ -155,6 +176,7 @@
     const describerInfo = document.getElementById('describerInfo');
     const playersList = document.getElementById('playersList');
     const statusMessage = document.getElementById('statusMessage');
+    const cardContainer = document.getElementById('cardContainer');
 
     const correctBtn = document.getElementById('correctBtn');
     const skipBtn = document.getElementById('skipBtn');
@@ -163,11 +185,12 @@
     const resetBtn = document.getElementById('resetBtn');
 
     // --------------------------------------------------------------
-    //  FUNZIONI DI CONNESSIONE
+    //  CONNESSIONE
     // --------------------------------------------------------------
     function connect() {
         const name = playerNameInput.value.trim() || 'Anonimo';
         const room = roomInput.value.trim() || 'default';
+        const team = document.querySelector('input[name="team"]:checked')?.value || 'A';
         myName = name;
         roomId = room;
 
@@ -183,7 +206,8 @@
             ws.send(JSON.stringify({
                 type: 'connect',
                 playerName: myName,
-                room: roomId
+                room: roomId,
+                team: team
             }));
         };
 
@@ -217,7 +241,7 @@
     }
 
     // --------------------------------------------------------------
-    //  GESTIONE MESSAGGI DAL SERVER
+    //  GESTIONE MESSAGGI SERVER
     // --------------------------------------------------------------
     function handleServerMessage(data) {
         switch (data.type) {
@@ -226,7 +250,7 @@
                 connected = true;
                 loginScreen.style.display = 'none';
                 gameArea.style.display = 'block';
-                connectionStatus.textContent = `✅ Connesso come ${data.playerName} (${data.playerId})`;
+                connectionStatus.textContent = `✅ Connesso come ${data.playerName} (team ${data.team})`;
                 statusMessage.textContent = 'Connesso! In attesa dello stato...';
                 break;
             }
@@ -237,8 +261,6 @@
             }
             case 'playerJoined':
             case 'playerLeft':
-            case 'players':
-                // Già gestito tramite state
                 break;
             default:
                 console.log('Messaggio non gestito:', data);
@@ -251,37 +273,63 @@
     function updateUI() {
         if (!gameState) return;
 
-        const { cards, currentIndex, scores, currentDescriber, timeLeft, isPlaying, finished, players } = gameState;
+        const {
+            currentDescriber,
+            timeLeft,
+            isPlaying,
+            finished,
+            players,
+            scores,
+            teamScores,
+            isMeDescriber,
+            card
+        } = gameState;
 
         // Timer
         timerDisplay.textContent = `⏱️ ${timeLeft}`;
 
         // Carta
-        if (finished || currentIndex >= cards.length) {
+        if (finished) {
             wordDisplay.textContent = '🏁 FINE!';
             forbiddenDisplay.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
-            statusMessage.textContent = '🎉 Partita terminata! Premi "Nuovo turno" per ricominciare.';
-        } else if (cards.length > 0 && currentIndex < cards.length) {
-            const card = cards[currentIndex];
-            wordDisplay.textContent = card.word;
-            forbiddenDisplay.innerHTML = card.forbidden.map(w => `<span>${w}</span>`).join('');
+            cardContainer.classList.remove('card-hidden');
+        } else if (card) {
+            wordDisplay.textContent = card.word || '🃏';
+            if (card.forbidden && card.forbidden.length > 0) {
+                forbiddenDisplay.innerHTML = card.forbidden.map(w => `<span>${w}</span>`).join('');
+            } else {
+                forbiddenDisplay.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
+            }
+            if (card.word === '🤫') {
+                cardContainer.classList.add('card-hidden');
+            } else {
+                cardContainer.classList.remove('card-hidden');
+            }
         } else {
             wordDisplay.textContent = '🃏';
             forbiddenDisplay.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
+            cardContainer.classList.remove('card-hidden');
+        }
+
+        // Punteggi di squadra
+        if (teamScores) {
+            scoreA.textContent = teamScores.A || 0;
+            scoreB.textContent = teamScores.B || 0;
         }
 
         // Descrittore
         if (currentDescriber && players && players[currentDescriber]) {
             const name = players[currentDescriber].name;
-            describerInfo.innerHTML = `🗣️ <strong>${name}</strong> è il descrittore!`;
+            const team = players[currentDescriber].team || '?';
+            describerInfo.innerHTML = `🗣️ <strong>${name}</strong> (team ${team}) è il descrittore! ${isMeDescriber ? '⭐ Sei tu!' : ''}`;
         } else if (finished) {
             describerInfo.innerHTML = '🏁 Partita finita! Premi "Nuovo turno" per ricominciare.';
         } else {
             describerInfo.innerHTML = '⏳ Nessun descrittore – premi "Nuovo turno" per iniziare!';
         }
 
-        // Punteggi del giocatore locale
-        if (myPlayerId && scores[myPlayerId]) {
+        // Punteggi individuali del giocatore locale
+        if (myPlayerId && scores && scores[myPlayerId]) {
             const s = scores[myPlayerId];
             correctCount.textContent = s.correct || 0;
             skipCount.textContent = s.skip || 0;
@@ -300,8 +348,9 @@
                 const s = scores[pid] || { correct: 0, skip: 0, foul: 0 };
                 const isDesc = (pid === currentDescriber);
                 const isMe = (pid === myPlayerId);
-                html += `<div class="player ${isDesc ? 'describer' : ''}">
-                            <span class="name">${isMe ? '⭐ ' : ''}${p.name}</span>
+                const teamClass = p.team === 'A' ? 'team-A' : 'team-B';
+                html += `<div class="player ${isDesc ? 'describer' : ''} ${teamClass}">
+                            <span class="name">${isMe ? '⭐ ' : ''}${p.name} (${p.team||'?'})</span>
                             <span class="score">✅${s.correct||0} ⏭${s.skip||0} 🚨${s.foul||0}</span>
                             ${isDesc ? ' 👑' : ''}
                         </div>`;
@@ -309,35 +358,33 @@
             playersList.innerHTML = html || '<span>Nessun giocatore</span>';
         }
 
-        // Abilita/disabilita pulsanti in base allo stato
+        // Abilita pulsanti
+        const isActive = isPlaying && !finished && currentDescriber !== null && gameState.card && gameState.card.word !== '🤫';
         const isMyTurn = (currentDescriber === myPlayerId);
-        const isActive = isPlaying && !finished && currentIndex < cards.length;
+        const canFoul = isActive && !isMyTurn && currentDescriber !== null;
 
-        // Pulsanti di gioco
-        correctBtn.disabled = !isActive || !isMyTurn;
-        skipBtn.disabled = !isActive || !isMyTurn;
-        foulBtn.disabled = !isActive || !isMyTurn || isMyTurn; // solo controllori possono fare fallo
-        newTurnBtn.disabled = isActive; // se è attivo, non puoi iniziare un nuovo turno
+        correctBtn.disabled = !(isActive && isMyTurn);
+        skipBtn.disabled = !(isActive && isMyTurn);
+        foulBtn.disabled = !canFoul;
+        newTurnBtn.disabled = isPlaying && !finished;
 
-        // Reset sempre abilitato
-        resetBtn.disabled = false;
-
-        // Messaggio di stato
-        if (!isActive && !finished) {
-            statusMessage.textContent = '⏳ In attesa che qualcuno inizi il turno...';
-        } else if (finished) {
-            statusMessage.textContent = '🏁 Partita finita! Premi "Nuovo turno" per ricominciare.';
+        // Messaggio
+        if (finished) {
+            const winner = teamScores.A > teamScores.B ? 'A' : (teamScores.B > teamScores.A ? 'B' : 'nessuno (pareggio)');
+            statusMessage.textContent = `🏁 Partita finita! Vince la squadra ${winner}! Premi "Nuovo turno" per ricominciare.`;
         } else if (isActive && isMyTurn) {
             statusMessage.textContent = '🎤 Sei il descrittore! Parla e usa i pulsanti per segnare.';
         } else if (isActive && !isMyTurn && currentDescriber) {
             statusMessage.textContent = '👀 Sei un controllore – ascolta e premi "Fallo!" se senti una proibita.';
-        } else if (isActive && !currentDescriber) {
-            statusMessage.textContent = '⏳ Nessun descrittore... premi "Nuovo turno" per iniziare.';
+        } else if (!isActive && !finished) {
+            statusMessage.textContent = '⏳ In attesa che il descrittore inizi il turno...';
+        } else {
+            statusMessage.textContent = '⏳ In attesa...';
         }
     }
 
     // --------------------------------------------------------------
-    //  INVIO AZIONI
+    //  AZIONI
     // --------------------------------------------------------------
     function sendAction(action, data = {}) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -351,9 +398,6 @@
         }));
     }
 
-    // --------------------------------------------------------------
-    //  EVENTI PULSANTI
-    // --------------------------------------------------------------
     connectBtn.addEventListener('click', connect);
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && loginScreen.style.display !== 'none') {
@@ -371,17 +415,12 @@
         }
     });
 
-    // --------------------------------------------------------------
-    //  CHIUSURA PULITA
-    // --------------------------------------------------------------
     window.addEventListener('beforeunload', () => {
         disconnect();
     });
 
-    // --------------------------------------------------------------
-    //  AVVIO – tentativo connessione automatico (opzionale)
-    // --------------------------------------------------------------
-    // connect(); // Decommenta per connetterti subito
+    // Connessione automatica (opzionale)
+    // connect();
 </script>
 </body>
 </html>
