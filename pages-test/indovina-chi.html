@@ -4,16 +4,411 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AniQuiz - Indovina Chi Multiplayer</title>
-    <!-- ... (TUTTO IL CSS RIMANE IDENTICO AL PRECEDENTE) ... -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 950px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #333; text-align: center; margin-bottom: 20px; font-size: 2.2em; }
+        .h1-span {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        input {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+            margin: 5px 0;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-warning:hover { background: #e67e22; }
+        .btn-info { background: #3498db; color: white; }
+        .btn-info:hover { background: #2980b9; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .room-code {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            border: 3px dashed #667eea;
+        }
+        .room-code .code {
+            font-size: 2.8em;
+            font-weight: bold;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+            word-break: break-all;
+            user-select: all;
+        }
+        .room-code .label { font-size: 0.9em; color: #666; margin-bottom: 10px; display: block; }
+        .share-section { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 15px 0; }
+        .share-section .btn { width: auto; flex: 1; min-width: 120px; }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .players-list { display: flex; gap: 10px; flex-wrap: wrap; }
+        .player-badge {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .player-badge.active { background: #667eea; color: white; }
+        .player-badge .score { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .characters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .character-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 0.5s;
+            border: 3px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+        .character-card.my-character { border-color: #27ae60; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+        .character-card.opponent-character { border-color: #e74c3c; background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); }
+        .character-card .emoji { font-size: 3em; display: block; margin-bottom: 5px; }
+        .character-card .name { font-size: 1.3em; font-weight: bold; color: #2c3e50; }
+        .character-card .details { color: #666; margin-top: 5px; font-size: 0.9em; }
+        .character-card .label {
+            font-size: 0.8em;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.05);
+        }
+        .character-card .label.mine { background: #27ae60; color: white; }
+        .character-card .label.theirs { background: #e74c3c; color: white; }
+        .chat-box {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            height: 180px;
+            overflow-y: auto;
+            padding: 15px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            animation: fadeIn 0.3s;
+        }
+        .chat-message .sender { font-weight: 600; color: #667eea; }
+        .chat-message .time { font-size: 11px; color: #999; margin-left: 10px; }
+        .chat-message.system { background: #f0f0f0; text-align: center; font-style: italic; }
+        .chat-message.question { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .chat-message.answer { background: #f3e5f5; border-left: 4px solid #9c27b0; }
+        .chat-message.guess { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .chat-message.success { background: #e8f5e9; border-left: 4px solid #4caf50; }
+        .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .controls .input-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
+        .controls .guess-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: 600;
+            animation: fadeIn 0.3s;
+        }
+        .status-message.info { background: #d1ecf1; color: #0c5460; }
+        .status-message.success { background: #d4edda; color: #155724; }
+        .status-message.error { background: #f8d7da; color: #721c24; }
+        .status-message.warning { background: #fff3cd; color: #856404; }
+        .hidden { display: none !important; }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .connection-status.connected { background: #d4edda; color: #155724; }
+        .connection-status.connecting { background: #fff3cd; color: #856404; }
+        .connection-status.disconnected { background: #f8d7da; color: #721c24; }
+        .connection-status .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .connection-status.connected .dot { background: #28a745; }
+        .connection-status.connecting .dot { background: #f39c12; animation: pulse 1s infinite; }
+        .connection-status.disconnected .dot { background: #dc3545; }
+        .quick-response { margin: 10px 0; display: flex; gap: 10px; align-items: center; animation: fadeIn 0.3s; }
+        .quick-response input { flex: 1; padding: 8px; border-radius: 8px; border: 2px solid #667eea; margin: 0; }
+        .quick-response .btn { width: auto; padding: 8px 20px; margin: 0; }
+        .turn-indicator { padding: 5px 15px; border-radius: 20px; font-weight: 600; font-size: 14px; }
+        .turn-indicator.my-turn { background: #d4edda; color: #155724; }
+        .turn-indicator.other-turn { background: #fff3cd; color: #856404; }
+        .round-info { text-align: center; padding: 10px; background: #f8f9fa; border-radius: 10px; margin: 10px 0; font-weight: 600; color: #666; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #e74c3c; }
+        .toast.warning { background: #f39c12; }
+        .toast.info { background: #3498db; }
+        .toast.hidden { display: none; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .characters-grid { grid-template-columns: 1fr; }
+            .controls .input-group, .controls .guess-group { grid-template-columns: 1fr; }
+            .game-header { flex-direction: column; align-items: stretch; }
+            .room-code .code { font-size: 1.8em; letter-spacing: 4px; }
+            .share-section .btn { min-width: 80px; font-size: 14px; padding: 10px 15px; }
+        }
+        #selectionScreen .selection-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        #selectionScreen .selection-actions { display: flex; gap: 10px; }
+        #selectionScreen .selection-actions .btn { width: auto; padding: 10px 20px; }
+        .character-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            max-height: 450px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+        .character-board .char-card {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .character-board .char-card:hover { transform: scale(1.03); border-color: #667eea; }
+        .character-board .char-card.selected { border-color: #27ae60; background: #e8f5e9; }
+        .character-board .char-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; background: #eee; margin-bottom: 6px; }
+        .character-board .char-card .char-name { font-weight: 600; font-size: 0.9em; color: #333; }
+        .character-board .char-card .char-anime { font-size: 0.75em; color: #777; }
+        .selection-status { text-align: center; margin-top: 10px; font-weight: 500; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        #loadingScreen { text-align: center; padding: 50px; }
+        #loadingScreen .loader { margin: 20px auto; }
+        #loadingScreen p { color: #666; font-size: 1.1em; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- ... (TUTTO L'HTML RIMANE IDENTICO) ... -->
+        <h1>🎮 <span class="h1-span">AniQuiz</span> Indovina Chi</h1>
+        
+        <div id="toast" class="toast hidden"></div>
+        
+        <!-- LOBBY -->
+        <div id="lobbyScreen" class="screen active">
+            <div style="margin: 20px 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Il tuo nome:</label>
+                <input type="text" id="playerName" placeholder="Inserisci il tuo nome" maxlength="20" value="Giocatore1">
+            </div>
+            <div class="grid-2">
+                <button class="btn btn-primary" onclick="createGame()">🎯 Crea Partita</button>
+                <button class="btn btn-secondary" onclick="showJoin()">🔗 Unisciti</button>
+            </div>
+            <div id="joinSection" class="hidden" style="margin-top: 15px;">
+                <input type="text" id="peerIdInput" placeholder="Codice a 4 cifre (es. 1234)" maxlength="4" pattern="\d*" style="text-transform: uppercase; letter-spacing: 6px; font-size: 20px; text-align: center;">
+                <button class="btn btn-success" onclick="joinGame()">📞 Connetti</button>
+                <button class="btn btn-secondary" onclick="showJoin()" style="margin-top: 5px;">Annulla</button>
+            </div>
+            <div id="waitingSection" class="hidden" style="margin-top: 20px;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <p style="color: #666; margin-bottom: 10px;">📋 Condividi questo codice con il tuo amico:</p>
+                    <div class="room-code">
+                        <span class="label">CODICE PARTITA</span>
+                        <div class="code" id="myPeerId">Caricamento...</div>
+                    </div>
+                </div>
+                <div class="share-section">
+                    <button class="btn btn-info" onclick="copyPeerId()">📋 Copia Codice</button>
+                    <button class="btn btn-primary" onclick="shareViaWhatsApp()">💬 WhatsApp</button>
+                    <button class="btn btn-success" onclick="shareViaTelegram()">✈️ Telegram</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div class="status-message info">⏳ In attesa che un amico si connetta...</div>
+                </div>
+            </div>
+            <div id="debugLog" class="debug-log">
+                <div style="font-weight: bold; margin-bottom: 5px; color: #3498db;">📋 Log di connessione:</div>
+                <div id="logEntries"></div>
+            </div>
+            <button class="btn btn-secondary" onclick="toggleDebug()" style="margin-top: 10px; width: auto; padding: 5px 15px; font-size: 12px;">🔧 Mostra Log</button>
+        </div>
+
+        <!-- LOADING SCREEN (client in attesa) -->
+        <div id="loadingScreen" class="screen">
+            <div class="loader"></div>
+            <p>Connesso! Caricamento personaggi...</p>
+            <p style="font-size: 0.9em; color: #999;">Attendi che l'host invii il tabellone</p>
+        </div>
+
+        <!-- SELEZIONE PERSONAGGIO -->
+        <div id="selectionScreen" class="screen">
+            <div class="selection-header">
+                <h3 style="margin:0;">📋 Scegli il tuo personaggio</h3>
+                <div class="selection-actions">
+                    <button class="btn btn-warning" onclick="pickRandomCharacter()" style="width:auto; padding:8px 20px;">🎲 Casuale</button>
+                    <button class="btn btn-success" id="readyBtn" onclick="confirmSelection()" disabled style="width:auto; padding:8px 20px;">✅ Pronto</button>
+                </div>
+            </div>
+            <div id="charBoard" class="character-board">
+                <div class="loader"></div>
+                <p style="text-align:center;grid-column:1/-1;">Caricamento personaggi...</p>
+            </div>
+            <div class="selection-status" id="selectionStatus">Seleziona un personaggio cliccando sulla card</div>
+            <div class="selection-status" id="opponentStatus" style="color:#666;">⏳ In attesa che l'avversario scelga...</div>
+        </div>
+
+        <!-- GIOCO -->
+        <div id="gameScreen" class="screen">
+            <div class="game-header">
+                <div class="players-list" id="playersList"></div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div id="turnIndicator" class="turn-indicator">🎯 Turno: -</div>
+                    <div id="connectionStatus" class="connection-status disconnected">
+                        <span class="dot"></span> Disconnesso
+                    </div>
+                </div>
+            </div>
+            <div id="statusMessage" class="status-message hidden"></div>
+            <div class="round-info" id="roundInfo">🎯 Round 1</div>
+            <div class="characters-grid">
+                <div id="myCharacterCard" class="character-card my-character">
+                    <span class="emoji">🎭</span>
+                    <div class="name" id="myCharName">Il tuo personaggio</div>
+                    <div class="details" id="myCharDetails"></div>
+                    <span class="label mine">👤 TU</span>
+                </div>
+                <div id="opponentCharacterCard" class="character-card opponent-character">
+                    <span class="emoji">❓</span>
+                    <div class="name" id="opponentCharName">Personaggio avversario</div>
+                    <div class="details" id="opponentCharDetails"></div>
+                    <span class="label theirs">👤 AVVERSARIO</span>
+                </div>
+            </div>
+            <div class="chat-box" id="chatBox">
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            </div>
+            <div class="controls" id="gameControls" style="display:none;">
+                <div class="input-group">
+                    <input type="text" id="questionInput" placeholder="❓ Fai una domanda...">
+                    <button class="btn btn-primary" onclick="askQuestion()">Chiedi</button>
+                </div>
+                <div class="guess-group">
+                    <input type="text" id="guessInput" placeholder="🔍 Chi pensi che sia l'avversario?">
+                    <button class="btn btn-secondary" onclick="makeGuess()">Indovina!</button>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="disconnectGame()" style="margin-top: 10px; width: auto; padding: 10px 20px; font-size: 14px;">🚪 Esci</button>
+        </div>
     </div>
 
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    
     <script>
-        // ICE_SERVERS (rimangono uguali)
+        // Server STUN/TURN pubblici per migliorare la connessione NAT
         const ICE_SERVERS = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -21,11 +416,20 @@
                 { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:stun3.l.google.com:19302' },
                 { urls: 'stun:stun4.l.google.com:19302' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
             ]
         };
 
+        // Stato globale
         const GameState = {
             players: [],
             currentPlayerId: null,
@@ -47,16 +451,13 @@
             pongTimeout: null,
             intentionalDisconnect: false,
             charactersLoaded: false,
-            connectionTimeout: null,
-            forceOpenTimeout: null  // nuovo campo per timeout di forzatura
+            connectionTimeout: null
         };
 
         let toastTimeout = null;
         let debugVisible = false;
         let selectedCharacterId = null;
 
-        // Tutte le funzioni di utilità (showToast, addLog, showScreen, etc.) rimangono ESATTAMENTE UGUALI
-        // Le copio per completezza ma sono identiche a prima
         // ============================================
         // TOAST & DEBUG
         // ============================================
@@ -87,7 +488,7 @@
         }
 
         // ============================================
-        // UI HELPERS (identiche)
+        // UI HELPERS
         // ============================================
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -191,7 +592,9 @@
         // ============================================
         function copyPeerId() {
             const id = document.getElementById('myPeerId').textContent;
-            if (navigator.clipboard) navigator.clipboard.writeText(id).then(() => showToast('✅ Codice copiato!', 'success'));
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(id).then(() => showToast('✅ Codice copiato!', 'success'));
+            }
         }
 
         function shareViaWhatsApp() {
@@ -205,14 +608,16 @@
         }
 
         // ============================================
-        // ANILIST API (identica)
+        // ANILIST API
         // ============================================
         async function fetchAnimeCharacters() {
             try {
                 const response = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ query: `query { Page(page: 1, perPage: 24) { characters(sort: FAVOURITES_DESC) { id name { first last } image { large } media(sort: POPULARITY_DESC, perPage: 1) { nodes { title { romaji } } } } } }` })
+                    body: JSON.stringify({
+                        query: `query { Page(page: 1, perPage: 24) { characters(sort: FAVOURITES_DESC) { id name { first last } image { large } media(sort: POPULARITY_DESC, perPage: 1) { nodes { title { romaji } } } } } }`
+                    })
                 });
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0].message);
@@ -246,7 +651,7 @@
         }
 
         // ============================================
-        // GESTIONE PERSONAGGI (identico)
+        // GESTIONE PERSONAGGI
         // ============================================
         function renderCharacterBoard(characters) {
             const board = document.getElementById('charBoard');
@@ -256,7 +661,11 @@
                 const card = document.createElement('div');
                 card.className = 'char-card';
                 card.dataset.id = c.id;
-                card.innerHTML = `<img src="${c.image}" alt="${c.name}" onerror="this.style.display='none'"><div class="char-name">${c.name}</div><div class="char-anime">${c.anime}</div>`;
+                card.innerHTML = `
+                    <img src="${c.image}" alt="${c.name}" onerror="this.style.display='none'">
+                    <div class="char-name">${c.name}</div>
+                    <div class="char-anime">${c.anime}</div>
+                `;
                 card.addEventListener('click', () => selectCharacter(c.id));
                 board.appendChild(card);
             });
@@ -280,7 +689,7 @@
         }
 
         function pickRandomCharacter() {
-            if (GameState.ready) return;
+            if (GameState.ready) { showToast('Hai già confermato!', 'warning', 2000); return; }
             if (GameState.boardCharacters.length === 0) return;
             selectCharacter(GameState.boardCharacters[Math.floor(Math.random() * GameState.boardCharacters.length)].id);
         }
@@ -327,6 +736,7 @@
         }
 
         function createPeer(id) {
+            // Usa sempre gli ICE_SERVERS per entrambi i peer
             return new Peer(id, { debug: 0, config: ICE_SERVERS });
         }
 
@@ -364,41 +774,6 @@
         }
 
         // ============================================
-        // NUOVA FUNZIONE PER FORZARE L'APERTURA
-        // ============================================
-        function forceConnectionReady(conn, callback) {
-            // Se è già aperta, chiama subito
-            if (conn.open) {
-                callback();
-                return;
-            }
-            let eventFired = false;
-            const onOpen = () => {
-                if (!eventFired) {
-                    eventFired = true;
-                    clearTimeout(timeout);
-                    clearTimeout(forceTimeout);
-                    callback();
-                }
-            };
-            const timeout = setTimeout(() => {
-                // Dopo 500ms controlla di nuovo
-                if (conn.open && !eventFired) {
-                    onOpen();
-                }
-            }, 500);
-            const forceTimeout = setTimeout(() => {
-                // Dopo 5 secondi forza comunque
-                if (!eventFired) {
-                    addLog('⚠️ Forzatura connessione dopo timeout', 'warning');
-                    eventFired = true;
-                    callback();
-                }
-            }, 5000);
-            conn.on('open', onOpen);
-        }
-
-        // ============================================
         // HOST
         // ============================================
         async function initHost() {
@@ -423,20 +798,23 @@
                 addLog(`📞 Nuova connessione da ${conn.peer}`, 'success');
                 GameState.connection = conn;
                 setupConnection(conn);
-                clearTimeout(GameState.connectionTimeout);
-                // Usa la forzatura
-                forceConnectionReady(conn, () => {
-                    addLog('✅ Connessione host considerata pronta', 'success');
+                if (conn.open) {
+                    clearTimeout(GameState.connectionTimeout);
                     onHostConnectionReady(conn);
-                });
-                // Timeout di sicurezza più lungo (20s)
-                GameState.connectionTimeout = setTimeout(() => {
-                    if (!conn.open) {
-                        addLog('⏰ Timeout connessione host', 'error');
-                        showToast('⚠️ Connessione lenta, riprova', 'warning', 4000);
-                        conn.close();
-                    }
-                }, 20000);
+                } else {
+                    conn.on('open', () => {
+                        clearTimeout(GameState.connectionTimeout);
+                        onHostConnectionReady(conn);
+                    });
+                    // Timeout di sicurezza: dopo 20 secondi avvisa
+                    GameState.connectionTimeout = setTimeout(() => {
+                        if (!conn.open) {
+                            addLog('⏰ Timeout connessione host', 'error');
+                            showToast('⚠️ Connessione lenta, riprova', 'warning', 4000);
+                            conn.close();
+                        }
+                    }, 20000);
+                }
             });
 
             GameState.peer.on('error', (err) => {
@@ -474,20 +852,23 @@
                 const conn = GameState.peer.connect(hostId, { reliable: true, config: ICE_SERVERS });
                 GameState.connection = conn;
                 setupConnection(conn);
-                clearTimeout(GameState.connectionTimeout);
-                // Usa la forzatura
-                forceConnectionReady(conn, () => {
-                    addLog('✅ Connessione client considerata pronta', 'success');
+                if (conn.open) {
+                    clearTimeout(GameState.connectionTimeout);
                     onClientConnectionReady(conn);
-                });
-                GameState.connectionTimeout = setTimeout(() => {
-                    if (!conn.open) {
-                        addLog('⏰ Timeout connessione client', 'error');
-                        showStatus('❌ Connessione fallita (timeout)', 'error');
-                        updateConnectionStatus('disconnected', 'Timeout');
-                        conn.close();
-                    }
-                }, 20000);
+                } else {
+                    conn.on('open', () => {
+                        clearTimeout(GameState.connectionTimeout);
+                        onClientConnectionReady(conn);
+                    });
+                    GameState.connectionTimeout = setTimeout(() => {
+                        if (!conn.open) {
+                            addLog('⏰ Timeout connessione client', 'error');
+                            showStatus('❌ Connessione fallita (timeout)', 'error');
+                            updateConnectionStatus('disconnected', 'Timeout');
+                            conn.close();
+                        }
+                    }, 20000);
+                }
             });
 
             GameState.peer.on('error', (err) => {
@@ -532,7 +913,7 @@
         }
 
         // ============================================
-        // GESTIONE MESSAGGI (identica)
+        // GESTIONE MESSAGGI
         // ============================================
         function handleMessage(data) {
             switch(data.type) {
@@ -655,7 +1036,10 @@
             const div = document.createElement('div');
             div.id = 'quickResponse';
             div.className = 'quick-response';
-            div.innerHTML = `<input type="text" id="quickAnswer" placeholder="Rispondi..."><button class="btn btn-primary" onclick="sendQuickAnswer()">Invia</button>`;
+            div.innerHTML = `
+                <input type="text" id="quickAnswer" placeholder="Rispondi...">
+                <button class="btn btn-primary" onclick="sendQuickAnswer()">Invia</button>
+            `;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
             document.getElementById('quickAnswer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuickAnswer(); });
@@ -684,15 +1068,25 @@
         function resetGameState() {
             stopPing();
             if (GameState.connectionTimeout) { clearTimeout(GameState.connectionTimeout); GameState.connectionTimeout = null; }
-            if (GameState.forceOpenTimeout) { clearTimeout(GameState.forceOpenTimeout); GameState.forceOpenTimeout = null; }
             Object.assign(GameState, {
-                players: [], currentPlayerId: null, gameStarted: false,
-                myCharacter: null, opponentCharacter: null, ready: false, opponentReady: false,
-                boardCharacters: [], charactersLoaded: false, intentionalDisconnect: false
+                players: [],
+                currentPlayerId: null,
+                gameStarted: false,
+                myCharacter: null,
+                opponentCharacter: null,
+                ready: false,
+                opponentReady: false,
+                boardCharacters: [],
+                charactersLoaded: false,
+                intentionalDisconnect: false
             });
             selectedCharacterId = null;
             const chatBox = document.getElementById('chatBox');
-            if (chatBox) chatBox.innerHTML = `<div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div><div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div><div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>`;
+            if (chatBox) chatBox.innerHTML = `
+                <div class="chat-message system">🎮 Benvenuti in AniQuiz Indovina Chi!</div>
+                <div class="chat-message system">👀 Ognuno ha un personaggio. A turno fate domande!</div>
+                <div class="chat-message system">🔍 Quando sei sicuro, indovina il personaggio dell'avversario!</div>
+            `;
             hideStatus();
             document.getElementById('waitingSection').classList.add('hidden');
             document.getElementById('lobbyScreen').querySelector('.grid-2').style.display = 'grid';
@@ -706,7 +1100,6 @@
             GameState.intentionalDisconnect = true;
             stopPing();
             if (GameState.connectionTimeout) { clearTimeout(GameState.connectionTimeout); GameState.connectionTimeout = null; }
-            if (GameState.forceOpenTimeout) { clearTimeout(GameState.forceOpenTimeout); GameState.forceOpenTimeout = null; }
             if (GameState.connection) {
                 sendMessage({ type: 'disconnect', playerName: GameState.myName });
                 GameState.connection.close();
@@ -796,6 +1189,7 @@
             }
         });
 
+        // Auto-join via parametro ?join=XXXX
         (function checkAutoJoin() {
             const params = new URLSearchParams(window.location.search);
             const joinId = params.get('join');
