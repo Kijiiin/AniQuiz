@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Anime Uwufufu – Torneo a eliminazione</title>
+    <style>
+        /* RESET & BASE */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+
+        body {
+            background: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 40px;
+            padding: 30px 25px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .header .sub {
+            color: #99aabb;
+            font-size: 1rem;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        /* CONTROLLI */
+        .controls {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 60px;
+            padding: 12px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 16px 24px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .controls label {
+            color: #ccd;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls select {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f0f0f5;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .controls select:hover {
+            border-color: #ffd966;
+        }
+
+        .controls select option {
+            background: #1a1a2e;
+            color: #f0f0f5;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #f7971e, #fbbf24);
+            border: none;
+            padding: 8px 28px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0f0f1a;
+            cursor: pointer;
+            transition: 0.25s;
+            box-shadow: 0 4px 16px rgba(247, 151, 30, 0.25);
+        }
+
+        .btn-start:hover {
+            transform: scale(1.04);
+            box-shadow: 0 6px 24px rgba(247, 151, 30, 0.4);
+        }
+
+        .btn-start:active { transform: scale(0.96); }
+
+        /* STATUS BAR */
+        .status-bar {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 60px;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .status-bar .turno {
+            color: #ddd;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        .status-bar .turno span { color: #ffd966; }
+
+        .status-bar .progress {
+            color: #aaa;
+            font-size: 0.95rem;
+        }
+
+        .btn-reset {
+            background: rgba(255, 70, 70, 0.12);
+            border: 1px solid rgba(255, 70, 70, 0.25);
+            color: #ff7a7a;
+            padding: 6px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .btn-reset:hover {
+            background: rgba(255, 70, 70, 0.2);
+            border-color: #ff7a7a;
+        }
+
+        /* MATCH AREA */
+        .match-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            min-height: 380px;
+        }
+
+        .match-title {
+            color: #ccd;
+            font-size: 1.15rem;
+            font-weight: 500;
+            background: rgba(255,255,255,0.04);
+            padding: 6px 24px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .match-cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(30, 30, 50, 0.75);
+            backdrop-filter: blur(4px);
+            border-radius: 28px;
+            padding: 16px 16px 20px;
+            width: 210px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            transition: transform 0.25s ease, box-shadow 0.3s;
+            cursor: default;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 215, 0, 0.2);
+        }
+
+        .card img {
+            width: 100%;
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border-radius: 18px;
+            background: #1a1a2e;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+
+        .card .title {
+            margin-top: 12px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #f0f0f5;
+            line-height: 1.3;
+            min-height: 2.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card .sub-info {
+            color: #99aabb;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card .vote-btn {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #f7971e, #ffb347);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #0f0f1a;
+            cursor: pointer;
+            transition: 0.25s;
+            width: 100%;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(247, 151, 30, 0.25);
+        }
+
+        .card .vote-btn:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(247, 151, 30, 0.4); }
+        .card .vote-btn:active { transform: scale(0.96); }
+        .card .vote-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .vs-badge {
+            font-size: 2rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            user-select: none;
+        }
+
+        /* WINNER SCREEN */
+        .winner-screen {
+            text-align: center;
+            padding: 10px 10px 0;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .winner-screen .trophy { font-size: 4.2rem; margin-bottom: 2px; }
+        .winner-screen .winner-name {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #ffd966;
+            text-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+        }
+        .winner-screen .winner-sub { color: #aab; margin-top: 6px; font-size: 1rem; }
+        .winner-screen .winner-img {
+            width: 180px;
+            border-radius: 28px;
+            margin: 16px auto;
+            box-shadow: 0 16px 50px rgba(0,0,0,0.6);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .btn-restart {
+            margin-top: 20px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #ddd;
+            padding: 10px 32px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+        .btn-restart:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: #ffd966;
+            color: #fff;
+            transform: scale(1.03);
+        }
+
+        /* LOADING */
+        .loading {
+            color: #aab;
+            font-size: 1.3rem;
+            text-align: center;
+            padding: 50px 20px;
+        }
+        .loading .spinner {
+            display: inline-block;
+            width: 46px;
+            height: 46px;
+            border: 4px solid rgba(255,215,0,0.08);
+            border-top-color: #ffd966;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* RESPONSIVE */
+        @media (max-width: 700px) {
+            .container { padding: 18px 12px; }
+            .header h1 { font-size: 2.0rem; }
+            .controls { border-radius: 30px; padding: 12px 16px; gap: 10px; }
+            .controls label { font-size: 0.85rem; }
+            .controls select { font-size: 0.9rem; padding: 4px 12px; }
+            .match-cards { gap: 12px; }
+            .card { width: 150px; padding: 10px; }
+            .card .title { font-size: 0.9rem; min-height: 2.4em; }
+            .vs-badge { font-size: 1.4rem; padding: 0 4px; }
+            .status-bar { flex-direction: column; align-items: stretch; text-align: center; gap: 6px; }
+            .winner-screen .winner-name { font-size: 1.7rem; }
+        }
+
+        @media (max-width: 450px) {
+            .card { width: 130px; padding: 8px; }
+            .card img { border-radius: 12px; }
+            .card .vote-btn { font-size: 0.75rem; padding: 6px 8px; }
+            .vs-badge { font-size: 1.0rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <div class="header">
+        <h1>⚔️ Anime Uwufufu</h1>
+        <div class="sub">Scegli il tuo preferito in ogni scontro – torneo a eliminazione</div>
+    </div>
+
+    <!-- Selettore dimensione torneo -->
+    <div class="controls" id="controls">
+        <label for="sizeSelect">🏟️ Partecipanti:
+            <select id="sizeSelect">
+                <option value="16">16</option>
+                <option value="32">32</option>
+                <option value="64">64</option>
+                <option value="128" selected>128</option>
+            </select>
+        </label>
+        <button class="btn-start" id="startBtn">🚀 Avvia torneo</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+        <div class="turno">🏁 <span id="turnoLabel">In attesa</span></div>
+        <div class="progress" id="progressLabel">—</div>
+        <button class="btn-reset" id="resetBtn">⟳ Ricomincia</button>
+    </div>
+
+    <!-- Match Area -->
+    <div class="match-area" id="matchArea">
+        <div class="loading" id="loadingScreen">
+            <div class="spinner"></div>
+            <div>Caricamento anime…</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // 1. API HELPER – Recupera N anime casuali (esclusi NOT_YET_RELEASED)
+    // ============================================================
+    async function getRandomAnimePool(quantity = 128) {
+        // --- Conteggio totale anime validi ---
+        const totalQuery = `
+            query {
+                Page(page: 1, perPage: 1) {
+                    pageInfo { total }
+                    media(type: ANIME, status_not: NOT_YET_RELEASED) { id }
+                }
+            }`;
+        const totalRes = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: totalQuery })
+        });
+        const totalData = await totalRes.json();
+        const totalAnime = totalData.data.Page.pageInfo.total;
+        if (!totalAnime) throw new Error('Nessun anime disponibile.');
+
+        const perPage = 50;
+        const maxPage = Math.floor(totalAnime / perPage);
+        if (maxPage === 0) throw new Error('Non ci sono abbastanza anime.');
+
+        // Calcola quante pagine ci servono (prendiamo un po' di margine)
+        let pagesNeeded = Math.ceil(quantity / perPage) + 2;
+        // Ma non possiamo superare il numero di pagine disponibili
+        pagesNeeded = Math.min(pagesNeeded, maxPage);
+
+        // Genera pagine casuali (distinte)
+        const pageSet = new Set();
+        while (pageSet.size < pagesNeeded) {
+            const p = Math.floor(Math.random() * maxPage) + 1;
+            pageSet.add(p);
+        }
+        const randomPages = Array.from(pageSet);
+
+        // --- Fetch in parallelo ---
+        const fetchQuery = `
+            query ($page: Int, $perPage: Int) {
+                Page(page: $page, perPage: $perPage) {
+                    media(
+                        type: ANIME
+                        status_not: NOT_YET_RELEASED
+                        sort: ID_DESC
+                    ) {
+                        id
+                        title { romaji english }
+                        coverImage { large }
+                        genres
+                        episodes
+                        meanScore
+                        status
+                        startDate { year }
+                    }
+                }
+            }`;
+
+        const fetchPromises = randomPages.map(page =>
+            fetch('https://graphql.anilist.co', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: fetchQuery,
+                    variables: { page, perPage }
+                })
+            }).then(r => r.json())
+        );
+
+        const allResults = await Promise.all(fetchPromises);
+        let allAnime = [];
+        for (const res of allResults) {
+            const media = res.data?.Page?.media || [];
+            allAnime = allAnime.concat(media);
+        }
+
+        // Filtraggio sicurezza: copertina e status
+        allAnime = allAnime.filter(a =>
+            a.coverImage?.large &&
+            a.status !== 'NOT_YET_RELEASED'
+        );
+
+        if (allAnime.length === 0) throw new Error('Nessun anime valido trovato nelle pagine pescate.');
+
+        // Deduplica per ID
+        const seen = new Set();
+        const unique = [];
+        for (const a of allAnime) {
+            if (!seen.has(a.id)) {
+                seen.add(a.id);
+                unique.push(a);
+            }
+        }
+
+        // Mescola e restituisci esattamente 'quantity' (se ne abbiamo abbastanza)
+        const shuffled = unique.sort(() => 0.5 - Math.random());
+        if (shuffled.length < quantity) {
+            console.warn(`⚠️ Trovati solo ${shuffled.length} anime unici, ne servivano ${quantity}.`);
+            return shuffled;
+        }
+        return shuffled.slice(0, quantity);
+    }
+
+    // ============================================================
+    // 2. TORNEO – Gestione stato e logica (supporta qualsiasi potenza di 2)
+    // ============================================================
+    class Tournament {
+        constructor(participants) {
+            this.participants = participants;
+            this.rounds = [];
+            this.currentRound = 0;
+            this.currentMatch = 0;
+            this.winner = null;
+            this.finished = false;
+            this._buildBracket();
+        }
+
+        _buildBracket() {
+            let current = [...this.participants];
+            while (current.length > 1) {
+                const round = [];
+                for (let i = 0; i < current.length; i += 2) {
+                    if (i + 1 < current.length) {
+                        round.push([current[i], current[i + 1]]);
+                    } else {
+                        // bye (non dovrebbe capitare con potenze di 2)
+                        round.push([current[i], null]);
+                    }
+                }
+                this.rounds.push(round);
+                current = new Array(round.length).fill(null);
+            }
+        }
+
+        getCurrentMatch() {
+            if (this.finished) return null;
+            const round = this.rounds[this.currentRound];
+            if (!round) return null;
+            return round[this.currentMatch] || null;
+        }
+
+        vote(winner) {
+            if (this.finished) return false;
+            const round = this.rounds[this.currentRound];
+            const match = round[this.currentMatch];
+            if (!match) return false;
+
+            // Sostituisci il match con il vincitore
+            round[this.currentMatch] = winner;
+            this.currentMatch++;
+
+            // Se il round è completo
+            if (this.currentMatch >= round.length) {
+                const winners = round.filter(w => w !== null);
+                if (winners.length === 1) {
+                    this.winner = winners[0];
+                    this.finished = true;
+                    return true;
+                }
+                // Crea il prossimo round
+                const nextRound = [];
+                for (let i = 0; i < winners.length; i += 2) {
+                    if (i + 1 < winners.length) {
+                        nextRound.push([winners[i], winners[i + 1]]);
+                    } else {
+                        nextRound.push([winners[i], null]);
+                    }
+                }
+                this.rounds.push(nextRound);
+                this.currentRound++;
+                this.currentMatch = 0;
+            }
+            return true;
+        }
+
+        reset(participants) {
+            this.participants = participants || this.participants;
+            this.rounds = [];
+            this.currentRound = 0;
+            this.currentMatch = 0;
+            this.winner = null;
+            this.finished = false;
+            this._buildBracket();
+        }
+
+        // Nome del turno in base al numero di partecipanti rimasti
+        getRoundName() {
+            if (this.finished) return '🏆 Campione!';
+            const totalRounds = this.rounds.length;
+            const idx = this.currentRound;
+            // Calcola il numero di partecipanti in questo round
+            const round = this.rounds[idx];
+            if (!round) return `Turno ${idx+1}`;
+            const count = round.length * 2; // approssimativo
+            const names = {
+                128: 'Primo turno (128→64)',
+                64: 'Secondo turno (64→32)',
+                32: 'Terzo turno (32→16)',
+                16: 'Ottavi di finale',
+                8: 'Quarti di finale',
+                4: 'Semifinali',
+                2: 'Finale'
+            };
+            // mappa in base al numero di match * 2
+            const key = count;
+            return names[key] || `Turno ${idx+1}`;
+        }
+
+        getProgress() {
+            if (this.finished) return '🏆 Torneo concluso!';
+            const round = this.rounds[this.currentRound];
+            if (!round) return '';
+            const total = round.length;
+            const done = this.currentMatch;
+            return `Match ${done+1} di ${total}`;
+        }
+    }
+
+    // ============================================================
+    // 3. UI CONTROLLER
+    // ============================================================
+    const app = {
+        tournament: null,
+        isReady: false,
+        size: 128,
+
+        elements: {
+            matchArea: document.getElementById('matchArea'),
+            turnoLabel: document.getElementById('turnoLabel'),
+            progressLabel: document.getElementById('progressLabel'),
+            resetBtn: document.getElementById('resetBtn'),
+            startBtn: document.getElementById('startBtn'),
+            sizeSelect: document.getElementById('sizeSelect'),
+        },
+
+        init() {
+            this.elements.resetBtn.addEventListener('click', () => this.startNewTournament());
+            this.elements.startBtn.addEventListener('click', () => this.startNewTournament());
+            this.elements.sizeSelect.addEventListener('change', () => {
+                this.size = parseInt(this.elements.sizeSelect.value);
+            });
+            // Avvia automaticamente con 128
+            this.startNewTournament();
+        },
+
+        async startNewTournament() {
+            const size = this.size;
+            this.elements.matchArea.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>⏳ Caricamento ${size} anime casuali…</div>
+                </div>
+            `;
+            this.elements.turnoLabel.textContent = 'Caricamento…';
+            this.elements.progressLabel.textContent = '⏳';
+
+            try {
+                const participants = await getRandomAnimePool(size);
+                if (!participants || participants.length < 2) {
+                    throw new Error(`Servivano almeno 2 anime, trovati ${participants?.length || 0}.`);
+                }
+                // Se non ne abbiamo abbastanza, avvisiamo ma continuiamo con quelli che abbiamo
+                if (participants.length < size) {
+                    console.warn(`Trovati solo ${participants.length} anime, ma il torneo continua.`);
+                }
+                this.tournament = new Tournament(participants);
+                this.isReady = true;
+                this.renderMatch();
+            } catch (err) {
+                console.error(err);
+                this.elements.matchArea.innerHTML = `
+                    <div style="color:#ff8a8a; text-align:center; padding:40px;">
+                        <div style="font-size:3rem;">😵</div>
+                        <p style="font-size:1.2rem; margin-top:10px;">Errore nel caricamento.</p>
+                        <p style="color:#99aabb; font-size:0.9rem;">${err.message}</p>
+                        <button class="btn-restart" style="margin-top:20px;" onclick="app.startNewTournament()">⟳ Riprova</button>
+                    </div>
+                `;
+                this.elements.turnoLabel.textContent = 'Errore';
+                this.elements.progressLabel.textContent = '❌';
+            }
+        },
+
+        renderMatch() {
+            const tour = this.tournament;
+            if (!tour || tour.finished) {
+                this.renderWinner();
+                return;
+            }
+
+            const match = tour.getCurrentMatch();
+            if (!match) {
+                this.renderWinner();
+                return;
+            }
+
+            const [a, b] = match;
+            if (!a || !b) {
+                // bye – salta
+                tour.vote(a || b);
+                this.renderMatch();
+                return;
+            }
+
+            // Aggiorna status
+            this.elements.turnoLabel.textContent = tour.getRoundName();
+            this.elements.progressLabel.textContent = tour.getProgress();
+
+            const cardHtml = (anime, side) => `
+                <div class="card" data-side="${side}">
+                    <img src="${anime.coverImage.large}" alt="${anime.title.romaji}" loading="lazy" 
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect width=%22200%22 height=%22280%22 fill=%22%23222%22/%3E%3Ctext x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22 dy=%22.3em%22%3E❓%3C/text%3E%3C/svg%3E'">
+                    <div class="title">${anime.title.romaji || anime.title.english || 'Senza titolo'}</div>
+                    <div class="sub-info">
+                        ${anime.startDate?.year || '?'} · ${anime.genres?.slice(0,2).join(', ') || ''}
+                        ${anime.meanScore ? `· ${anime.meanScore}%` : ''}
+                    </div>
+                    <button class="vote-btn" data-anime-id="${anime.id}">⬆ Vota</button>
+                </div>
+            `;
+
+            this.elements.matchArea.innerHTML = `
+                <div class="match-title">⚔️ Scegli il tuo preferito</div>
+                <div class="match-cards">
+                    ${cardHtml(a, 'left')}
+                    <div class="vs-badge">⚡</div>
+                    ${cardHtml(b, 'right')}
+                </div>
+            `;
+
+            const btns = this.elements.matchArea.querySelectorAll('.vote-btn');
+            btns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(btn.dataset.animeId);
+                    const match = tour.getCurrentMatch();
+                    const winner = match?.find(anime => anime.id === id);
+                    if (winner) {
+                        btns.forEach(b => b.disabled = true);
+                        tour.vote(winner);
+                        setTimeout(() => this.renderMatch(), 200);
+                    }
+                });
+            });
+        },
+
+        renderWinner() {
+            const tour = this.tournament;
+            const winner = tour?.winner;
+            if (!winner) {
+                this.elements.matchArea.innerHTML = `<div style="color:#aab; text-align:center; padding:40px;">Nessun vincitore.</div>`;
+                return;
+            }
+
+            this.elements.turnoLabel.textContent = '🏆 Campione!';
+            this.elements.progressLabel.textContent = '🎉 Complimenti!';
+
+            this.elements.matchArea.innerHTML = `
+                <div class="winner-screen">
+                    <div class="trophy">🏆</div>
+                    <div class="winner-name">${winner.title.romaji || winner.title.english || 'Campione'}</div>
+                    <div class="winner-sub">
+                        ${winner.startDate?.year || ''} · ${winner.genres?.slice(0,3).join(', ') || ''}
+                        ${winner.meanScore ? `· ${winner.meanScore}%` : ''}
+                    </div>
+                    <img class="winner-img" src="${winner.coverImage.large}" alt="${winner.title.romaji}" loading="lazy" onerror="this.style.display='none'">
+                    <br>
+                    <button class="btn-restart" onclick="app.startNewTournament()">🔄 Nuovo torneo</button>
+                </div>
+            `;
+        }
+    };
+
+    // Avvia
+    document.addEventListener('DOMContentLoaded', () => app.init());
+</script>
+</body>
+</html>
