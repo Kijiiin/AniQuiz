@@ -572,6 +572,7 @@
     <script>
         // ============================================================
         // 1. API HELPER – Recupera N anime mescolando diverse classifiche
+        //    Esclude: formato MUSIC, episodi < 10 minuti (se disponibile)
         // ============================================================
         async function getRandomAnimePool(quantity = 128) {
             // --- Conteggio totale anime validi (per le pagine casuali) ---
@@ -596,8 +597,6 @@
             if (maxPage === 0) throw new Error('Non ci sono abbastanza anime.');
 
             // --- Definisco le diverse categorie da interrogare ---
-            // Per le prime 4 uso la prima pagina (per avere i migliori di quella categoria)
-            // Per i casuali uso 3 pagine casuali diverse
             const categories = [
                 { sort: 'POPULARITY_DESC', label: 'popolari', page: 1 },
                 { sort: 'TRENDING_DESC', label: 'trending', page: 1 },
@@ -608,7 +607,7 @@
                 { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 }
             ];
 
-            // --- Costruisco le query per ogni categoria ---
+            // --- Query con campi aggiuntivi: format e episodeDuration ---
             const fetchQuery = `
             query ($page: Int, $perPage: Int, $sort: MediaSort) {
                 Page(page: $page, perPage: $perPage) {
@@ -625,6 +624,8 @@
                         meanScore
                         status
                         startDate { year }
+                        format
+                        episodeDuration
                     }
                 }
             }`;
@@ -651,13 +652,22 @@
                 allAnime = allAnime.concat(media);
             }
 
+            // --- FILTRI ---
+            // 1. Escludi formato "MUSIC"
+            // 2. Escludi episodeDuration < 10 minuti (se il campo è null, lo teniamo)
+            allAnime = allAnime.filter(a => {
+                if (a.format === 'MUSIC') return false;
+                if (a.episodeDuration !== null && a.episodeDuration < 10) return false;
+                return true;
+            });
+
             // Filtraggio sicurezza: copertina e status
             allAnime = allAnime.filter(a =>
                 a.coverImage?.large &&
                 a.status !== 'NOT_YET_RELEASED'
             );
 
-            if (allAnime.length === 0) throw new Error('Nessun anime valido trovato.');
+            if (allAnime.length === 0) throw new Error('Nessun anime valido dopo i filtri (formato MUSIC o durata < 10min).');
 
             // Deduplica per ID
             const seen = new Set();
@@ -669,10 +679,10 @@
                 }
             }
 
-            // Mescola bene e restituisci esattamente 'quantity'
+            // Mescola e restituisci esattamente 'quantity' (se ne abbiamo abbastanza)
             const shuffled = unique.sort(() => 0.5 - Math.random());
             if (shuffled.length < quantity) {
-                console.warn(`⚠️ Trovati solo ${shuffled.length} anime unici, ne servivano ${quantity}.`);
+                console.warn(`⚠️ Trovati solo ${shuffled.length} anime unici dopo i filtri, ne servivano ${quantity}.`);
                 return shuffled;
             }
             return shuffled.slice(0, quantity);
@@ -700,12 +710,13 @@
                         if (i + 1 < current.length) {
                             round.push([current[i], current[i + 1]]);
                         } else {
-                            round.push([current[i], null]);
+                            round.push([current[i], null]); // bye
                         }
                     }
                     this.rounds.push(round);
                     current = new Array(round.length).fill(null);
                 }
+                // Se i partecipanti erano 1, il torneo non ha round, ma non dovrebbe succedere
             }
 
             getCurrentMatch() {
@@ -731,6 +742,7 @@
                         this.finished = true;
                         return true;
                     }
+                    // Crea il prossimo round
                     const nextRound = [];
                     for (let i = 0; i < winners.length; i += 2) {
                         if (i + 1 < winners.length) {
@@ -832,7 +844,7 @@
                 this.elements.matchArea.innerHTML = `
                     <div class="loading">
                         <div class="spinner"></div>
-                        <div>⏳ Caricamento ${size} anime da Popolari, Trending, Votati, Recenti e Casuali…</div>
+                        <div>⏳ Caricamento ${size} anime da Popolari, Trending, Votati, Recenti e Casuali (esclusi MUSIC e durata < 10min)…</div>
                     </div>
                 `;
                 this.elements.turnoLabel.textContent = 'Caricamento…';
@@ -883,6 +895,7 @@
 
                 const [a, b] = match;
                 if (!a || !b) {
+                    // bye – salta automaticamente
                     tour.vote(a || b);
                     this.renderMatch();
                     return;
@@ -899,6 +912,7 @@
                         <div class="sub-info">
                             ${anime.startDate?.year || '?'} · ${anime.genres?.slice(0,2).join(', ') || ''}
                             ${anime.meanScore ? `· ${anime.meanScore}%` : ''}
+                            ${anime.episodeDuration ? `· ${anime.episodeDuration}min` : ''}
                         </div>
                         <div class="actions">
                             <button class="vote-btn" data-anime-id="${anime.id}">⬆ Vota</button>
@@ -953,9 +967,18 @@
 
             renderWinner() {
                 const tour = this.tournament;
-                const winner = tour?.winner;
+                let winner = tour?.winner;
+
+                // Se per qualche motivo il vincitore è null ma il torneo è finito, prova a prenderlo dall'ultimo round
+                if (tour && tour.finished && !winner) {
+                    const lastRound = tour.rounds[tour.rounds.length - 1];
+                    if (lastRound && lastRound.length === 1 && lastRound[0] !== null) {
+                        winner = lastRound[0];
+                    }
+                }
+
                 if (!winner) {
-                    this.elements.matchArea.innerHTML = `<div style="color:#aab; text-align:center; padding:40px;">Nessun vincitore.</div>`;
+                    this.elements.matchArea.innerHTML = `<div style="color:#aab; text-align:center; padding:40px;">Nessun vincitore determinato.</div>`;
                     return;
                 }
 
@@ -969,6 +992,7 @@
                         <div class="winner-sub">
                             ${winner.startDate?.year || ''} · ${winner.genres?.slice(0,3).join(', ') || ''}
                             ${winner.meanScore ? `· ${winner.meanScore}%` : ''}
+                            ${winner.episodeDuration ? `· ${winner.episodeDuration}min` : ''}
                         </div>
                         <img class="winner-img" src="${winner.coverImage.large}" alt="${winner.title.romaji}" loading="lazy" onerror="this.style.display='none'">
                         <br>
