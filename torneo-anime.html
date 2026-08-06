@@ -481,7 +481,8 @@
 
     <script>
         // ================================================================
-        // 1. FETCH – multi‑categoria con esclusione NOT_YET_RELEASED e CANCELLED
+        // 1. FETCH – multi‑categoria con esclusione NOT_YET_RELEASED, CANCELLED
+        //    e durata episodi > 11 minuti (filtro lato client)
         // ================================================================
 
         const PER_PAGE = 30;
@@ -517,6 +518,7 @@
                             episodes
                             format
                             status
+                            episodeDuration   /* Aggiunto per il filtro durata */
                         }
                     }
                 `;
@@ -550,7 +552,17 @@
                     uniqueMap.set(a.id, a);
                 }
             }
-            return Array.from(uniqueMap.values());
+            let unique = Array.from(uniqueMap.values());
+
+            // --- FILTRO DURATA EPISODI: escludi quelli con episodeDuration <= 11 minuti ---
+            // Se episodeDuration è null, lo teniamo (non sappiamo la durata)
+            unique = unique.filter(a => {
+                if (a.episodeDuration === null) return true;   // campo assente – teniamo
+                return a.episodeDuration > 11;                 // durata > 11 minuti
+            });
+
+            console.log(`✅ Dopo filtro durata: ${unique.length} anime rimasti`);
+            return unique;
         }
 
         // ================================================================
@@ -696,7 +708,7 @@
                     <div class="loading">
                         <div class="spinner"></div>
                         <div>⏳ Caricamento anime da Popolari, Trending, Votati, Recenti e Casuali…</div>
-                        <div style="font-size:0.85rem; color:#666; margin-top:6px;">Esclusi: non ancora usciti e cancellati</div>
+                        <div style="font-size:0.85rem; color:#666; margin-top:6px;">Esclusi: non ancora usciti, cancellati e durata episodi ≤ 11 min</div>
                     </div>
                 `;
                 this.elements.turnoLabel.textContent = 'Caricamento…';
@@ -705,7 +717,7 @@
                 try {
                     const allAnime = await fetchMixedAnime();
                     if (!allAnime || allAnime.length < 2) {
-                        throw new Error(`Trovati solo ${allAnime?.length || 0} anime.`);
+                        throw new Error(`Trovati solo ${allAnime?.length || 0} anime dopo i filtri.`);
                     }
 
                     // Mescola e prendi i primi 'size'
@@ -713,7 +725,12 @@
                     const participants = shuffled.slice(0, Math.min(size, shuffled.length));
 
                     if (participants.length < 2) {
-                        throw new Error('Non ci sono abbastanza anime per il torneo.');
+                        throw new Error('Non ci sono abbastanza anime per il torneo dopo i filtri.');
+                    }
+
+                    // Se il numero di partecipanti è minore di size, mostriamo un avviso in console
+                    if (participants.length < size) {
+                        console.warn(`⚠️ Richiesti ${size}, disponibili solo ${participants.length} dopo i filtri. Torneo ridotto.`);
                     }
 
                     this.tournament = new Tournament(participants);
@@ -769,6 +786,7 @@
                         <div class="sub-info">
                             ${anime.startDate?.year || '?'} · ${anime.genres?.slice(0,2).join(', ') || ''}
                             ${anime.meanScore ? `· ${anime.meanScore}%` : ''}
+                            ${anime.episodeDuration ? `· ${anime.episodeDuration}min` : ''}
                             ${anime.status ? `· ${anime.status}` : ''}
                         </div>
                         <div class="actions">
@@ -849,6 +867,7 @@
                         <div class="winner-sub">
                             ${winner.startDate?.year || ''} · ${winner.genres?.slice(0,3).join(', ') || ''}
                             ${winner.meanScore ? `· ${winner.meanScore}%` : ''}
+                            ${winner.episodeDuration ? `· ${winner.episodeDuration}min` : ''}
                             ${winner.status ? `· ${winner.status}` : ''}
                         </div>
                         <img class="winner-img" src="${winner.coverImage?.large || ''}" alt="${winner.title?.romaji || 'Campione'}" loading="lazy" onerror="this.style.display='none'">
