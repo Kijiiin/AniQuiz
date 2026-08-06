@@ -572,10 +572,25 @@
     <script>
 
         
-        async function getRandomAnimePool(quantity = 128) {
+        // ============================================================
+// 1. API HELPER – Recupera anime da 5 categorie AniList
+//
+// Categorie:
+//   🔥 Trending
+//   ⭐ Popolari
+//   🏆 Valutati
+//   🆕 Recenti
+//   🎲 Casuali
+//
+// 30 anime per richiesta.
+// Continua a richiedere altre pagine finché non raggiunge
+// il numero richiesto dal torneo.
+// ============================================================
+async function getRandomAnimePool(quantity = 128) {
 
     const PER_PAGE = 30;
     const MAX_PAGES = 50;
+
 
     // ============================================================
     // Query AniList per una categoria
@@ -594,9 +609,22 @@
             ) {
                 media(
                     type: ANIME
+
+                    # ------------------------------------------------
+                    # ESCLUSIONI DIRETTE ANIList
+                    # ------------------------------------------------
+
+                    # Esclude:
+                    # - Anime non ancora rilasciati
+                    # - Anime cancellati
                     status_not_in: [NOT_YET_RELEASED, CANCELLED]
+
+                    # Esclude formato MUSIC
                     format_not: MUSIC
+
+                    # Solo anime con episodi > 11 minuti
                     duration_greater: 11
+
                     sort: $sort
                 ) {
                     id
@@ -617,6 +645,10 @@
                     status
                     format
 
+                    # Paese di origine
+                    # CN = Cina
+                    countryOfOrigin
+
                     startDate {
                         year
                     }
@@ -625,69 +657,115 @@
         }
         `;
 
-        const response = await fetch('https://graphql.anilist.co', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                query,
-                variables: {
-                    page,
-                    perPage: PER_PAGE,
-                    sort: [sort]
-                }
-            })
-        });
 
+        const response = await fetch(
+            'https://graphql.anilist.co',
+            {
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify({
+                    query,
+
+                    variables: {
+                        page,
+                        perPage: PER_PAGE,
+                        sort: [sort]
+                    }
+                })
+            }
+        );
+
+
+        // ------------------------------------------------------------
+        // Controllo HTTP
+        // ------------------------------------------------------------
         if (!response.ok) {
-            throw new Error(`AniList HTTP ${response.status}`);
+            throw new Error(
+                `AniList HTTP ${response.status}`
+            );
         }
+
 
         const data = await response.json();
 
+
+        // ------------------------------------------------------------
+        // Controllo errori GraphQL
+        // ------------------------------------------------------------
         if (data.errors) {
-            console.error('AniList GraphQL error:', data.errors);
+
+            console.error(
+                'AniList GraphQL error:',
+                data.errors
+            );
+
             throw new Error(
-                data.errors[0]?.message || 'Errore AniList GraphQL'
+                data.errors[0]?.message ||
+                'Errore AniList GraphQL'
             );
         }
+
 
         return data.data?.Page?.media || [];
     }
 
 
+
     // ============================================================
-    // Filtra e aggiunge anime senza duplicati
+    // Lista finale + controllo duplicati
     // ============================================================
+
     const seen = new Set();
     const unique = [];
 
+
+    // ============================================================
+    // Funzione che filtra e aggiunge gli anime
+    // ============================================================
     function addAnimeList(list) {
 
         for (const anime of list) {
 
-            // Copertina obbligatoria
+
+            // --------------------------------------------------------
+            // Deve avere una copertina
+            // --------------------------------------------------------
             if (!anime.coverImage?.large) {
                 continue;
             }
 
-            // Sicurezza: escludi non ancora rilasciati
+
+            // --------------------------------------------------------
+            // Escludi anime non ancora rilasciati
+            // --------------------------------------------------------
             if (anime.status === 'NOT_YET_RELEASED') {
                 continue;
             }
 
-            // Sicurezza: escludi cancellati
+
+            // --------------------------------------------------------
+            // Escludi anime cancellati
+            // --------------------------------------------------------
             if (anime.status === 'CANCELLED') {
                 continue;
             }
 
+
+            // --------------------------------------------------------
             // Escludi formato MUSIC
+            // --------------------------------------------------------
             if (anime.format === 'MUSIC') {
                 continue;
             }
 
-            // Escludi episodi <= 11 minuti
+
+            // --------------------------------------------------------
+            // Escludi episodi con durata <= 11 minuti
+            // --------------------------------------------------------
             if (
                 anime.duration !== null &&
                 anime.duration !== undefined &&
@@ -696,10 +774,48 @@
                 continue;
             }
 
+
+            // --------------------------------------------------------
+            // Escludi anime cinesi
+            //
+            // AniList:
+            // CN = Cina
+            // --------------------------------------------------------
+            if (anime.countryOfOrigin === 'CN') {
+                continue;
+            }
+
+
+            // --------------------------------------------------------
+            // Escludi titoli che contengono "(Chinese)"
+            // --------------------------------------------------------
+            const titleRomaji =
+                anime.title?.romaji || '';
+
+            const titleEnglish =
+                anime.title?.english || '';
+
+
+            if (
+                titleRomaji
+                    .toLowerCase()
+                    .includes('(chinese)') ||
+
+                titleEnglish
+                    .toLowerCase()
+                    .includes('(chinese)')
+            ) {
+                continue;
+            }
+
+
+            // --------------------------------------------------------
             // Elimina duplicati
+            // --------------------------------------------------------
             if (seen.has(anime.id)) {
                 continue;
             }
+
 
             seen.add(anime.id);
             unique.push(anime);
@@ -707,92 +823,180 @@
     }
 
 
+
     // ============================================================
-    // 1. Prima fase:
-    //    30 anime per ognuna delle 5 categorie
+    // PRIMA FASE
+    //
+    // 30 anime per ognuna delle 5 categorie
+    //
+    // 5 × 30 = 150 risultati iniziali
     // ============================================================
 
-    const randomPage = Math.floor(Math.random() * MAX_PAGES) + 1;
+    const randomPage =
+        Math.floor(Math.random() * MAX_PAGES) + 1;
+
 
     const firstBatch = await Promise.all([
 
-        // 🔥 Trending
-        fetchCategory('TRENDING_DESC', 1),
+        // 🔥 TRENDING
+        fetchCategory(
+            'TRENDING_DESC',
+            1
+        ),
 
-        // ⭐ Popolari
-        fetchCategory('POPULARITY_DESC', 1),
 
-        // 🏆 Più valutati
-        fetchCategory('SCORE_DESC', 1),
+        // ⭐ POPOLARI
+        fetchCategory(
+            'POPULARITY_DESC',
+            1
+        ),
 
-        // 🆕 Più recenti
-        fetchCategory('START_DATE_DESC', 1),
 
-        // 🎲 Casuali
-        fetchCategory('ID_DESC', randomPage)
+        // 🏆 PIÙ VALUTATI
+        fetchCategory(
+            'SCORE_DESC',
+            1
+        ),
+
+
+        // 🆕 PIÙ RECENTI
+        fetchCategory(
+            'START_DATE_DESC',
+            1
+        ),
+
+
+        // 🎲 CASUALI
+        fetchCategory(
+            'ID_DESC',
+            randomPage
+        )
 
     ]);
 
+
+    // Aggiunge i risultati applicando tutti i filtri
     firstBatch.forEach(addAnimeList);
 
 
+
     // ============================================================
-    // 2. Se non abbiamo abbastanza anime, continuiamo a pescare
+    // SE NON ABBIAMO ABBASTANZA ANIME
+    //
+    // Continua a pescare altre pagine.
     // ============================================================
 
     let extraPage = 1;
 
+
     while (unique.length < quantity) {
 
-        // Evita di interrogare troppe pagine
+
+        // --------------------------------------------------------
+        // Sicurezza: limite massimo
+        // --------------------------------------------------------
         if (extraPage > MAX_PAGES) {
+
             console.warn(
-                `⚠️ Raggiunto limite di ${MAX_PAGES} pagine. ` +
+                `⚠️ Raggiunto il limite di ${MAX_PAGES} pagine. ` +
                 `Trovati ${unique.length} anime validi.`
             );
+
             break;
         }
 
-        // Alterna le categorie per ottenere maggiore varietà
+
+        // --------------------------------------------------------
+        // Categorie utilizzate per le richieste aggiuntive
+        // --------------------------------------------------------
         const extraCategories = [
+
             'TRENDING_DESC',
+
             'POPULARITY_DESC',
+
             'SCORE_DESC',
+
             'START_DATE_DESC',
+
             'ID_DESC'
+
         ];
 
+
+        // Seleziona una categoria in rotazione
         const category =
-            extraCategories[(extraPage - 1) % extraCategories.length];
+            extraCategories[
+                (extraPage - 1) %
+                extraCategories.length
+            ];
 
-        // Per ID_DESC utilizziamo una pagina casuale
-        const page = category === 'ID_DESC'
-            ? Math.floor(Math.random() * MAX_PAGES) + 1
-            : extraPage;
 
-        const results = await fetchCategory(category, page);
+        // --------------------------------------------------------
+        // Per i casuali utilizza una pagina casuale
+        // --------------------------------------------------------
+        const page =
+            category === 'ID_DESC'
 
+                ? Math.floor(
+                    Math.random() * MAX_PAGES
+                ) + 1
+
+                : extraPage;
+
+
+        // --------------------------------------------------------
+        // Richiesta
+        // --------------------------------------------------------
+        const results =
+            await fetchCategory(
+                category,
+                page
+            );
+
+
+        // --------------------------------------------------------
+        // Filtra e aggiunge
+        // --------------------------------------------------------
         addAnimeList(results);
+
 
         extraPage++;
     }
 
 
+
     // ============================================================
-    // 3. Mischia veramente in modo casuale
+    // MESCOLA GLI ANIME
+    //
+    // In questo modo il torneo non favorisce nessuna categoria.
     // ============================================================
 
-    for (let i = unique.length - 1; i > 0; i--) {
+    for (
+        let i = unique.length - 1;
+        i > 0;
+        i--
+    ) {
 
-        const j = Math.floor(Math.random() * (i + 1));
+        const j =
+            Math.floor(
+                Math.random() * (i + 1)
+            );
 
-        [unique[i], unique[j]] =
-            [unique[j], unique[i]];
+
+        [
+            unique[i],
+            unique[j]
+        ] = [
+            unique[j],
+            unique[i]
+        ];
     }
 
 
+
     // ============================================================
-    // 4. Restituisce esattamente quantity anime
+    // RESTITUISCE ESATTAMENTE QUANTITY ANIME
     // ============================================================
 
     if (unique.length < quantity) {
@@ -805,7 +1009,11 @@
         return unique;
     }
 
-    return unique.slice(0, quantity);
+
+    return unique.slice(
+        0,
+        quantity
+    );
 }
 
         // ============================================================
