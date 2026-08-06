@@ -1,1 +1,1 @@
-https://ani-quiz-eight.vercel.app/
+https://ani-quiz-chi.vercel.app/
