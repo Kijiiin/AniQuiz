@@ -110,12 +110,19 @@
             box-shadow: 0 4px 16px rgba(247, 151, 30, 0.25);
         }
 
-        .btn-start:hover {
+        .btn-start:hover:not(:disabled) {
             transform: scale(1.04);
             box-shadow: 0 6px 24px rgba(247, 151, 30, 0.4);
         }
 
-        .btn-start:active { transform: scale(0.96); }
+        .btn-start:active:not(:disabled) { transform: scale(0.96); }
+
+        .btn-start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
 
         /* STATUS BAR */
         .status-bar {
@@ -154,9 +161,13 @@
             font-size: 0.9rem;
             transition: 0.2s;
         }
-        .btn-reset:hover {
+        .btn-reset:hover:not(:disabled) {
             background: rgba(255, 70, 70, 0.2);
             border-color: #ff7a7a;
+        }
+        .btn-reset:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         /* MATCH AREA */
@@ -390,9 +401,9 @@
 
     <!-- Match Area -->
     <div class="match-area" id="matchArea">
-        <div class="loading" id="loadingScreen">
-            <div class="spinner"></div>
-            <div>Caricamento anime…</div>
+        <div style="color:#99aabb; text-align:center; padding:60px 20px; font-size:1.2rem;">
+            <div style="font-size:4rem; margin-bottom:16px;">🎌</div>
+            <p>Scegli il numero di partecipanti e clicca su <strong>"Avvia torneo"</strong> per iniziare!</p>
         </div>
     </div>
 </div>
@@ -425,7 +436,6 @@
 
         // Calcola quante pagine ci servono (prendiamo un po' di margine)
         let pagesNeeded = Math.ceil(quantity / perPage) + 2;
-        // Ma non possiamo superare il numero di pagine disponibili
         pagesNeeded = Math.min(pagesNeeded, maxPage);
 
         // Genera pagine casuali (distinte)
@@ -589,7 +599,6 @@
             if (this.finished) return '🏆 Campione!';
             const totalRounds = this.rounds.length;
             const idx = this.currentRound;
-            // Calcola il numero di partecipanti in questo round
             const round = this.rounds[idx];
             if (!round) return `Turno ${idx+1}`;
             const count = round.length * 2; // approssimativo
@@ -602,9 +611,7 @@
                 4: 'Semifinali',
                 2: 'Finale'
             };
-            // mappa in base al numero di match * 2
-            const key = count;
-            return names[key] || `Turno ${idx+1}`;
+            return names[count] || `Turno ${idx+1}`;
         }
 
         getProgress() {
@@ -624,6 +631,7 @@
         tournament: null,
         isReady: false,
         size: 128,
+        isLoading: false,
 
         elements: {
             matchArea: document.getElementById('matchArea'),
@@ -640,11 +648,27 @@
             this.elements.sizeSelect.addEventListener('change', () => {
                 this.size = parseInt(this.elements.sizeSelect.value);
             });
-            // Avvia automaticamente con 128
-            this.startNewTournament();
+            // Non avviare automaticamente! Mostra solo la schermata iniziale.
+            this.showWelcome();
+        },
+
+        showWelcome() {
+            this.elements.matchArea.innerHTML = `
+                <div style="color:#99aabb; text-align:center; padding:60px 20px; font-size:1.2rem;">
+                    <div style="font-size:4rem; margin-bottom:16px;">🎌</div>
+                    <p>Scegli il numero di partecipanti e clicca su <strong>"Avvia torneo"</strong> per iniziare!</p>
+                </div>
+            `;
+            this.elements.turnoLabel.textContent = 'In attesa';
+            this.elements.progressLabel.textContent = '—';
         },
 
         async startNewTournament() {
+            if (this.isLoading) return;
+            this.isLoading = true;
+            this.elements.startBtn.disabled = true;
+            this.elements.resetBtn.disabled = true;
+
             const size = this.size;
             this.elements.matchArea.innerHTML = `
                 <div class="loading">
@@ -660,7 +684,6 @@
                 if (!participants || participants.length < 2) {
                     throw new Error(`Servivano almeno 2 anime, trovati ${participants?.length || 0}.`);
                 }
-                // Se non ne abbiamo abbastanza, avvisiamo ma continuiamo con quelli che abbiamo
                 if (participants.length < size) {
                     console.warn(`Trovati solo ${participants.length} anime, ma il torneo continua.`);
                 }
@@ -679,6 +702,10 @@
                 `;
                 this.elements.turnoLabel.textContent = 'Errore';
                 this.elements.progressLabel.textContent = '❌';
+            } finally {
+                this.isLoading = false;
+                this.elements.startBtn.disabled = false;
+                this.elements.resetBtn.disabled = false;
             }
         },
 
@@ -772,7 +799,7 @@
         }
     };
 
-    // Avvia
+    // Avvia la UI (senza caricare automaticamente gli anime)
     document.addEventListener('DOMContentLoaded', () => app.init());
 </script>
 </body>
