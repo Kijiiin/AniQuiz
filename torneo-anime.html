@@ -481,7 +481,7 @@
 
     <script>
         // ================================================================
-        // 1. FETCH – esattamente come in AniQuiz (multi‑categoria)
+        // 1. FETCH – multi‑categoria con esclusione NOT_YET_RELEASED e CANCELLED
         // ================================================================
 
         const PER_PAGE = 30;
@@ -501,7 +501,12 @@
                 query += `
                     ${alias}: Page(page: ${s.page}, perPage: ${PER_PAGE}) {
                         pageInfo { hasNextPage }
-                        media(type: ANIME, sort: ${s.sort}, isAdult: false, status_not: NOT_YET_RELEASED) {
+                        media(
+                            type: ANIME,
+                            sort: ${s.sort},
+                            isAdult: false,
+                            status_not_in: [NOT_YET_RELEASED, CANCELLED]
+                        ) {
                             id
                             title { romaji english native }
                             coverImage { large }
@@ -511,6 +516,7 @@
                             meanScore
                             episodes
                             format
+                            status
                         }
                     }
                 `;
@@ -690,6 +696,7 @@
                     <div class="loading">
                         <div class="spinner"></div>
                         <div>⏳ Caricamento anime da Popolari, Trending, Votati, Recenti e Casuali…</div>
+                        <div style="font-size:0.85rem; color:#666; margin-top:6px;">Esclusi: non ancora usciti e cancellati</div>
                     </div>
                 `;
                 this.elements.turnoLabel.textContent = 'Caricamento…';
@@ -762,6 +769,7 @@
                         <div class="sub-info">
                             ${anime.startDate?.year || '?'} · ${anime.genres?.slice(0,2).join(', ') || ''}
                             ${anime.meanScore ? `· ${anime.meanScore}%` : ''}
+                            ${anime.status ? `· ${anime.status}` : ''}
                         </div>
                         <div class="actions">
                             <button class="vote-btn" data-anime-id="${anime.id}">⬆ Vota</button>
@@ -841,6 +849,7 @@
                         <div class="winner-sub">
                             ${winner.startDate?.year || ''} · ${winner.genres?.slice(0,3).join(', ') || ''}
                             ${winner.meanScore ? `· ${winner.meanScore}%` : ''}
+                            ${winner.status ? `· ${winner.status}` : ''}
                         </div>
                         <img class="winner-img" src="${winner.coverImage?.large || ''}" alt="${winner.title?.romaji || 'Campione'}" loading="lazy" onerror="this.style.display='none'">
                         <br>
