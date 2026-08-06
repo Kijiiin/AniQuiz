@@ -688,20 +688,16 @@
             }
 
             _buildBracket() {
-                let current = [...this.participants];
-                while (current.length > 1) {
-                    const round = [];
-                    for (let i = 0; i < current.length; i += 2) {
-                        if (i + 1 < current.length) {
-                            round.push([current[i], current[i + 1]]);
-                        } else {
-                            // bye (non dovrebbe capitare con potenze di 2)
-                            round.push([current[i], null]);
-                        }
+                const round = [];
+                for (let i = 0; i < this.participants.length; i += 2) {
+                    if (i + 1 < this.participants.length) {
+                        round.push([this.participants[i], this.participants[i + 1]]);
+                    } else {
+                        // bye (non dovrebbe capitare con potenze di 2)
+                        round.push([this.participants[i], null]);
                     }
-                    this.rounds.push(round);
-                    current = new Array(round.length).fill(null);
                 }
+                this.rounds.push(round);
             }
 
             getCurrentMatch() {
