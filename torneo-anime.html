@@ -572,7 +572,7 @@
     <script>
         // ============================================================
         // 1. API HELPER – Recupera N anime mescolando diverse classifiche
-        //    Esclude: formato MUSIC, episodi < 10 minuti (se disponibile)
+        //    Esclude formato MUSIC (via query) e durata < 10 min (client)
         // ============================================================
         async function getRandomAnimePool(quantity = 128) {
             // --- Conteggio totale anime validi (per le pagine casuali) ---
@@ -596,7 +596,7 @@
             const maxPage = Math.floor(totalAnime / perPage);
             if (maxPage === 0) throw new Error('Non ci sono abbastanza anime.');
 
-            // --- Definisco le diverse categorie da interrogare ---
+            // --- Categorie: popolari, trending, votati, recenti + 5 pagine casuali ---
             const categories = [
                 { sort: 'POPULARITY_DESC', label: 'popolari', page: 1 },
                 { sort: 'TRENDING_DESC', label: 'trending', page: 1 },
@@ -604,16 +604,19 @@
                 { sort: 'START_DATE_DESC', label: 'recenti', page: 1 },
                 { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
                 { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
+                { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
+                { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
                 { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 }
             ];
 
-            // --- Query con campi aggiuntivi: format e episodeDuration ---
+            // --- Query con filtro format_not: MUSIC ---
             const fetchQuery = `
             query ($page: Int, $perPage: Int, $sort: MediaSort) {
                 Page(page: $page, perPage: $perPage) {
                     media(
                         type: ANIME
                         status_not: NOT_YET_RELEASED
+                        format_not: MUSIC
                         sort: [$sort]
                     ) {
                         id
@@ -652,11 +655,8 @@
                 allAnime = allAnime.concat(media);
             }
 
-            // --- FILTRI ---
-            // 1. Escludi formato "MUSIC"
-            // 2. Escludi episodeDuration < 10 minuti (se il campo è null, lo teniamo)
+            // --- Filtro lato client per durata episodi (escludi solo se esplicitamente < 10) ---
             allAnime = allAnime.filter(a => {
-                if (a.format === 'MUSIC') return false;
                 if (a.episodeDuration !== null && a.episodeDuration < 10) return false;
                 return true;
             });
@@ -679,7 +679,7 @@
                 }
             }
 
-            // Mescola e restituisci esattamente 'quantity' (se ne abbiamo abbastanza)
+            // Mescola e restituisci
             const shuffled = unique.sort(() => 0.5 - Math.random());
             if (shuffled.length < quantity) {
                 console.warn(`⚠️ Trovati solo ${shuffled.length} anime unici dopo i filtri, ne servivano ${quantity}.`);
@@ -716,7 +716,6 @@
                     this.rounds.push(round);
                     current = new Array(round.length).fill(null);
                 }
-                // Se i partecipanti erano 1, il torneo non ha round, ma non dovrebbe succedere
             }
 
             getCurrentMatch() {
@@ -969,7 +968,7 @@
                 const tour = this.tournament;
                 let winner = tour?.winner;
 
-                // Se per qualche motivo il vincitore è null ma il torneo è finito, prova a prenderlo dall'ultimo round
+                // Fallback: se il vincitore è null ma il torneo è finito, prendi dall'ultimo round
                 if (tour && tour.finished && !winner) {
                     const lastRound = tour.rounds[tour.rounds.length - 1];
                     if (lastRound && lastRound.length === 1 && lastRound[0] !== null) {
