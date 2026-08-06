@@ -571,10 +571,10 @@
 
     <script>
         // ============================================================
-        // 1. API HELPER – Recupera N anime casuali (esclusi NOT_YET_RELEASED)
+        // 1. API HELPER – Recupera N anime mescolando diverse classifiche
         // ============================================================
         async function getRandomAnimePool(quantity = 128) {
-            // --- Conteggio totale anime validi ---
+            // --- Conteggio totale anime validi (per le pagine casuali) ---
             const totalQuery = `
             query {
                 Page(page: 1, perPage: 1) {
@@ -595,26 +595,27 @@
             const maxPage = Math.floor(totalAnime / perPage);
             if (maxPage === 0) throw new Error('Non ci sono abbastanza anime.');
 
-            // Calcola quante pagine ci servono (prendiamo un po' di margine)
-            let pagesNeeded = Math.ceil(quantity / perPage) + 2;
-            pagesNeeded = Math.min(pagesNeeded, maxPage);
+            // --- Definisco le diverse categorie da interrogare ---
+            // Per le prime 4 uso la prima pagina (per avere i migliori di quella categoria)
+            // Per i casuali uso 3 pagine casuali diverse
+            const categories = [
+                { sort: 'POPULARITY_DESC', label: 'popolari', page: 1 },
+                { sort: 'TRENDING_DESC', label: 'trending', page: 1 },
+                { sort: 'SCORE_DESC', label: 'votati', page: 1 },
+                { sort: 'START_DATE_DESC', label: 'recenti', page: 1 },
+                { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
+                { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 },
+                { sort: 'ID_DESC', label: 'casuali', page: Math.floor(Math.random() * maxPage) + 1 }
+            ];
 
-            // Genera pagine casuali (distinte)
-            const pageSet = new Set();
-            while (pageSet.size < pagesNeeded) {
-                const p = Math.floor(Math.random() * maxPage) + 1;
-                pageSet.add(p);
-            }
-            const randomPages = Array.from(pageSet);
-
-            // --- Fetch in parallelo ---
+            // --- Costruisco le query per ogni categoria ---
             const fetchQuery = `
-            query ($page: Int, $perPage: Int) {
+            query ($page: Int, $perPage: Int, $sort: MediaSort) {
                 Page(page: $page, perPage: $perPage) {
                     media(
                         type: ANIME
                         status_not: NOT_YET_RELEASED
-                        sort: ID_DESC
+                        sort: [$sort]
                     ) {
                         id
                         title { romaji english }
@@ -628,13 +629,17 @@
                 }
             }`;
 
-            const fetchPromises = randomPages.map(page =>
+            const fetchPromises = categories.map(cat =>
                 fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         query: fetchQuery,
-                        variables: { page, perPage }
+                        variables: {
+                            page: cat.page,
+                            perPage: perPage,
+                            sort: cat.sort
+                        }
                     })
                 }).then(r => r.json())
             );
@@ -652,7 +657,7 @@
                 a.status !== 'NOT_YET_RELEASED'
             );
 
-            if (allAnime.length === 0) throw new Error('Nessun anime valido trovato nelle pagine pescate.');
+            if (allAnime.length === 0) throw new Error('Nessun anime valido trovato.');
 
             // Deduplica per ID
             const seen = new Set();
@@ -664,7 +669,7 @@
                 }
             }
 
-            // Mescola e restituisci esattamente 'quantity' (se ne abbiamo abbastanza)
+            // Mescola bene e restituisci esattamente 'quantity'
             const shuffled = unique.sort(() => 0.5 - Math.random());
             if (shuffled.length < quantity) {
                 console.warn(`⚠️ Trovati solo ${shuffled.length} anime unici, ne servivano ${quantity}.`);
@@ -674,7 +679,7 @@
         }
 
         // ============================================================
-        // 2. TORNEO – Gestione stato e logica (supporta qualsiasi potenza di 2)
+        // 2. TORNEO – Gestione stato e logica
         // ============================================================
         class Tournament {
             constructor(participants) {
@@ -688,16 +693,19 @@
             }
 
             _buildBracket() {
-                const round = [];
-                for (let i = 0; i < this.participants.length; i += 2) {
-                    if (i + 1 < this.participants.length) {
-                        round.push([this.participants[i], this.participants[i + 1]]);
-                    } else {
-                        // bye (non dovrebbe capitare con potenze di 2)
-                        round.push([this.participants[i], null]);
+                let current = [...this.participants];
+                while (current.length > 1) {
+                    const round = [];
+                    for (let i = 0; i < current.length; i += 2) {
+                        if (i + 1 < current.length) {
+                            round.push([current[i], current[i + 1]]);
+                        } else {
+                            round.push([current[i], null]);
+                        }
                     }
+                    this.rounds.push(round);
+                    current = new Array(round.length).fill(null);
                 }
-                this.rounds.push(round);
             }
 
             getCurrentMatch() {
@@ -713,11 +721,9 @@
                 const match = round[this.currentMatch];
                 if (!match) return false;
 
-                // Sostituisci il match con il vincitore
                 round[this.currentMatch] = winner;
                 this.currentMatch++;
 
-                // Se il round è completo
                 if (this.currentMatch >= round.length) {
                     const winners = round.filter(w => w !== null);
                     if (winners.length === 1) {
@@ -725,7 +731,6 @@
                         this.finished = true;
                         return true;
                     }
-                    // Crea il prossimo round
                     const nextRound = [];
                     for (let i = 0; i < winners.length; i += 2) {
                         if (i + 1 < winners.length) {
@@ -751,14 +756,12 @@
                 this._buildBracket();
             }
 
-            // Nome del turno in base al numero di partecipanti rimasti
             getRoundName() {
                 if (this.finished) return '🏆 Campione!';
-                const totalRounds = this.rounds.length;
                 const idx = this.currentRound;
                 const round = this.rounds[idx];
                 if (!round) return `Turno ${idx+1}`;
-                const count = round.length * 2; // approssimativo
+                const count = round.length * 2;
                 const names = {
                     128: 'Primo turno (128→64)',
                     64: 'Secondo turno (64→32)',
@@ -805,7 +808,6 @@
                 this.elements.sizeSelect.addEventListener('change', () => {
                     this.size = parseInt(this.elements.sizeSelect.value);
                 });
-                // Non avviare automaticamente! Mostra solo la schermata iniziale.
                 this.showWelcome();
             },
 
@@ -830,7 +832,7 @@
                 this.elements.matchArea.innerHTML = `
                     <div class="loading">
                         <div class="spinner"></div>
-                        <div>⏳ Caricamento ${size} anime casuali…</div>
+                        <div>⏳ Caricamento ${size} anime da Popolari, Trending, Votati, Recenti e Casuali…</div>
                     </div>
                 `;
                 this.elements.turnoLabel.textContent = 'Caricamento…';
@@ -881,13 +883,11 @@
 
                 const [a, b] = match;
                 if (!a || !b) {
-                    // bye – salta
                     tour.vote(a || b);
                     this.renderMatch();
                     return;
                 }
 
-                // Aggiorna status
                 this.elements.turnoLabel.textContent = tour.getRoundName();
                 this.elements.progressLabel.textContent = tour.getProgress();
 
@@ -918,16 +918,13 @@
                     </div>
                 `;
 
-                // Aggiungi event listener per il click sulla card (tutta la carta)
                 const cards = this.elements.matchArea.querySelectorAll('.card');
                 const btns = this.elements.matchArea.querySelectorAll('.vote-btn');
 
-                // Funzione per gestire il voto
                 const handleVote = (animeId) => {
                     const match = tour.getCurrentMatch();
                     const winner = match?.find(anime => anime.id === animeId);
                     if (winner) {
-                        // Disabilita tutti i bottoni e le card
                         btns.forEach(b => b.disabled = true);
                         cards.forEach(c => c.style.cursor = 'default');
                         tour.vote(winner);
@@ -935,17 +932,16 @@
                     }
                 };
 
-                // Click sulla carta (intera)
+                // Click su tutta la carta
                 cards.forEach(card => {
                     card.addEventListener('click', (e) => {
-                        // Evita che il click sul link o sul bottone venga gestito due volte
                         if (e.target.closest('.anilist-link') || e.target.closest('.vote-btn')) return;
                         const id = parseInt(card.dataset.animeId);
                         handleVote(id);
                     });
                 });
 
-                // Click sul bottone "Vota"
+                // Click sul bottone Vota
                 btns.forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -977,7 +973,7 @@
                         <img class="winner-img" src="${winner.coverImage.large}" alt="${winner.title.romaji}" loading="lazy" onerror="this.style.display='none'">
                         <br>
                         <div style="margin-top:16px;">
-                            <a href="https://anilist.co/anime/${winner.id}" target="_blank" rel="noopener noreferrer" class="anilist-link" style="font-size:1.1rem; padding:10px 24px;">
+                            <a href="https://anilist.co/anime/${winner.id}" target="_blank" rel="noopener noreferrer" class="anilist-link" style="font-size:1.1rem; padding:10px 24px; color:#aab; text-decoration:none; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:40px; transition:0.25s;">
                                 📖 Vedi su AniList
                             </a>
                         </div>
@@ -988,7 +984,6 @@
             }
         };
 
-        // Avvia la UI (senza caricare automaticamente gli anime)
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 
