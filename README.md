@@ -1,1 +1,1 @@
-https://disperatisrl.github.io/AniQuiz/
+https://ani-quiz-eight.vercel.app/
