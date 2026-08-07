@@ -619,14 +619,8 @@ async function getRandomAnimePool(quantity = 128) {
                     # - Anime cancellati
                     status_not_in: [NOT_YET_RELEASED, CANCELLED]
 
-                    # Esclude formato MUSIC
-                    format_not: MUSIC
-
-                    # Esclude formato SPECIAL
-                    format_not: SPECIAL
-
-                    # Esclude formato TV_SHORT
-                    format_not: TV_SHORT
+                    # Esclude formato MUSIC, SPECIAL, TV_SHORT
+                    format_not_in: [MUSIC, SPECIAL, TV_SHORT]
 
                     # Solo anime con popolarità > 16999
                     popularity_greater: 16999
