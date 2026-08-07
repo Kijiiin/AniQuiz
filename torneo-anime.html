@@ -779,6 +779,14 @@ async function getRandomAnimePool(quantity = 128) {
 
 
             // --------------------------------------------------------
+            // Escludi formato POPULARITY
+            // --------------------------------------------------------
+            if (anime.popularity_greater === '17000') {
+                continue;
+            }
+
+
+            // --------------------------------------------------------
             // Escludi episodi con durata <= 11 minuti
             // --------------------------------------------------------
             if (
