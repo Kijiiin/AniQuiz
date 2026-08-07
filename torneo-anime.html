@@ -622,8 +622,17 @@ async function getRandomAnimePool(quantity = 128) {
                     # Esclude formato MUSIC
                     format_not: MUSIC
 
-                    # Solo anime con episodi > 11 minuti
-                    duration_greater: 11
+                    # Esclude formato SPECIAL
+                    format_not: SPECIAL
+
+                    # Esclude formato TV_SHORT
+                    format_not: TV_SHORT
+
+                    # Solo anime con popolarità > 16999
+                    popularity_greater: 16999
+
+                    # Solo anime con episodi > 15 minuti
+                    duration_greater: 15
 
                     sort: $sort
                 ) {
