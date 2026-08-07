@@ -764,12 +764,27 @@ async function getRandomAnimePool(quantity = 128) {
 
 
             // --------------------------------------------------------
+            // Escludi formato TV_SHORT
+            // --------------------------------------------------------
+            if (anime.format === 'TV_SHORT') {
+                continue;
+            }
+
+            // --------------------------------------------------------
+            // Escludi formato SPECIAL
+            // --------------------------------------------------------
+            if (anime.format === 'SPECIAL') {
+                continue;
+            }
+
+
+            // --------------------------------------------------------
             // Escludi episodi con durata <= 11 minuti
             // --------------------------------------------------------
             if (
                 anime.duration !== null &&
                 anime.duration !== undefined &&
-                anime.duration <= 11
+                anime.duration <= 15
             ) {
                 continue;
             }
