@@ -781,7 +781,7 @@ async function getRandomAnimePool(quantity = 128) {
             // --------------------------------------------------------
             // Escludi formato POPULARITY
             // --------------------------------------------------------
-            if (anime.popularity_greater === 17000) {
+            if (anime.popularity < 17000 ) {
                 continue;
             }
 
