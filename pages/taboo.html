@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taboo multiplayer</title>
+  <style>
+    :root {
+      --ink: #182033;
+      --paper: #fffaf0;
+      --violet: #51347d;
+      --pink: #e95870;
+      --blue: #2375c3;
+      --yellow: #ffc941;
+      --line: #d9cfbd;
+      --surface: #f2e8d4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 18px;
+      color: var(--ink);
+      background: radial-gradient(circle at top, #70479c, #1a2037 70%);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      padding: clamp(18px, 4vw, 34px);
+      background: var(--paper);
+      border: 4px solid var(--yellow);
+      border-radius: 28px;
+      box-shadow: 0 18px 50px #0008;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--violet);
+      font-size: clamp(2rem, 7vw, 4rem);
+      letter-spacing: -0.07em;
+      text-align: center;
+    }
+
+    h1 span { color: var(--pink); }
+
+    h2 { margin: 0 0 8px; font-size: 1.1rem; }
+
+    .subtitle,
+    .muted {
+      color: #5f5970;
+      text-align: center;
+    }
+
+    .subtitle { margin: 2px 0 24px; }
+    .muted { margin: 0; font-size: 0.92rem; }
+
+    .panel {
+      margin: 14px 0;
+      padding: 18px;
+      background: var(--surface);
+      border-radius: 18px;
+    }
+
+    .hidden { display: none !important; }
+
+    .connection-grid,
+    .setup-grid,
+    .controls,
+    .scoreboard {
+      display: grid;
+      gap: 12px;
+    }
+
+    .connection-grid { grid-template-columns: 1fr 1fr auto; }
+    .setup-grid { grid-template-columns: 1fr 1fr; }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 10px;
+      color: var(--ink);
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      font: inherit;
+    }
+
+    button {
+      min-height: 42px;
+      padding: 10px 15px;
+      border: 0;
+      border-radius: 12px;
+      box-shadow: 0 3px 0 #0003;
+      cursor: pointer;
+      font: 800 1rem inherit;
+      transition: transform 0.1s, filter 0.1s;
+    }
+
+    button:hover:not(:disabled) { filter: brightness(1.06); }
+
+    button:active:not(:disabled) {
+      box-shadow: none;
+      transform: translateY(3px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .primary { color: #fff; background: var(--violet); }
+    .blue { color: #fff; background: var(--blue); }
+    .pink { color: #fff; background: var(--pink); }
+    .warning { background: var(--yellow); }
+    .secondary { background: #e6ddcf; }
+    .danger { color: #fff; background: #a93d4e; }
+
+    #connection-status,
+    #lobby-status,
+    #game-status {
+      min-height: 24px;
+      margin: 10px 0 0;
+      font-weight: 650;
+      text-align: center;
+    }
+
+    .success { color: #087241; }
+    .error { color: #a1293d; }
+
+    .lobby-header,
+    .game-header,
+    .footer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .player-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .player-row {
+      display: grid;
+      grid-template-columns: 1fr minmax(175px, 230px);
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      background: #fff8ea;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+    }
+
+    .player-name { font-weight: 800; }
+    .player-name small { color: #6e6579; font-weight: 600; }
+
+    .scoreboard {
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      margin: 4px 0 16px;
+    }
+
+    .team-score {
+      padding: 11px;
+      color: #fff;
+      border-radius: 15px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .team-score.blue { background: var(--blue); }
+    .team-score.pink { background: var(--pink); }
+
+    .timer {
+      color: var(--violet);
+      font-size: 2rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .turn {
+      margin: 0 0 14px;
+      padding: 12px;
+      background: #efe6d5;
+      border-radius: 14px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .card {
+      min-height: 292px;
+      padding: 23px;
+      background: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 22px;
+      box-shadow: 7px 8px 0 var(--yellow);
+      text-align: center;
+    }
+
+    .card.is-hidden {
+      color: #625d69;
+      background: repeating-linear-gradient(45deg, #eee7d9, #eee7d9 10px, #e3d9c8 10px, #e3d9c8 20px);
+    }
+
+    .card-label {
+      color: #887c6c;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+    }
+
+    .word {
+      margin: 13px 0 18px;
+      font-size: clamp(2.2rem, 8vw, 4.5rem);
+      font-weight: 950;
+      line-height: 1;
+      overflow-wrap: anywhere;
+      text-transform: uppercase;
+    }
+
+    .forbidden {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+      gap: 8px;
+    }
+
+    .forbidden span {
+      min-height: 38px;
+      padding: 8px;
+      color: #a62c40;
+      background: #ffe3df;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+
+    .controls {
+      grid-template-columns: repeat(3, 1fr);
+      margin: 22px 0 8px;
+    }
+
+    .round-report {
+      margin: 18px 0;
+      padding: 17px;
+      background: #e7f3e9;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    .rules {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f4eee2;
+      border-radius: 16px;
+      font-size: 0.91rem;
+      line-height: 1.45;
+    }
+
+    .rules summary { cursor: pointer; font-weight: 850; }
+    .rules ul { margin: 10px 0 0; padding-left: 20px; }
+
+    @media (max-width: 620px) {
+      .connection-grid,
+      .setup-grid,
+      .controls,
+      .player-row { grid-template-columns: 1fr; }
+
+      .scoreboard { grid-template-columns: 1fr 1fr; }
+      .timer { grid-column: 1 / -1; grid-row: 1; }
+      .card { min-height: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>TA<span>B</span>OO</h1>
+    <p class="subtitle">Partita online con ruoli, carte riservate e turni sincronizzati.</p>
+
+    <section id="connection" class="panel">
+      <div class="connection-grid">
+        <label class="field">
+          Il tuo nome
+          <input id="player-name" maxlength="24" placeholder="Es. Giulia">
+        </label>
+        <label class="field">
+          Codice stanza
+          <input id="room-code" maxlength="40" placeholder="Es. serata-quiz">
+        </label>
+        <button id="connect-button" class="primary" type="button">Entra</button>
+      </div>
+
+      <details>
+        <summary>Server multiplayer</summary>
+        <label class="field">
+          Indirizzo del server
+          <input id="server-url" value="wss://anime-multiplayer-server.onrender.com">
+        </label>
+      </details>
+
+      <p id="connection-status">Non connesso</p>
+    </section>
+
+    <section id="lobby" class="panel hidden">
+      <div class="lobby-header">
+        <div>
+          <h2>Lobby della partita</h2>
+          <p class="muted">L’host assegna le squadre. Servono almeno un giocatore blu e uno rosa.</p>
+        </div>
+        <button id="leave-button" class="secondary" type="button">Esci dalla stanza</button>
+      </div>
+
+      <div class="setup-grid">
+        <label class="field">
+          Punti per vincere
+          <input id="target-score" type="number" value="20" min="3" max="99">
+        </label>
+        <label class="field">
+          Durata del turno
+          <input value="60 secondi" disabled>
+        </label>
+      </div>
+
+      <div id="players" class="player-list"></div>
+      <p id="lobby-status"></p>
+      <button id="start-button" class="primary" type="button">Avvia la partita</button>
+    </section>
+
+    <section id="game" class="hidden">
+      <div class="game-header">
+        <h2>Partita in corso</h2>
+        <button id="leave-game-button" class="secondary" type="button">Esci dalla stanza</button>
+      </div>
+
+      <div class="scoreboard">
+        <div id="score-blue" class="team-score blue">Squadra blu · 0</div>
+        <div id="timer" class="timer">1:00</div>
+        <div id="score-pink" class="team-score pink">Squadra rosa · 0</div>
+      </div>
+
+      <div id="turn-text" class="turn"></div>
+
+      <article id="card" class="card">
+        <div id="card-label" class="card-label">CARTA RISERVATA</div>
+        <div id="word" class="word">•••••</div>
+        <div class="card-label">PAROLE VIETATE</div>
+        <div id="forbidden" class="forbidden"></div>
+      </article>
+
+      <p id="visibility-message" class="subtitle"></p>
+
+      <div id="controls" class="controls">
+        <button id="correct-button" class="blue hidden" type="button">✓ Indovinata</button>
+        <button id="skip-button" class="secondary hidden" type="button">↷ Passa</button>
+        <button id="taboo-button" class="danger hidden" type="button">! TABOO</button>
+      </div>
+
+      <p id="game-status"></p>
+      <div id="report" class="round-report hidden" aria-live="polite"></div>
+
+      <div class="footer-actions">
+        <button id="begin-turn-button" class="warning hidden" type="button">Avvia turno</button>
+        <button id="end-game-button" class="secondary hidden" type="button">Termina partita</button>
+      </div>
+    </section>
+
+    <details class="rules">
+      <summary>Ruoli nella versione online</summary>
+      <ul>
+        <li>Il descrittore vede parola e parole vietate; la sua squadra non vede la carta e deve indovinare ascoltando gli indizi.</li>
+        <li>La squadra avversaria vede la carta per controllare le parole vietate e può premere <strong>TABOO</strong>.</li>
+        <li>Il descrittore può segnare <strong>Indovinata</strong> o <strong>Passa</strong>. L’host avvia ogni turno e il timer è uguale per tutti.</li>
+        <li>A fine turno: +1 per ogni carta indovinata, −1 per ogni carta passata o Taboo. Il descrittore cambia automaticamente.</li>
+      </ul>
+    </details>
+  </main>
+
+  <script src="js/multiplayer.js"></script>
+  <script src="js/games/taboo/taboo.js"></script>
+</body>
+</html>
