@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -863,6 +862,21 @@ input:focus {
 }
 
 /* =========================================================
+   ANILIST LOADING
+========================================================= */
+
+.anilist-loading {
+    margin-top: 15px;
+    padding: 14px;
+    border-radius: 13px;
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(139,92,246,.20);
+    color: #c4b5fd;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* =========================================================
    MOBILE
 ========================================================= */
 
@@ -976,7 +990,7 @@ input:focus {
             <input
                 id="input-name"
                 maxlength="18"
-                placeholder="Il tuo nickname"
+                placeholder="Username AniList"
             >
 
             <input
@@ -1002,7 +1016,15 @@ input:focus {
         <div class="rules">
 
             <div class="rule">
-                🎌 L'Impostor non conosce l'anime.
+                🎌 Il nickname deve essere il tuo username AniList.
+            </div>
+
+            <div class="rule">
+                📚 Il gioco usa automaticamente i tuoi anime COMPLETED su AniList.
+            </div>
+
+            <div class="rule">
+                👥 Servono almeno 3 giocatori.
             </div>
 
             <div class="rule">
@@ -1011,10 +1033,6 @@ input:focus {
 
             <div class="rule">
                 🔀 Il primo giocatore viene scelto casualmente.
-            </div>
-
-            <div class="rule">
-                🔄 Si continua con nuovi round finché non viene votato un giocatore.
             </div>
 
             <div class="rule">
@@ -1114,6 +1132,14 @@ input:focus {
 
                 <div class="rule">
                     👥 Servono almeno 3 giocatori.
+                </div>
+
+                <div class="rule">
+                    📚 Vengono recuperati gli anime COMPLETED di tutti gli utenti AniList.
+                </div>
+
+                <div class="rule">
+                    🧹 Gli anime duplicati vengono eliminati automaticamente.
                 </div>
 
                 <div class="rule">
@@ -1271,7 +1297,6 @@ input:focus {
             votate chi pensate sia l'Impostor.
         </p>
 
-
         <div class="vote-info">
 
             <strong>
@@ -1291,12 +1316,10 @@ input:focus {
 
         </div>
 
-
         <div
             id="vote-list"
             class="vote-grid"
         ></div>
-
 
         <div
             id="vote-status"
@@ -1304,7 +1327,6 @@ input:focus {
         >
             <strong>0</strong> / 0 giocatori hanno votato.
         </div>
-
 
         <button
             id="btn-confirm-vote"
@@ -1314,7 +1336,6 @@ input:focus {
             🗳️ Conferma voto
         </button>
 
-
         <div
             id="tie-message"
             class="tie-message"
@@ -1323,7 +1344,6 @@ input:focus {
             🤝 C'è stato un pareggio.
             Si procede con una nuova votazione.
         </div>
-
 
         <div
             id="vote-error"
@@ -1361,7 +1381,6 @@ input:focus {
             Ora può tentare di indovinare l'anime.
         </p>
 
-
         <div
             id="guess-form"
             class="guess-box"
@@ -1389,7 +1408,6 @@ input:focus {
             ></div>
 
         </div>
-
 
         <div
             id="guess-wait"
@@ -1440,18 +1458,15 @@ input:focus {
             id="result-subtitle"
         ></p>
 
-
         <div
             id="result-anime"
             class="result-anime"
         ></div>
 
-
         <div
             id="score-list"
             class="scores"
         ></div>
-
 
         <button
             id="btn-again"
@@ -1485,62 +1500,479 @@ const SERVER_URL =
 
 
 /* =========================================================
-   ANIME DATABASE
+   ANILIST API
 ========================================================= */
 
-const ANIME_DATABASE = [
+const ANILIST_API =
+    "https://graphql.anilist.co";
 
-    "Naruto",
-    "One Piece",
-    "Bleach",
-    "Jujutsu Kaisen",
-    "Demon Slayer",
-    "Attack on Titan",
-    "My Hero Academia",
-    "Hunter x Hunter",
-    "Dragon Ball",
-    "Death Note",
-    "Fullmetal Alchemist: Brotherhood",
-    "One Punch Man",
-    "Tokyo Ghoul",
-    "Chainsaw Man",
-    "Spy x Family",
-    "Sword Art Online",
-    "JoJo's Bizarre Adventure",
-    "Black Clover",
-    "Haikyuu!!",
-    "Blue Lock",
-    "Solo Leveling",
-    "Frieren",
-    "Steins;Gate",
-    "Code Geass",
-    "Re:Zero",
-    "Mob Psycho 100",
-    "Dr. Stone",
-    "Fairy Tail",
-    "Vinland Saga",
-    "Neon Genesis Evangelion",
-    "Assassination Classroom",
-    "The Seven Deadly Sins",
-    "Fire Force",
-    "Noragami",
-    "Akame ga Kill!",
-    "Parasyte",
-    "The Promised Neverland",
-    "Kuroko's Basketball",
-    "Bungo Stray Dogs",
-    "Overlord",
-    "That Time I Got Reincarnated as a Slime",
-    "Konosuba",
-    "Mushoku Tensei",
-    "Classroom of the Elite",
-    "Oshi no Ko",
-    "Kaguya-sama: Love Is War",
-    "Your Lie in April",
-    "Erased",
-    "Sword of the Stranger"
 
-];
+/*
+ * Richiediamo SOLO gli anime COMPLETED.
+ *
+ * userName viene usato normalmente.
+ *
+ * userId viene supportato se il giocatore
+ * inserisce un ID numerico.
+ */
+
+const ANILIST_QUERY = `
+query GetCompletedAnime(
+    $userName: String,
+    $userId: Int
+) {
+
+    MediaListCollection(
+        userName: $userName,
+        userId: $userId,
+        type: ANIME,
+        status: COMPLETED
+    ) {
+
+        lists {
+
+            entries {
+
+                media {
+
+                    id
+
+                    title {
+                        romaji
+                        english
+                        native
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+`;
+
+
+/* =========================================================
+   GET ANILIST COMPLETED ANIME
+========================================================= */
+
+async function getAniListCompletedAnime(
+    identifier
+) {
+
+    const value =
+        String(identifier || "")
+            .trim();
+
+
+    if (!value) {
+
+        throw new Error(
+            "Username AniList non valido."
+        );
+
+    }
+
+
+    const variables = {};
+
+
+    /*
+     * Se sono tutti numeri,
+     * lo consideriamo un AniList ID.
+     *
+     * Altrimenti username.
+     */
+
+    if (
+        /^\d+$/.test(value)
+    ) {
+
+        variables.userId =
+            Number(value);
+
+    }
+    else {
+
+        variables.userName =
+            value;
+
+    }
+
+
+    const response =
+        await fetch(
+            ANILIST_API,
+            {
+
+                method:
+                    "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Accept":
+                        "application/json"
+
+                },
+
+                body:
+                    JSON.stringify({
+
+                        query:
+                            ANILIST_QUERY,
+
+                        variables:
+                            variables
+
+                    })
+
+            }
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "AniList HTTP " +
+            response.status
+        );
+
+    }
+
+
+    const json =
+        await response.json();
+
+
+    if (json.errors) {
+
+        throw new Error(
+            json.errors
+                .map(
+                    error =>
+                        error.message
+                )
+                .join(", ")
+        );
+
+    }
+
+
+    const collection =
+        json.data
+            ?.MediaListCollection;
+
+
+    /*
+     * Se AniList non trova l'utente,
+     * collection può essere null.
+     */
+
+    if (!collection) {
+
+        throw new Error(
+            "Utente AniList non trovato: " +
+            value
+        );
+
+    }
+
+
+    const lists =
+        collection.lists || [];
+
+
+    const anime = [];
+
+
+    for (
+        const list of lists
+    ) {
+
+        for (
+            const entry of
+            (list.entries || [])
+        ) {
+
+            const media =
+                entry.media;
+
+
+            if (!media) {
+                continue;
+            }
+
+
+            /*
+             * Titolo preferito:
+             *
+             * 1. English
+             * 2. Romaji
+             * 3. Native
+             */
+
+            const title =
+                media.title?.english ||
+                media.title?.romaji ||
+                media.title?.native;
+
+
+            if (!title) {
+                continue;
+            }
+
+
+            anime.push({
+
+                id:
+                    media.id,
+
+                title:
+                    title
+
+            });
+
+        }
+
+    }
+
+
+    return anime;
+
+}
+
+
+/* =========================================================
+   BUILD ANILIST POOL
+========================================================= */
+
+async function buildAnimePool() {
+
+    const players =
+        getPlayers();
+
+
+    if (
+        players.length === 0
+    ) {
+
+        throw new Error(
+            "Nessun giocatore nella stanza."
+        );
+
+    }
+
+
+    /*
+     * Prendiamo i nickname di tutti
+     * i giocatori.
+     *
+     * Il nickname è l'username AniList.
+     */
+
+    const uniquePlayers = [];
+
+
+    const seenIdentifiers =
+        new Set();
+
+
+    for (
+        const player of players
+    ) {
+
+        const identifier =
+            String(
+                player.name || ""
+            ).trim();
+
+
+        const key =
+            identifier.toLowerCase();
+
+
+        /*
+         * Se due giocatori hanno inserito
+         * lo stesso username, facciamo
+         * una sola richiesta.
+         */
+
+        if (
+            seenIdentifiers.has(key)
+        ) {
+
+            continue;
+
+        }
+
+
+        seenIdentifiers.add(key);
+
+        uniquePlayers.push(
+            identifier
+        );
+
+    }
+
+
+    /*
+     * Richiediamo le liste
+     * in parallelo.
+     */
+
+    const results =
+        await Promise.allSettled(
+
+            uniquePlayers.map(
+                identifier =>
+                    getAniListCompletedAnime(
+                        identifier
+                    )
+            )
+
+        );
+
+
+    const uniqueAnime =
+        new Map();
+
+
+    const failedUsers = [];
+
+
+    results.forEach(
+        (
+            result,
+            index
+        ) => {
+
+            const username =
+                uniquePlayers[index];
+
+
+            if (
+                result.status ===
+                "fulfilled"
+            ) {
+
+                for (
+                    const anime of
+                    result.value
+                ) {
+
+                    /*
+                     * L'ID AniList è la chiave
+                     * utilizzata per eliminare
+                     * i duplicati.
+                     */
+
+                    if (
+                        !uniqueAnime.has(
+                            anime.id
+                        )
+                    ) {
+
+                        uniqueAnime.set(
+                            anime.id,
+                            anime
+                        );
+
+                    }
+
+                }
+
+            }
+            else {
+
+                console.error(
+                    "Errore AniList per:",
+                    username,
+                    result.reason
+                );
+
+
+                failedUsers.push(
+                    username
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+     * Se anche un solo giocatore
+     * non è stato trovato, fermiamo
+     * l'avvio.
+     */
+
+    if (
+        failedUsers.length > 0
+    ) {
+
+        throw new Error(
+            "Impossibile caricare AniList per: " +
+            failedUsers.join(", ")
+        );
+
+    }
+
+
+    const pool =
+        Array.from(
+            uniqueAnime.values()
+        );
+
+
+    if (
+        pool.length === 0
+    ) {
+
+        throw new Error(
+            "Nessun anime COMPLETED trovato negli account AniList dei giocatori."
+        );
+
+    }
+
+
+    console.log(
+        "================================"
+    );
+
+    console.log(
+        "AniList Pool creato."
+    );
+
+    console.log(
+        "Giocatori:",
+        uniquePlayers
+    );
+
+    console.log(
+        "Anime unici:",
+        pool.length
+    );
+
+    console.log(
+        "Pool:",
+        pool
+    );
+
+    console.log(
+        "================================"
+    );
+
+
+    return pool;
+
+}
 
 
 /* =========================================================
@@ -1566,6 +1998,19 @@ const game = {
     seed: null,
 
     anime: null,
+
+    /*
+     * Pool ottenuto da AniList.
+     */
+
+    animePool: [],
+
+    /*
+     * Evita di fare due caricamenti
+     * contemporaneamente.
+     */
+
+    loadingAniList: false,
 
     impostorId: null,
 
@@ -1609,44 +2054,88 @@ function showScreen(name) {
         .querySelectorAll(".screen")
         .forEach(
             screen =>
-                screen.classList.remove("active")
+                screen.classList.remove(
+                    "active"
+                )
         );
+
 
     const target =
         $("screen-" + name);
 
+
     if (target) {
-        target.classList.add("active");
+
+        target.classList.add(
+            "active"
+        );
+
     }
 
-    game.phase = name;
+
+    game.phase =
+        name;
+
 }
 
 
-function setError(id, text) {
+function setError(
+    id,
+    text
+) {
 
-    const el = $(id);
+    const el =
+        $(id);
+
 
     if (el) {
-        el.textContent = text || "";
+
+        el.textContent =
+            text || "";
+
     }
+
 }
 
 
-function escapeHTML(value) {
+function escapeHTML(
+    value
+) {
 
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
 }
 
 
-function normalize(value) {
+function normalize(
+    value
+) {
 
-    return String(value || "")
+    return String(
+        value || ""
+    )
         .trim()
         .toLowerCase()
         .normalize("NFD")
@@ -1654,6 +2143,7 @@ function normalize(value) {
             /[\u0300-\u036f]/g,
             ""
         );
+
 }
 
 
@@ -1661,9 +2151,13 @@ function normalize(value) {
    HASH
 ========================================================= */
 
-function hashString(text) {
+function hashString(
+    text
+) {
 
-    let hash = 2166136261;
+    let hash =
+        2166136261;
+
 
     for (
         let i = 0;
@@ -1671,7 +2165,9 @@ function hashString(text) {
         i++
     ) {
 
-        hash ^= text.charCodeAt(i);
+        hash ^=
+            text.charCodeAt(i);
+
 
         hash =
             Math.imul(
@@ -1681,7 +2177,9 @@ function hashString(text) {
 
     }
 
+
     return hash >>> 0;
+
 }
 
 
@@ -1689,15 +2187,61 @@ function hashString(text) {
    ANIME
 ========================================================= */
 
-function chooseAnime(seed) {
+function chooseAnime(
+    seed
+) {
+
+    if (
+        !Array.isArray(
+            game.animePool
+        ) ||
+        game.animePool.length === 0
+    ) {
+
+        return null;
+
+    }
+
 
     const index =
         hashString(
             String(seed)
         ) %
-        ANIME_DATABASE.length;
+        game.animePool.length;
 
-    return ANIME_DATABASE[index];
+
+    return game.animePool[index];
+
+}
+
+
+/*
+ * Restituisce sempre il titolo
+ * dell'anime attuale.
+ */
+
+function getAnimeTitle() {
+
+    if (!game.anime) {
+        return "";
+    }
+
+
+    if (
+        typeof game.anime ===
+        "string"
+    ) {
+
+        return game.anime;
+
+    }
+
+
+    return (
+        game.anime.title ||
+        ""
+    );
+
 }
 
 
@@ -1708,16 +2252,23 @@ function chooseAnime(seed) {
 function getPlayers() {
 
     return Object
-        .values(game.players || {})
+        .values(
+            game.players || {}
+        )
         .filter(Boolean);
+
 }
 
 
 function getSortedPlayerIds() {
 
     return getPlayers()
-        .map(player => player.id)
+        .map(
+            player =>
+                player.id
+        )
         .sort();
+
 }
 
 
@@ -1725,18 +2276,24 @@ function getSortedPlayerIds() {
    TURN ORDER
 ========================================================= */
 
-function createTurnOrder(seed) {
+function createTurnOrder(
+    seed
+) {
 
     const ids =
         getSortedPlayerIds();
 
-    const array = [...ids];
+
+    const array =
+        [...ids];
+
 
     let randomState =
         hashString(
             String(seed) +
             "|TURN_ORDER"
         );
+
 
     function random() {
 
@@ -1749,9 +2306,14 @@ function createTurnOrder(seed) {
                 1013904223
             ) >>> 0;
 
-        return randomState /
-            4294967296;
+
+        return (
+            randomState /
+            4294967296
+        );
+
     }
+
 
     for (
         let i = array.length - 1;
@@ -1765,6 +2327,7 @@ function createTurnOrder(seed) {
                 (i + 1)
             );
 
+
         [
             array[i],
             array[j]
@@ -1775,7 +2338,9 @@ function createTurnOrder(seed) {
 
     }
 
+
     return array;
+
 }
 
 
@@ -1789,12 +2354,19 @@ function calculateImpostorId() {
         return null;
     }
 
+
     const ids =
         getSortedPlayerIds();
 
-    if (ids.length === 0) {
+
+    if (
+        ids.length === 0
+    ) {
+
         return null;
+
     }
+
 
     const index =
         hashString(
@@ -1803,7 +2375,9 @@ function calculateImpostorId() {
         ) %
         ids.length;
 
+
     return ids[index];
+
 }
 
 
@@ -1813,6 +2387,7 @@ function isImpostor() {
         game.playerId ===
         game.impostorId
     );
+
 }
 
 
@@ -1825,10 +2400,13 @@ function isHost() {
     const ids =
         getSortedPlayerIds();
 
+
     return (
         ids.length > 0 &&
-        ids[0] === game.playerId
+        ids[0] ===
+        game.playerId
     );
+
 }
 
 
@@ -1841,7 +2419,9 @@ function generateRoomCode() {
     const chars =
         "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+
     let code = "";
+
 
     for (
         let i = 0;
@@ -1859,7 +2439,9 @@ function generateRoomCode() {
 
     }
 
+
     return code;
+
 }
 
 
@@ -1873,18 +2455,24 @@ if (!window.Multiplayer) {
         "Errore: multiplayer.js non è stato trovato."
     );
 
+
     throw new Error(
         "multiplayer.js missing"
     );
+
 }
+
 
 const MP =
     window.Multiplayer;
 
 
 MP.init({
+
     debug: false,
+
     autoConnect: false
+
 });
 
 
@@ -1892,11 +2480,15 @@ MP.init({
    SEND ACTION
 ========================================================= */
 
-function sendAction(action, data = {}) {
+function sendAction(
+    action,
+    data = {}
+) {
 
     if (!MP) {
         return;
     }
+
 
     if (
         typeof MP.sendAction ===
@@ -1909,7 +2501,9 @@ function sendAction(action, data = {}) {
         );
 
         return;
+
     }
+
 
     if (
         typeof MP.action ===
@@ -1934,35 +2528,47 @@ MP.on(
     "connected",
     data => {
 
-        game.connected = true;
+        game.connected =
+            true;
+
 
         game.playerId =
             data.playerId;
 
+
         game.room =
             data.room;
+
 
         game.players =
             data.players || {};
 
+
         $("connection").textContent =
             "● Connesso";
+
 
         $("connection")
             .classList.add(
                 "connected"
             );
 
+
         $("lobby-room-name").textContent =
             "#" +
             game.room;
 
+
         $("lobby-room-code").textContent =
             game.room;
 
+
         renderPlayers();
 
-        showScreen("lobby");
+
+        showScreen(
+            "lobby"
+        );
 
     }
 );
@@ -1972,10 +2578,13 @@ MP.on(
     "disconnected",
     () => {
 
-        game.connected = false;
+        game.connected =
+            false;
+
 
         $("connection").textContent =
             "● Disconnesso";
+
 
         $("connection")
             .classList.remove(
@@ -1994,6 +2603,7 @@ MP.on(
             "home-error",
             message
         );
+
 
         setError(
             "lobby-error",
@@ -2015,7 +2625,9 @@ MP.on(
         game.players =
             players || {};
 
+
         renderPlayers();
+
 
         checkLobbyStart();
 
@@ -2035,6 +2647,7 @@ MP.on(
 
         }
 
+
         renderPlayers();
 
     }
@@ -2049,6 +2662,7 @@ MP.on(
             playerId
         ];
 
+
         renderPlayers();
 
     }
@@ -2057,7 +2671,10 @@ MP.on(
 
 MP.on(
     "ready",
-    (playerId, ready) => {
+    (
+        playerId,
+        ready
+    ) => {
 
         if (
             game.players[
@@ -2067,11 +2684,14 @@ MP.on(
 
             game.players[
                 playerId
-            ].ready = ready;
+            ].ready =
+                ready;
 
         }
 
+
         renderPlayers();
+
 
         checkLobbyStart();
 
@@ -2118,9 +2738,12 @@ $("input-name")
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
+
                 joinRoom();
+
             }
 
         }
@@ -2133,9 +2756,12 @@ $("input-room")
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
+
                 joinRoom();
+
             }
 
         }
@@ -2149,25 +2775,36 @@ function joinRoom() {
             .value
             .trim();
 
+
     let room =
         $("input-room")
             .value
             .trim()
             .toUpperCase();
 
-    if (name.length < 2) {
+
+    if (
+        name.length < 2
+    ) {
 
         setError(
             "home-error",
-            "Inserisci un nickname di almeno 2 caratteri."
+            "Inserisci il tuo username AniList."
         );
 
+
         return;
+
     }
 
+
     if (!room) {
-        room = generateRoomCode();
+
+        room =
+            generateRoomCode();
+
     }
+
 
     if (
         !/^[A-Z0-9]{3,8}$/
@@ -2179,22 +2816,30 @@ function joinRoom() {
             "Codice stanza non valido."
         );
 
+
         return;
+
     }
+
 
     game.playerName =
         name;
 
+
     game.room =
         room;
+
 
     setError(
         "home-error",
         "Connessione..."
     );
 
+
     $("btn-join")
-        .disabled = true;
+        .disabled =
+        true;
+
 
     MP.connect({
 
@@ -2209,11 +2854,13 @@ function joinRoom() {
 
     });
 
+
     setTimeout(
         () => {
 
             $("btn-join")
-                .disabled = false;
+                .disabled =
+                false;
 
         },
         3000
@@ -2231,12 +2878,15 @@ function renderPlayers() {
     const list =
         $("player-list");
 
+
     if (!list) {
         return;
     }
 
+
     const players =
         getPlayers();
+
 
     if (
         players.length === 0
@@ -2246,7 +2896,9 @@ function renderPlayers() {
             "<div>Nessun giocatore.</div>";
 
         return;
+
     }
+
 
     list.innerHTML =
         players
@@ -2256,6 +2908,7 @@ function renderPlayers() {
                     const me =
                         player.id ===
                         game.playerId;
+
 
                     return `
 
@@ -2305,12 +2958,14 @@ function renderPlayers() {
             )
             .join("");
 
+
     $("btn-ready").textContent =
         game.ready
         ?
         "✕ Non sono pronto"
         :
         "✓ Sono pronto";
+
 
     $("btn-ready").disabled =
         players.length < 3;
@@ -2330,11 +2985,14 @@ $("btn-ready")
             game.ready =
                 !game.ready;
 
+
             MP.setReady(
                 game.ready
             );
 
+
             renderPlayers();
+
 
             checkLobbyStart();
 
@@ -2346,7 +3004,8 @@ $("btn-ready")
    START GAME
 ========================================================= */
 
-let startRequested = false;
+let startRequested =
+    false;
 
 
 function checkLobbyStart() {
@@ -2354,31 +3013,46 @@ function checkLobbyStart() {
     if (
         !isHost() ||
         startRequested ||
-        game.phase !== "lobby"
+        game.phase !==
+        "lobby"
     ) {
+
         return;
+
     }
+
 
     const players =
         getPlayers();
 
+
     if (
         players.length < 3
     ) {
+
         return;
+
     }
+
 
     const everyoneReady =
         players.every(
             player =>
-                player.ready === true
+                player.ready ===
+                true
         );
 
+
     if (!everyoneReady) {
+
         return;
+
     }
 
-    startRequested = true;
+
+    startRequested =
+        true;
+
 
     setTimeout(
         () => {
@@ -2403,86 +3077,224 @@ function checkLobbyStart() {
    START GAME
 ========================================================= */
 
-function startGame() {
+async function startGame() {
 
     if (!isHost()) {
         return;
     }
 
+
     const players =
         getPlayers();
+
 
     if (
         players.length < 3
     ) {
 
-        startRequested = false;
+        startRequested =
+            false;
 
         return;
+
     }
 
-    const seed =
-        Date.now().toString(36) +
-        "-" +
-        Math.random()
-            .toString(36)
-            .slice(2,10);
 
-    game.seed =
-        seed;
+    /*
+     * Evita richieste multiple.
+     */
 
-    game.anime =
-        chooseAnime(seed);
+    if (
+        game.loadingAniList
+    ) {
 
-    game.impostorId =
-        calculateImpostorId();
+        return;
 
-    game.turnOrder =
-        createTurnOrder(seed);
+    }
 
-    game.currentRound =
-        1;
 
-    game.currentTurnIndex =
-        0;
-
-    game.words =
-        [];
-
-    game.votes =
-        {};
-
-    game.selectedVote =
-        null;
-
-    game.gameStarted =
+    game.loadingAniList =
         true;
 
-    sendAction(
-        "impostor_start",
-        {
 
-            seed:
-                seed,
-
-            turnOrder:
-                game.turnOrder,
-
-            players:
-                players.map(
-                    player => ({
-                        id:
-                            player.id,
-
-                        name:
-                            player.name
-                    })
-                )
-
-        }
+    setError(
+        "lobby-error",
+        "⏳ Caricamento degli anime COMPLETED da AniList..."
     );
 
-    enterRound();
+
+    try {
+
+        /*
+         * Costruisce il pool globale
+         * usando le liste COMPLETED
+         * di tutti i giocatori.
+         */
+
+        const animePool =
+            await buildAnimePool();
+
+
+        /*
+         * Salviamo il pool sull'host.
+         */
+
+        game.animePool =
+            animePool;
+
+
+        /*
+         * Creazione seed.
+         */
+
+        const seed =
+            Date.now().toString(36) +
+            "-" +
+            Math.random()
+                .toString(36)
+                .slice(2, 10);
+
+
+        game.seed =
+            seed;
+
+
+        /*
+         * Scegliamo l'anime dal pool.
+         */
+
+        game.anime =
+            chooseAnime(
+                seed
+            );
+
+
+        if (!game.anime) {
+
+            throw new Error(
+                "Impossibile scegliere un anime dal pool AniList."
+            );
+
+        }
+
+
+        game.impostorId =
+            calculateImpostorId();
+
+
+        game.turnOrder =
+            createTurnOrder(
+                seed
+            );
+
+
+        game.currentRound =
+            1;
+
+
+        game.currentTurnIndex =
+            0;
+
+
+        game.words =
+            [];
+
+
+        game.votes =
+            {};
+
+
+        game.selectedVote =
+            null;
+
+
+        game.gameStarted =
+            true;
+
+
+        game.roundCompletionHandled =
+            null;
+
+
+        game.voteResolutionHandled =
+            false;
+
+
+        /*
+         * Inviamo il pool completo
+         * a tutti gli altri client.
+         *
+         * In questo modo NON devono
+         * fare richieste AniList.
+         */
+
+        sendAction(
+            "impostor_start",
+            {
+
+                seed:
+                    seed,
+
+                turnOrder:
+                    game.turnOrder,
+
+                animePool:
+                    game.animePool,
+
+                players:
+                    players.map(
+                        player => ({
+
+                            id:
+                                player.id,
+
+                            name:
+                                player.name
+
+                        })
+                    )
+
+            }
+        );
+
+
+        setError(
+            "lobby-error",
+            ""
+        );
+
+
+        enterRound();
+
+    }
+    catch (error) {
+
+        console.error(
+            "Errore caricamento AniList:",
+            error
+        );
+
+
+        setError(
+            "lobby-error",
+            "❌ " +
+            (
+                error.message ||
+                "Errore durante il caricamento di AniList."
+            )
+        );
+
+
+        startRequested =
+            false;
+
+    }
+    finally {
+
+        game.loadingAniList =
+            false;
+
+    }
 
 }
 
@@ -2501,7 +3313,9 @@ function handleAction(
 
         case "impostor_start":
 
-            receiveGameStart(data);
+            receiveGameStart(
+                data
+            );
 
             break;
 
@@ -2518,14 +3332,18 @@ function handleAction(
 
         case "next_round":
 
-            receiveNextRound(data);
+            receiveNextRound(
+                data
+            );
 
             break;
 
 
         case "start_vote":
 
-            receiveStartVote(data);
+            receiveStartVote(
+                data
+            );
 
             break;
 
@@ -2542,21 +3360,27 @@ function handleAction(
 
         case "vote_skip_result":
 
-            receiveSkipResult(data);
+            receiveSkipResult(
+                data
+            );
 
             break;
 
 
         case "impostor_caught":
 
-            receiveImpostorCaught(data);
+            receiveImpostorCaught(
+                data
+            );
 
             break;
 
 
         case "final_result":
 
-            receiveFinalResult(data);
+            receiveFinalResult(
+                data
+            );
 
             break;
 
@@ -2579,22 +3403,71 @@ function handleAction(
    RECEIVE GAME START
 ========================================================= */
 
-function receiveGameStart(data) {
+function receiveGameStart(
+    data
+) {
 
     if (
         !data ||
         !data.seed
     ) {
+
         return;
+
     }
+
 
     game.seed =
         data.seed;
+
+
+    /*
+     * Riceviamo il pool AniList
+     * creato dall'host.
+     */
+
+    game.animePool =
+        Array.isArray(
+            data.animePool
+        )
+        ?
+        data.animePool.filter(
+            anime =>
+                anime &&
+                anime.id &&
+                anime.title
+        )
+        :
+        [];
+
+
+    if (
+        game.animePool.length ===
+        0
+    ) {
+
+        console.error(
+            "Pool AniList vuoto."
+        );
+
+
+        return;
+
+    }
+
+
+    /*
+     * Tutti i client calcolano
+     * lo stesso anime usando:
+     *
+     * seed + pool
+     */
 
     game.anime =
         chooseAnime(
             data.seed
         );
+
 
     game.turnOrder =
         Array.isArray(
@@ -2607,32 +3480,42 @@ function receiveGameStart(data) {
             data.seed
         );
 
+
     game.impostorId =
         calculateImpostorId();
+
 
     game.currentRound =
         1;
 
+
     game.currentTurnIndex =
         0;
+
 
     game.words =
         [];
 
+
     game.votes =
         {};
+
 
     game.selectedVote =
         null;
 
+
     game.gameStarted =
         true;
+
 
     game.roundCompletionHandled =
         null;
 
+
     game.voteResolutionHandled =
         false;
+
 
     enterRound();
 
@@ -2648,38 +3531,45 @@ function enterRound() {
     game.phase =
         "game";
 
-    /*
-     * NON azzeriamo game.words qui.
-     * game.words contiene lo storico completo della partita:
-     * ogni elemento ha il proprio round e resta disponibile
-     * anche dopo lo Skip e il passaggio al round successivo.
-     */
+
     game.currentTurnIndex =
         0;
 
+
     game.roundCompletionHandled =
         null;
+
 
     $("round-badge")
         .textContent =
         "🔄 Round " +
         game.currentRound;
 
+
     renderSecret();
+
 
     renderWords();
 
+
     renderTurn();
 
-    showScreen("game");
+
+    showScreen(
+        "game"
+    );
+
 
     $("word-input")
-        .value = "";
+        .value =
+        "";
+
 
     setError(
         "word-error",
         ""
     );
+
 
     updateWordInput();
 
@@ -2695,10 +3585,14 @@ function renderSecret() {
     const card =
         $("secret-card");
 
-    if (isImpostor()) {
+
+    if (
+        isImpostor()
+    ) {
 
         card.className =
             "secret impostor";
+
 
         card.innerHTML = `
 
@@ -2723,10 +3617,12 @@ function renderSecret() {
 
         `;
 
-    } else {
+    }
+    else {
 
         card.className =
             "secret";
+
 
         card.innerHTML = `
 
@@ -2740,7 +3636,7 @@ function renderSecret() {
 
             <div class="secret-anime">
                 ${escapeHTML(
-                    game.anime
+                    getAnimeTitle()
                 )}
             </div>
 
@@ -2764,15 +3660,21 @@ function renderSecret() {
 function getCurrentTurnPlayerId() {
 
     if (
-        !Array.isArray(game.turnOrder) ||
+        !Array.isArray(
+            game.turnOrder
+        ) ||
         game.turnOrder.length === 0
     ) {
+
         return null;
+
     }
+
 
     return game.turnOrder[
         game.currentTurnIndex
     ];
+
 }
 
 
@@ -2781,7 +3683,9 @@ function getCurrentTurnPlayer() {
     const id =
         getCurrentTurnPlayerId();
 
+
     return game.players[id];
+
 }
 
 
@@ -2790,23 +3694,30 @@ function renderTurn() {
     const box =
         $("turn-box");
 
+
     const player =
         getCurrentTurnPlayer();
+
 
     if (!player) {
 
         box.className =
             "turn-box";
 
+
         box.innerHTML =
             "Attesa...";
 
+
         return;
+
     }
+
 
     const myTurn =
         player.id ===
         game.playerId;
+
 
     box.className =
         "turn-box" +
@@ -2817,6 +3728,7 @@ function renderTurn() {
             :
             ""
         );
+
 
     box.innerHTML = `
 
@@ -2854,24 +3766,29 @@ function updateWordInput() {
     const currentId =
         getCurrentTurnPlayerId();
 
+
     const myTurn =
         currentId ===
         game.playerId;
 
+
     const area =
         $("word-input-area");
+
 
     if (myTurn) {
 
         area.style.display =
             "block";
 
-    } else {
+    }
+    else {
 
         area.style.display =
             "none";
 
     }
+
 
     renderTurn();
 
@@ -2891,7 +3808,8 @@ $("word-input")
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
 
                 event.preventDefault();
@@ -2913,18 +3831,24 @@ function submitWord() {
     const currentId =
         getCurrentTurnPlayerId();
 
+
     if (
         currentId !==
         game.playerId
     ) {
+
         return;
+
     }
+
 
     const input =
         $("word-input");
 
+
     const word =
         input.value.trim();
+
 
     if (!word) {
 
@@ -2933,18 +3857,26 @@ function submitWord() {
             "Inserisci una parola."
         );
 
+
         return;
+
     }
 
-    if (/\s/.test(word)) {
+
+    if (
+        /\s/.test(word)
+    ) {
 
         setError(
             "word-error",
             "Puoi inserire una sola parola."
         );
 
+
         return;
+
     }
+
 
     if (
         word.length > 30
@@ -2955,26 +3887,19 @@ function submitWord() {
             "La parola è troppo lunga."
         );
 
+
         return;
+
     }
 
-
-    /*
-     * Salviamo il round e l'indice
-     * PRIMA di avanzare.
-     */
 
     const submittedRound =
         game.currentRound;
 
+
     const submittedTurnIndex =
         game.currentTurnIndex;
 
-
-    /*
-     * Aggiungiamo subito la parola
-     * sul nostro client.
-     */
 
     const added =
         addWord(
@@ -2982,12 +3907,15 @@ function submitWord() {
             word
         );
 
+
     if (!added) {
         return;
     }
 
 
-    input.value = "";
+    input.value =
+        "";
+
 
     setError(
         "word-error",
@@ -2995,23 +3923,13 @@ function submitWord() {
     );
 
 
-    /*
-     * Passaggio immediato del turno.
-     *
-     * Non aspettiamo il server.
-     */
-
     advanceTurn();
 
-
-    /*
-     * Comunichiamo agli altri client
-     * la parola e il turno da cui proviene.
-     */
 
     sendAction(
         "word",
         {
+
             word:
                 word,
 
@@ -3020,6 +3938,7 @@ function submitWord() {
 
             turnIndex:
                 submittedTurnIndex
+
         }
     );
 
@@ -3035,17 +3954,15 @@ function addWord(
     word
 ) {
 
-    /*
-     * Una sola parola per giocatore
-     * per round.
-     */
-
     const exists =
         game.words.some(
             item =>
-                item.playerId === playerId &&
-                item.round === game.currentRound
+                item.playerId ===
+                    playerId &&
+                item.round ===
+                    game.currentRound
         );
+
 
     if (exists) {
         return false;
@@ -3053,7 +3970,9 @@ function addWord(
 
 
     const player =
-        game.players[playerId];
+        game.players[
+            playerId
+        ];
 
 
     game.words.push({
@@ -3079,6 +3998,7 @@ function addWord(
 
     renderWords();
 
+
     checkRoundComplete();
 
 
@@ -3096,72 +4016,58 @@ function receiveWord(
         !data ||
         !data.word
     ) {
+
         return;
+
     }
 
 
     const receivedRound =
-        Number(data.round);
+        Number(
+            data.round
+        );
 
 
     if (
         receivedRound !==
-        Number(game.currentRound)
+        Number(
+            game.currentRound
+        )
     ) {
+
         return;
+
     }
 
-
-    /*
-     * Se la parola è già presente,
-     * significa che questo client l'ha
-     * già ricevuta/inserita.
-     */
 
     const alreadyExists =
         game.words.some(
             item =>
-                item.playerId === playerId &&
-                item.round === receivedRound
+                item.playerId ===
+                    playerId &&
+                item.round ===
+                    receivedRound
         );
 
 
     if (alreadyExists) {
 
-        /*
-         * Se siamo già passati al turno
-         * successivo, non avanzare nuovamente.
-         */
-
         return;
 
     }
 
 
-    /*
-     * IMPORTANTE:
-     *
-     * data.turnIndex identifica il turno
-     * in cui la parola è stata scritta.
-     *
-     * Se il nostro client è già avanti,
-     * non dobbiamo avanzare di nuovo.
-     */
-
     const submittedTurnIndex =
-        Number(data.turnIndex);
+        Number(
+            data.turnIndex
+        );
 
 
     if (
-        Number.isFinite(submittedTurnIndex)
+        Number.isFinite(
+            submittedTurnIndex
+        )
     ) {
-
-        /*
-         * Se il nostro turno attuale non
-         * corrisponde più a quello che ha
-         * scritto la parola, significa che
-         * abbiamo già avanzato.
-         */
 
         if (
             game.currentTurnIndex !==
@@ -3173,16 +4079,13 @@ function receiveWord(
                 data.word
             );
 
+
             return;
 
         }
 
     }
 
-
-    /*
-     * Aggiunge la parola degli altri.
-     */
 
     const added =
         addWord(
@@ -3196,10 +4099,6 @@ function receiveWord(
     }
 
 
-    /*
-     * Ora passa il turno.
-     */
-
     advanceTurn();
 
 }
@@ -3210,34 +4109,50 @@ function renderWords() {
     const list =
         $("word-list");
 
+
     if (
-        !Array.isArray(game.turnOrder) ||
+        !Array.isArray(
+            game.turnOrder
+        ) ||
         game.turnOrder.length === 0
     ) {
 
         list.innerHTML =
             "";
 
+
         return;
 
     }
 
 
-    /*
-     * Mostriamo lo storico COMPLETO della partita.
-     * Le parole dei round precedenti non vengono dimenticate.
-     */
     const rounds =
-        [...new Set(
-            game.words
-                .map(item => Number(item.round))
-                .filter(Number.isFinite)
-        )].sort(
-            (a, b) => a - b
+        [
+            ...new Set(
+                game.words
+                    .map(
+                        item =>
+                            Number(
+                                item.round
+                            )
+                    )
+                    .filter(
+                        Number.isFinite
+                    )
+            )
+        ]
+        .sort(
+            (
+                a,
+                b
+            ) =>
+                a - b
         );
 
 
-    if (rounds.length === 0) {
+    if (
+        rounds.length === 0
+    ) {
 
         list.innerHTML =
             game.turnOrder
@@ -3245,13 +4160,17 @@ function renderWords() {
                     playerId => {
 
                         const player =
-                            game.players[playerId];
+                            game.players[
+                                playerId
+                            ];
+
 
                         return `
 
                             <div class="word empty">
 
                                 <div class="word-player">
+
                                     ${escapeHTML(
                                         player
                                         ?
@@ -3259,6 +4178,7 @@ function renderWords() {
                                         :
                                         "Giocatore"
                                     )}
+
                                 </div>
 
                                 <div class="word-value">
@@ -3273,6 +4193,7 @@ function renderWords() {
                 )
                 .join("");
 
+
         return;
 
     }
@@ -3286,9 +4207,14 @@ function renderWords() {
                     const roundWords =
                         game.words.filter(
                             item =>
-                                Number(item.round) ===
-                                Number(round)
+                                Number(
+                                    item.round
+                                ) ===
+                                Number(
+                                    round
+                                )
                         );
+
 
                     const cards =
                         game.turnOrder
@@ -3296,7 +4222,10 @@ function renderWords() {
                                 playerId => {
 
                                     const player =
-                                        game.players[playerId];
+                                        game.players[
+                                            playerId
+                                        ];
+
 
                                     const entry =
                                         roundWords.find(
@@ -3305,6 +4234,7 @@ function renderWords() {
                                                 playerId
                                         );
 
+
                                     if (entry) {
 
                                         return `
@@ -3312,6 +4242,7 @@ function renderWords() {
                                             <div class="word">
 
                                                 <div class="word-player">
+
                                                     ${escapeHTML(
                                                         player
                                                         ?
@@ -3320,12 +4251,15 @@ function renderWords() {
                                                         entry.playerName ||
                                                         "Giocatore"
                                                     )}
+
                                                 </div>
 
                                                 <div class="word-value">
+
                                                     ${escapeHTML(
                                                         entry.word
                                                     )}
+
                                                 </div>
 
                                             </div>
@@ -3334,11 +4268,13 @@ function renderWords() {
 
                                     }
 
+
                                     return `
 
                                         <div class="word empty">
 
                                             <div class="word-player">
+
                                                 ${escapeHTML(
                                                     player
                                                     ?
@@ -3346,6 +4282,7 @@ function renderWords() {
                                                     :
                                                     "Giocatore"
                                                 )}
+
                                             </div>
 
                                             <div class="word-value">
@@ -3360,6 +4297,7 @@ function renderWords() {
                             )
                             .join("");
 
+
                     return `
 
                         <div style="
@@ -3372,7 +4310,9 @@ function renderWords() {
                             letter-spacing: 1px;
                             text-transform: uppercase;
                         ">
+
                             🔄 Round ${round}
+
                         </div>
 
                         ${cards}
@@ -3385,6 +4325,7 @@ function renderWords() {
 
 }
 
+
 /* =========================================================
    TURN ADVANCE
 ========================================================= */
@@ -3394,16 +4335,15 @@ function advanceTurn() {
     const players =
         game.turnOrder.length;
 
+
     if (
         players === 0
     ) {
+
         return;
+
     }
 
-
-    /*
-     * Passa al giocatore successivo.
-     */
 
     game.currentTurnIndex =
         (
@@ -3433,6 +4373,7 @@ function checkRoundComplete() {
     const totalPlayers =
         game.turnOrder.length;
 
+
     const wordsThisRound =
         game.words.filter(
             item =>
@@ -3445,7 +4386,9 @@ function checkRoundComplete() {
         wordsThisRound.length <
         totalPlayers
     ) {
+
         return;
+
     }
 
 
@@ -3453,7 +4396,9 @@ function checkRoundComplete() {
         game.roundCompletionHandled ===
         game.currentRound
     ) {
+
         return;
+
     }
 
 
@@ -3461,17 +4406,6 @@ function checkRoundComplete() {
         game.currentRound;
 
 
-    /*
-     * OGNI round termina con una votazione.
-     *
-     * Round 1 -> parole di tutti -> votazione
-     * Round 2 -> parole di tutti -> votazione
-     * Round 3 -> parole di tutti -> votazione
-     * ... e così via finché non viene votato un giocatore.
-     *
-     * Se vince Skip, proceedToNextRound() crea il round
-     * successivo senza cancellare lo storico delle parole.
-     */
     setTimeout(
         () => {
 
@@ -3500,20 +4434,26 @@ function startVoting() {
     game.phase =
         "vote";
 
+
     game.votes =
         {};
+
 
     game.selectedVote =
         null;
 
+
     game.voteResolutionHandled =
         false;
+
 
     game.voteSession++;
 
 
     $("btn-confirm-vote")
-        .disabled = true;
+        .disabled =
+        true;
+
 
     $("tie-message")
         .style.display =
@@ -3528,9 +4468,13 @@ function startVoting() {
 
     renderVotePlayers();
 
+
     updateVoteStatus();
 
-    showScreen("vote");
+
+    showScreen(
+        "vote"
+    );
 
 }
 
@@ -3543,6 +4487,7 @@ function renderVotePlayers() {
 
     const list =
         $("vote-list");
+
 
     const players =
         getPlayers();
@@ -3577,7 +4522,9 @@ function renderVotePlayers() {
 
                 `
             )
-            .join("") +
+            .join("")
+
+        +
 
         `
 
@@ -3600,7 +4547,9 @@ function renderVotePlayers() {
 
 
     list
-        .querySelectorAll(".vote")
+        .querySelectorAll(
+            ".vote"
+        )
         .forEach(
             button => {
 
@@ -3662,7 +4611,9 @@ $("btn-confirm-vote")
             if (
                 !game.selectedVote
             ) {
+
                 return;
+
             }
 
 
@@ -3672,7 +4623,9 @@ $("btn-confirm-vote")
                     game.playerId
                 )
             ) {
+
                 return;
+
             }
 
 
@@ -3689,6 +4642,7 @@ $("btn-confirm-vote")
             sendAction(
                 "vote",
                 {
+
                     targetId:
                         selected,
 
@@ -3697,6 +4651,7 @@ $("btn-confirm-vote")
 
                     voteSession:
                         game.voteSession
+
                 }
             );
 
@@ -3707,7 +4662,9 @@ $("btn-confirm-vote")
 
 
             document
-                .querySelectorAll(".vote")
+                .querySelectorAll(
+                    ".vote"
+                )
                 .forEach(
                     button =>
                         button.disabled =
@@ -3716,6 +4673,7 @@ $("btn-confirm-vote")
 
 
             updateVoteStatus();
+
 
             checkVotes();
 
@@ -3736,24 +4694,38 @@ function receiveVote(
         !data ||
         !data.targetId
     ) {
+
         return;
+
     }
 
 
     if (
-        Number(data.round) !==
-        Number(game.currentRound)
+        Number(
+            data.round
+        ) !==
+        Number(
+            game.currentRound
+        )
     ) {
+
         return;
+
     }
 
 
     if (
         data.voteSession &&
-        Number(data.voteSession) !==
-        Number(game.voteSession)
+        Number(
+            data.voteSession
+        ) !==
+        Number(
+            game.voteSession
+        )
     ) {
+
         return;
+
     }
 
 
@@ -3763,15 +4735,20 @@ function receiveVote(
             playerId
         )
     ) {
+
         return;
+
     }
 
 
-    game.votes[playerId] =
+    game.votes[
+        playerId
+    ] =
         data.targetId;
 
 
     updateVoteStatus();
+
 
     checkVotes();
 
@@ -3786,6 +4763,7 @@ function updateVoteStatus() {
 
     const total =
         getPlayers().length;
+
 
     const count =
         Object.keys(
@@ -3816,6 +4794,7 @@ function checkVotes() {
     const total =
         getPlayers().length;
 
+
     const count =
         Object.keys(
             game.votes
@@ -3825,7 +4804,9 @@ function checkVotes() {
     if (
         count < total
     ) {
+
         return;
+
     }
 
 
@@ -3843,7 +4824,9 @@ function resolveVote() {
     if (
         game.voteResolutionHandled
     ) {
+
         return;
+
     }
 
 
@@ -3855,7 +4838,9 @@ function resolveVote() {
 
 
     Object
-        .values(game.votes)
+        .values(
+            game.votes
+        )
         .forEach(
             target => {
 
@@ -3882,18 +4867,17 @@ function resolveVote() {
         game.voteResolutionHandled =
             false;
 
+
         return;
 
     }
 
 
-    /*
-     * Ordina dal più votato
-     * al meno votato.
-     */
-
     entries.sort(
-        (a,b) =>
+        (
+            a,
+            b
+        ) =>
             b[1] - a[1]
     );
 
@@ -3901,11 +4885,6 @@ function resolveVote() {
     const highest =
         entries[0][1];
 
-
-    /*
-     * Tutti quelli con il massimo
-     * numero di voti sono vincitori.
-     */
 
     const winners =
         entries.filter(
@@ -3915,13 +4894,6 @@ function resolveVote() {
         );
 
 
-    /*
-     * PAREGGIO
-     *
-     * Vale anche se tra i pareggianti
-     * c'è Skip.
-     */
-
     if (
         winners.length > 1
     ) {
@@ -3929,6 +4901,7 @@ function resolveVote() {
         handleVoteTie(
             counts
         );
+
 
         return;
 
@@ -3939,10 +4912,6 @@ function resolveVote() {
         winners[0][0];
 
 
-    /*
-     * SKIP HA PIÙ VOTI
-     */
-
     if (
         winner ===
         "__SKIP__"
@@ -3952,14 +4921,11 @@ function resolveVote() {
             counts
         );
 
+
         return;
 
     }
 
-
-    /*
-     * UN GIOCATORE HA PIÙ VOTI
-     */
 
     handlePlayerVoteResult(
         winner,
@@ -3977,10 +4943,6 @@ function handleVoteTie(
     counts
 ) {
 
-    /*
-     * Mostra il messaggio.
-     */
-
     $("tie-message")
         .style.display =
         "block";
@@ -3992,22 +4954,8 @@ function handleVoteTie(
     );
 
 
-    /*
-     * Tutti i client sono arrivati
-     * alla stessa situazione.
-     *
-     * Aspettiamo un momento e
-     * ricominciamo la votazione.
-     */
-
     setTimeout(
         () => {
-
-            /*
-             * Evita di riaprire la votazione
-             * se nel frattempo la partita
-             * è cambiata.
-             */
 
             if (
                 game.phase ===
@@ -4033,13 +4981,10 @@ function handleSkipResult(
     counts
 ) {
 
-    /*
-     * Comunica il risultato.
-     */
-
     sendAction(
         "vote_skip_result",
         {
+
             round:
                 game.currentRound,
 
@@ -4048,39 +4993,32 @@ function handleSkipResult(
 
             voteSession:
                 game.voteSession
+
         }
     );
 
-
-    /*
-     * Passa al round successivo.
-     *
-     * Tutti i client lo fanno
-     * autonomamente.
-     */
 
     proceedToNextRound();
 
 }
 
 
-function receiveSkipResult(data) {
+function receiveSkipResult(
+    data
+) {
 
     if (!data) {
         return;
     }
 
 
-    /*
-     * Se siamo ancora nella votazione,
-     * significa che un altro client ha
-     * risolto Skip.
-     */
-
     if (
-        game.phase !== "vote"
+        game.phase !==
+        "vote"
     ) {
+
         return;
+
     }
 
 
@@ -4098,10 +5036,6 @@ function handlePlayerVoteResult(
     counts
 ) {
 
-    /*
-     * L'Impostor è stato trovato.
-     */
-
     if (
         eliminatedId ===
         game.impostorId
@@ -4110,6 +5044,7 @@ function handlePlayerVoteResult(
         sendAction(
             "impostor_caught",
             {
+
                 round:
                     game.currentRound,
 
@@ -4118,22 +5053,18 @@ function handlePlayerVoteResult(
 
                 counts:
                     counts
+
             }
         );
 
 
         showGuessScreen();
 
+
         return;
 
     }
 
-
-    /*
-     * È stato accusato un innocente.
-     *
-     * L'Impostor vince.
-     */
 
     const result = {
 
@@ -4159,8 +5090,10 @@ function handlePlayerVoteResult(
     sendAction(
         "final_result",
         {
+
             result:
                 result
+
         }
     );
 
@@ -4178,35 +5111,12 @@ function receiveImpostorCaught(
     data
 ) {
 
-    if (
-        !data
-    ) {
+    if (!data) {
         return;
     }
 
 
-    /*
-     * Il giocatore che è l'Impostor
-     * deve poter fare il guess.
-     */
-
-    if (
-        isImpostor()
-    ) {
-
-        showGuessScreen();
-
-    }
-    else {
-
-        /*
-         * Gli altri aspettano che
-         * l'Impostor indovini.
-         */
-
-        showGuessScreen();
-
-    }
+    showGuessScreen();
 
 }
 
@@ -4222,7 +5132,8 @@ function showGuessScreen() {
 
 
     $("guess-input")
-        .value = "";
+        .value =
+        "";
 
 
     setError(
@@ -4238,6 +5149,7 @@ function showGuessScreen() {
         $("guess-form")
             .style.display =
             "block";
+
 
         $("guess-wait")
             .style.display =
@@ -4261,6 +5173,7 @@ function showGuessScreen() {
             .style.display =
             "none";
 
+
         $("guess-wait")
             .style.display =
             "block";
@@ -4268,7 +5181,9 @@ function showGuessScreen() {
     }
 
 
-    showScreen("guess");
+    showScreen(
+        "guess"
+    );
 
 }
 
@@ -4290,7 +5205,8 @@ $("guess-input")
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
 
                 event.preventDefault();
@@ -4305,8 +5221,12 @@ $("guess-input")
 
 function submitGuess() {
 
-    if (!isImpostor()) {
+    if (
+        !isImpostor()
+    ) {
+
         return;
+
     }
 
 
@@ -4323,13 +5243,19 @@ function submitGuess() {
             "Inserisci l'anime."
         );
 
+
         return;
+
     }
 
 
     const correct =
-        normalize(answer) ===
-        normalize(game.anime);
+        normalize(
+            answer
+        ) ===
+        normalize(
+            getAnimeTitle()
+        );
 
 
     const result =
@@ -4347,8 +5273,10 @@ function submitGuess() {
     sendAction(
         "impostor_guess",
         {
+
             result:
                 result
+
         }
     );
 
@@ -4371,7 +5299,9 @@ function receiveGuess(
         playerId !==
         game.impostorId
     ) {
+
         return;
+
     }
 
 
@@ -4406,7 +5336,9 @@ function receiveFinalResult(
         game.phase ===
         "result"
     ) {
+
         return;
+
     }
 
 
@@ -4425,13 +5357,9 @@ function receiveFinalResult(
 
 function proceedToNextRound() {
 
-    /*
-     * Evita che più client incrementino
-     * il round due volte.
-     */
-
     const nextRound =
-        game.currentRound + 1;
+        game.currentRound +
+        1;
 
 
     game.currentRound =
@@ -4457,8 +5385,10 @@ function proceedToNextRound() {
     sendAction(
         "next_round",
         {
+
             round:
                 nextRound
+
         }
     );
 
@@ -4474,21 +5404,30 @@ function receiveNextRound(
 
     if (
         !data ||
-        data.round === undefined
+        data.round ===
+        undefined
     ) {
+
         return;
+
     }
 
 
     const round =
-        Number(data.round);
+        Number(
+            data.round
+        );
 
 
     if (
         round <=
-        Number(game.currentRound)
+        Number(
+            game.currentRound
+        )
     ) {
+
         return;
+
     }
 
 
@@ -4527,7 +5466,9 @@ function receiveStartVote() {
         game.phase ===
         "vote"
     ) {
+
         return;
+
     }
 
 
@@ -4557,6 +5498,16 @@ function showResult() {
         );
 
 
+    const animeTitle =
+        typeof anime ===
+        "string"
+        ?
+        anime
+        :
+        anime?.title ||
+        "";
+
+
     if (
         result ===
         "players_win"
@@ -4565,6 +5516,7 @@ function showResult() {
         $("result-title")
             .textContent =
             "🎉 VINCONO I GIOCATORI";
+
 
         $("result-subtitle")
             .textContent =
@@ -4579,6 +5531,7 @@ function showResult() {
         $("result-title")
             .textContent =
             "🕵️ VINCE L'IMPOSTOR";
+
 
         $("result-subtitle")
             .textContent =
@@ -4636,7 +5589,7 @@ function showResult() {
 
         <div class="result-anime-name">
             ${escapeHTML(
-                anime
+                animeTitle
             )}
         </div>
 
@@ -4731,13 +5684,10 @@ function showResult() {
             .join("");
 
 
-    /*
-     * Mostra anche gli eventuali
-     * voti per Skip.
-     */
-
     const skipVotes =
-        counts["__SKIP__"] ||
+        counts[
+            "__SKIP__"
+        ] ||
         0;
 
 
@@ -4778,7 +5728,9 @@ function showResult() {
     }
 
 
-    showScreen("result");
+    showScreen(
+        "result"
+    );
 
 }
 
@@ -4795,57 +5747,86 @@ $("btn-again")
             game.ready =
                 false;
 
+
             game.seed =
                 null;
+
 
             game.anime =
                 null;
 
+
+            game.animePool =
+                [];
+
+
             game.impostorId =
                 null;
+
 
             game.turnOrder =
                 [];
 
+
             game.currentRound =
                 1;
+
 
             game.currentTurnIndex =
                 0;
 
+
             game.words =
                 [];
+
 
             game.votes =
                 {};
 
+
             game.selectedVote =
                 null;
+
 
             game.result =
                 null;
 
+
             game.gameStarted =
                 false;
+
 
             game.roundCompletionHandled =
                 null;
 
+
             game.voteResolutionHandled =
                 false;
 
+
             game.voteSession =
                 0;
+
+
+            game.loadingAniList =
+                false;
+
 
             startRequested =
                 false;
 
 
-            MP.setReady(false);
+            MP.setReady(
+                false
+            );
+
 
             renderPlayers();
 
-            showScreen("lobby");
+
+            showScreen(
+                "lobby"
+            );
 
         }
     );
@@ -4871,9 +5852,12 @@ $("btn-leave")
 
                 }
 
-            } catch (error) {
+            }
+            catch (error) {
 
-                console.error(error);
+                console.error(
+                    error
+                );
 
             }
 
